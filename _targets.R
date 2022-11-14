@@ -6,9 +6,7 @@
 future::plan(future::multisession)
 
 # Set packages to load
-targets::tar_option_set(
-  packages = c('rgdal', 'stringr' , 'spatstat.geom', 'ggplot2', 'ggthemes', 'raster', 'FRK'),
-  deployment = 'main')
+targets::tar_option_set(packages = c('rgdal', 'stringr', 'spatstat.geom', 'ggplot2', 'raster',), deployment = 'main')
 
 # Load R files and workflows
 lapply(list.files(file.path("R"), full.names = TRUE, recursive = TRUE, pattern = '\\.R$'), source)
