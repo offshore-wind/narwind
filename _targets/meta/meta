@@ -1,0 +1,45 @@
+name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
+add_country|function|43cf99499bc307d1|||||||||||||||
+add_xy|function|94ac1aa7719cdcce|||||||||||||||
+canada|stem|185842d2a6107240|165716105edc882e|b1458a4792e01ebd|-560880370||t19303.6906597222s|65a4f26dff507759|41466|rds|local|vector|||3.461||
+colour_breaks|function|d88318d1185e4b25|||||||||||||||
+cop_threshold|function|e6e8d64136a6e9b0|||||||||||||||
+data_targets|object|15a3473ea961e9ec|||||||||||||||
+density_canada|stem||a97318f08b416496|5a482c4dbc78d462|1639370601||t19303.6282212748s||0|rds|local|vector|||12.977||unable to find an inherited method for function erase for signature SpatialPolygonsDataFrame, sf
+density_maps_usa|stem||fd37b292e8634563|e4e168410dc948dc|-1081449615||t19303.6189765568s||0|rds|local|vector|||79.789|Package version inconsistency detected.TMB was built with Matrix version 1.4.1Current Matrix version is 1.5.1Please reinstall TMB from source using install.packagesTMB, type  source or ask CRAN for a binary version of TMB matching CRANs Matrix package. URL httpsseamap.env.duke.eduseamapmodelsfilesDukeECNorth_Atlantic_right_whalev12EC_North_Atlantic_right_whale_v12.zip status was Couldnt connect to server|cannot open URL httpsseamap.env.duke.eduseamapmodelsfilesDukeECNorth_Atlantic_right_whalev12EC_North_Atlantic_right_whale_v12.zip
+density_narw|stem|c08e37929c819885|5d56364df9c9f551|33288daaf35fcb4f|-1417879643||t19305.617650463s|3de19eadeb9e47e0|3081799|rds|local|vector|||13.266||
+density_support|stem|496af80ce906765e|325a823653003c5c|dc575f7e77d8983b|-1767676638||t19305.6618518519s|b2b2484eedfc9534|5707|rds|local|vector|||8.007||
+evalEnvironment|function|858a205f0854b134|||||||||||||||
+feeding_effort|function|afccaaf7ea82ad4e|||||||||||||||
+fill_mask|function|9853fa8b315716cc|||||||||||||||
+geodesic|stem|3271737f49dde397|21e045b24ba07f7f|0a66c71fbc1fe6b3|-1738915189||t19310.5742939815s|4ad13ce24b1ec477|8015981|rds|local|vector|||24.418||
+geodesic_dist|function|5db7f6ec57e18642|||||||||||||||
+get_ais|function|63b0618c5ca44ff0|||||||||||||||
+get_density|function|4ef138cfcd17ce7f|||||||||||||||
+get_farms|function|0ddab5cf9bbcc2ce|||||||||||||||
+get_regions|function|5d34c8c891f83fca|||||||||||||||
+get_world|function|0ae47550411192fd|||||||||||||||
+initialize_model|function|7f4ee77edcdcbd0c|||||||||||||||
+mask_density|function|200356f7b4bce34b|||||||||||||||
+merge_density|function|123d1e8fe3a24c55|||||||||||||||
+milk_assimilation|function|8e91ab26e3e09016|||||||||||||||
+milk_provisioning|function|37af58db6bd549bb|||||||||||||||
+narw_crs|function|3d025e5d979bd837|||||||||||||||
+plot_preds|function|f5148073c4b42a1e|||||||||||||||
+plot.narwsim|function|8277598287202126|||||||||||||||
+pointcount|function|a8a438d56fe616a3|||||||||||||||
+predict_hgam|function|05c4f922a6334dfa|||||||||||||||
+rcpp_hello_world|function|4c123630a5d83ae1|||||||||||||||
+regions|stem|0ce32cd987ff26d9|3ba519074549b2f2|dead4825180c609f|792987418||t19304.4309375s|07129517b4b8981d|3017|rds|local|vector|||3.668||
+regions_eez|stem|a7bb4c51a9b75541|9bf46007dd13c0be|977dae0e33a08bc5|1892299831||t19304.4331944444s|383ec6175685b3fe|65327|rds|local|vector|||3.533||
+run_model|function|8397cbf60d54a86d|||||||||||||||
+sightings|stem|116983b86c8b1f58|dcb949b0a705c424|cfcaebb9b7cad818|1398853383||t19303.5848611111s|8b2c9aafacc99705|1292287|rds|local|vector|||3.84|Package version inconsistency detected.TMB was built with Matrix version 1.4.1Current Matrix version is 1.5.1Please reinstall TMB from source using install.packagesTMB, type  source or ask CRAN for a binary version of TMB matching CRANs Matrix package|
+sim_support|function|60f6979d79c48617|||||||||||||||
+simAnnual|function|b2d241db51f07572|||||||||||||||
+simAnnualCoupled|function|e5f1d254d02cfc25|||||||||||||||
+simBasic|function|bfeb889f143d997c|||||||||||||||
+spatial_support|function|0c1c4a8f4a4e38e4|||||||||||||||
+sum_Nhat|function|7d2f1a125a6a7eb3|||||||||||||||
+toRaster_area|function|7299179857721b50|||||||||||||||
+windfarms|stem|cf7cbfcf733ded54|5867234329d4c157|b8628ea1f9caf769|-1367663514||t19310.5721412037s|6e8194c9f755176e|1353|rds|local|vector|||3.286||
+world|stem|a2f6976c350d9b73|bccac626381a6ace|d58ecd49f97a6ec3|-1868977180||t19305.6313541667s|359f7c682d8d4a0e|58839|rds|local|vector|||4.236|NULL source CRS comment, falling back to PROJ string. CRS object has no comment|

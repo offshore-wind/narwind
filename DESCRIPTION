@@ -1,0 +1,40 @@
+Package: narwind
+Type: Package
+Title: Assessing population effects of offshore wind development of North Atlantic right whales
+Version: 1.0
+Date: 2022-10-03
+Author: Phil J. Bouchet <pb282@st-andrews.ac.uk>
+Maintainer: Phil J. Bouchet <pb282@st-andrews.ac.uk>
+Description: The narwind package provides functions for simulating right whales
+Encoding: UTF-8
+LazyData: true
+RdMacros: Rdpack
+ByteCompile: true
+License: GPL (>= 2)
+Imports: 
+    Rcpp (>= 1.0.8),
+    dismo,
+    fields,
+    furrr,
+    future,
+    future.batchtools,
+    ggplot2,
+    glue,
+    lubridate,
+    mgcv,
+    move,
+    moveVis,
+    pals,
+    raster,
+    Rdpack,
+    rgdal,
+    rgeos,
+    sf,
+    sp,
+    spatstat,
+    stringr,
+    tarchetypes,
+    targets,
+    terra,
+    tidyverse
+LinkingTo: Rcpp, RcppEigen
