@@ -13,10 +13,6 @@ initialize_model <- function(){
 #' Run the bioenergetic model
 #'
 #' @param nsim Number of simulated animals
-#'
-#' @return
-#' @export
-#'
 
 run_model <- function(nsim = 1e3){
   
@@ -82,7 +78,7 @@ run_model <- function(nsim = 1e3){
     latentDensitySeq = seq_along(map_spgrd),
     limits = map_limits, 
     resolution = map_resolution, 
-    M = 100, 
+    M = 100,  # Number of proposals used in the importance sampler for movement (Michelot, 2019)
     # stepsize = 10 * map_resolution[1],
     # stepsize = 120000,
     # stepsize = 9.1e3, # Phil, 5/19/22: More recent papers report movement rates of < 9.1 km per day (on feeding grounds)
@@ -669,9 +665,6 @@ get_world <- function(sc = "medium"){
 #' @param Tstop Time at which milk stops nursing and becomes nutritionally independent (in days).
 #' @param Tdecrease Time at which milk comsuption starts to decrease (in days).
 #' @param E Steepness of the decline
-#'
-#' @return
-#' @export
 
 milk_assimilation <- function(a = seq(0, 500), Tstop = 365, Tdecrease = 100, E = 0.9){
   p <- (a-Tdecrease)/(Tstop-Tdecrease)
@@ -689,9 +682,6 @@ milk_assimilation <- function(a = seq(0, 500), Tstop = 365, Tdecrease = 100, E =
 #' @param maintenance_mass Mass of structural tissues (kg).
 #' @param target_condition Target body condition, expressed as the ratio of reserve to maintenance mass.
 #' @param starvation Starvation threshold
-#'
-#' @return
-#' @export
 
 milk_provisioning <- function(E = -2, blubber_mass, maintenance_mass, target_condition = 0.3, starvation = 0.15){
   p1 <- 1-E
@@ -712,9 +702,6 @@ milk_provisioning <- function(E = -2, blubber_mass, maintenance_mass, target_con
 #' @param target_condition 
 #' @param maintenance_mass 
 #' @param blubber_mass 
-#'
-#' @return
-#' @export
 
 feeding_effort <- function(eta, target_condition = 0.3, maintenance_mass, blubber_mass){
   1/(1+exp(-eta * ((target_condition*maintenance_mass/blubber_mass)-1)))
@@ -724,9 +711,6 @@ feeding_effort <- function(eta, target_condition = 0.3, maintenance_mass, blubbe
 #'
 #' @param gamma Feeding threshold
 #' @param D Coepepod density
-#'
-#' @return
-#' @export
 
 cop_threshold <- function(gamma, D){
   1/(1+exp(gamma-D))
@@ -935,9 +919,6 @@ colour_breaks <- function(dat){
 #' @param animate 
 #' @param raster.id 
 #' @param hide.lgd 
-#'
-#' @return
-#' @export
 
 plot.narwsim <- function(obj, 
                          id = NULL, 
@@ -1101,11 +1082,6 @@ plot.narwsim <- function(obj,
 #' Title
 #'
 #' @param res 
-#'
-#' @return
-#' @export
-#'
-#' @examples
 
 geodesic_dist <- function(grid.res = 85){
   

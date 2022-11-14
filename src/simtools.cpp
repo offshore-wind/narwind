@@ -31,18 +31,18 @@ struct Animal {
     Animal(const double & x0, const double & y0) : x(x0), y(y0) { }
 };
 
-/**
- * animal with capacity for attraction to other latent animals
- */
+//' @name Animal
+//' @title Animal with capacity for attraction to other latent animals
+//'
+//' @description Initialize an animal with latent members, and couple the observed position to one of the latent animals
+//' 
+//' @param init_latent latent animals to be attracted to
+//' @param init_animal index of latent animal to use as starting location
+
  struct CouplingAnimal : public Animal {
      std::vector<Animal> latent;
      CouplingAnimal() { }
-     /**
-      * Initialize an animal with latent members, and couple the observed
-      * position to one of the latent animals
-      * @param init_latent latent animals to be attracted to
-      * @param init_animal index of latent animal to use as starting location
-      */
+
      CouplingAnimal(
          const std::vector<Animal> & init_latent,
          std::size_t init_animal
@@ -172,30 +172,30 @@ Rcpp::NumericVector simAnnual(
     return movesim(animals, environments, rm);
 }
 
-/**
- * Simulate
- *
- * @param densities array of density maps, stored in column-major order with
- *   indices [xind, yind, map] for projected spaces (xind is index for a
- *   projected lon coordinate, yind is index for a projected lat)
- * @param densitySeq 1-indexed vector specifying which density maps should be
- *   used to simulate movement at each timepoint; number of timepoints to
- *   simulate comes from length of vector densitySeq
- * @param latentDensitySeq 1-indexed vector specifying which density maps should
- *   be used to simulate movement for each latent animal
- * @param limits vector (xmin, xmax, ymin, ymax) of spatial coordinate extents
- *   for spatial densities
- * @param resolution vector (xres, yres) of spatial step sizes for spatial
- *   densities
- * @param M specify the number of proposals used in the importance sampler for
- *   movement (Michelot, 2019)
- * @param stepsize the radius of the proposal circle for movement
- *   (Michelot, 2019)
- * @param xinit matrix of initial x coordinates for latent animals (nlatent x n)
- * @param yinit matrix of initial y coordinates for latent animals (nlatent x n)
- * @return
- */
+
+//' Simulate right whale movements
+//' 
+//' @param densities array of density maps, stored in column-major order with 
+//' indices [xind, yind, map] for projected spaces (xind is index for a projected lon coordinate, 
+//' yind is index for a projected lat)
+//' @param densitySeq 1-indexed vector specifying which density maps should be
+//' used to simulate movement at each timepoint; number of timepoints to
+//' simulate comes from length of vector densitySeq
+//' @param latentDensitySeq 1-indexed vector specifying which density maps should
+//' be used to simulate movement for each latent animal
+//' @param limits vector (xmin, xmax, ymin, ymax) of spatial coordinate extents
+//' for spatial densities
+//' @param resolution vector (xres, yres) of spatial step sizes for spatial
+//' densities
+//' @param M specify the number of proposals used in the importance sampler for
+//' movement (Michelot, 2019)
+//' @param stepsize the radius of the proposal circle for movement
+//' (Michelot, 2019)
+//' @param xinit matrix of initial x coordinates for latent animals (nlatent x n)
+//' @param yinit matrix of initial y coordinates for latent animals (nlatent x n)
+//' @return List of coordinates
 // [[Rcpp::export]]
+
 Rcpp::NumericVector simAnnualCoupled(
     std::vector<Eigen::MatrixXd> densities, std::vector<std::size_t> densitySeq,
     std::vector<std::size_t> latentDensitySeq,

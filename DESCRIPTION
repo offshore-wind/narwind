@@ -38,3 +38,4 @@ Imports:
     terra,
     tidyverse
 LinkingTo: Rcpp, RcppEigen
+RoxygenNote: 7.2.2
