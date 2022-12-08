@@ -1,121 +1,395 @@
 # MODEL ------------------------------------------------------
 
-#' Initialize bioenergetic model
+#' Initialize model
 #'
-#' Prepare data required for model runs. 
-#' 
 #' @export
-
 initialize_model <- function(){
-  targets::tar_make()
+  Rcpp::sourceCpp("src/simtools.cpp")
+  source("R/run_model.R")
+  assign("init.model", value = TRUE, envir = .GlobalEnv)
 }
 
-#' Run the bioenergetic model
+# SPATIAL DATA ------------------------------------------------------
+  
+#' Projected coordinate system
 #'
-#' @param nsim Number of simulated animals
-
-run_model <- function(nsim = 1e3){
-  
-  # ............................................................
-  # Load simulation tools
-  # ............................................................
-  # Rcpp::sourceCpp("src/simtools.cpp")
-  
-  # ............................................................
-  # Load spatial data
-  # ............................................................
-  regions <- targets::tar_read(regions)
-  wrld <- targets::tar_read(world)
-  windfarms <- targets::tar_read(windfarms)
-  density.support <- targets::tar_read(density_support) 
-  d <- targets::tar_read(density_narw)
-  
-  # ............................................................
-  # Apply spatial mask
-  # ............................................................
-  map_spgrd <- lapply(d, function(x) {
-    dens <- as(x, "SpatialGridDataFrame")
-    mask_density(x = dens, mask = density.support, fill = 1e-6, offset = 1e-6, clamp = TRUE)
-  })
-  
-  maps <- lapply(map_spgrd, as.matrix)
-  
-  # TODO: throw error if the map data are not in the format we expect
-  
-  # ............................................................
-  # Reference information for maps
-  # ............................................................
-  coords <- sp::coordinates(map_spgrd[[1]])
-  colnames(coords) <- c("x", "y")
-  map_limits <- c(range(coords[,1]), range(coords[,2]))
-  map_resolution <- map_spgrd[[1]]@grid@cellsize
-  
-  # ............................................................
-  # Set up simulation parameters
-  # ............................................................
-  
-  # Define time steps and sequence of density maps for each day
-  date_seq <- seq(from = lubridate::ymd('20220901'), by = 'day', length.out = 365)
-  map_seq <- lubridate::month(date_seq)
-  
-  # Simulate initial locations for latent animals
-  # Return cell ID for each animal (columns) x month (rows)
-  init_inds <- do.call(rbind, lapply(maps, function(m) {
-    p <- as.numeric(m)
-    p[!is.finite(p)] <- 0
-    sample(x = 1:length(p), size = nsim, replace = TRUE, prob = p)
-  }))
-  
-  # ............................................................
-  # Run simulation
-  # ............................................................
-  
-  # TODO: estimate spatial step size
-  
-  animals <- simAnnualCoupled(
-    densities = maps, 
-    densitySeq = map_seq, 
-    latentDensitySeq = seq_along(map_spgrd),
-    limits = map_limits, 
-    resolution = map_resolution, 
-    M = 100,  # Number of proposals used in the importance sampler for movement (Michelot, 2019)
-    # stepsize = 10 * map_resolution[1],
-    # stepsize = 120000,
-    # stepsize = 9.1e3, # Phil, 5/19/22: More recent papers report movement rates of < 9.1 km per day (on feeding grounds)
-    stepsize = 79.8,# Phil, 5/19/22: ...though up to 79.8 km per day in some cases.
-    xinit = matrix(data = coords[init_inds, 'x'], nrow = nrow(init_inds)),
-    yinit = matrix(data = coords[init_inds, 'y'], nrow = nrow(init_inds))
-  )
-  
-  dimnames(animals)[[3]] <- format(date_seq)
-  
-  # ............................................................
-  # Validate sampling scheme
-  # ............................................................
-  
-  # tidy version of map rasters
-  # raster_id <- map_seq[1]
-  # df <- as.data.frame(raster::raster(map_spgrd[[raster_id]]), xy = TRUE)
-  
-  # TODO: do data format checks on df here?
-  # scroll across longitude first, so we're in row-major order
-  # head(coords)
-  # we start with (xmin,ymax) and work our way over.  the cells are all center-offset,
-  # so the bounding box is not the correct xmin value
-  # map_spgrd[[raster_id]]@bbox
-
- class(animals) <- c("narwsim", class(animals))
- return(animals)
-
+#' @return An object of class \code{CRS}.
+#' 
+narw_crs <- function(){
+  sp::CRS("+proj=aea +lat_0=34 +lon_0=-78 +lat_1=27.3333333333333 +lat_2=40.6666666666667 +x_0=0 +y_0=0 +datum=WGS84 +units=km +no_defs")
 }
 
-# test <- data.frame(t(animals[c('easting','northing'), animal_id, ]))
-# plot(test)
-# points(test[1,], pch = 16)
-# points(test[2,], pch = 16)
+predict_hgam <- function(object, newdata, type, n.chunks = 5){
+  
+  N <- nrow(newdata)
+  n <- ceiling(N/n.chunks)
+  new.data <- split(1:N, ceiling(seq_along(1:N)/n)) |> 
+    purrr::map(.f = ~newdata[.x,])
+  
+  purrr::map(.x = new.data, .f = ~predict(object, newdata = .x, type = type)) |>
+    do.call(what = c)
+  
+}
+
+support_as_polygon <- function(){
+  support_grd <- targets::tar_read(density_support) |> raster::raster()
+  support_grd[support_grd == 0, ] <- NA
+  support_grd <- raster::rasterToPolygons(support_grd)
+  support_grd <- rgeos::gUnionCascaded(support_grd)
+  support_grd
+}
+
+spatial_support <- function(min_density = 0.001){
+  
+  # ..........................................
+  # Density surfaces
+  # ..........................................
+  
+  map_rasters <- targets::tar_read(density_merge) |> 
+    purrr::map(.f = ~as(.x, "SpatialGridDataFrame"))
+  
+  # ..........................................
+  # Spatial support
+  # ..........................................
+  
+  # Identify locations that exceed a minimum density value in some raster
+  filtered_support <- map_rasters[[1]]
+  filtered_support$Nhat <- FALSE
+  for(m in map_rasters) {
+    m$Nhat[is.na(m$Nhat)] <- 0
+    filtered_support$Nhat <- filtered_support$Nhat | (m$Nhat > min_density)
+  }
+  
+  # Identify connected components within the filtered support
+  coords <- sp::coordinates(filtered_support)
+  colnames(coords) <- c("x", "y")
+  rowseq <- sort(unique(coords[,"x"]))
+  colseq <- sort(unique(coords[,"y"]))
+  fs <- spatstat.geom::im(mat = as.matrix(filtered_support), xcol = colseq, yrow = rowseq)
+  components <- spatstat.geom::connected(fs)
+  
+  # Use the largest component to define the spatial mask
+  filtered_support$Nhat <- as.numeric(components$v)
+  largest_component <- which.max(table(filtered_support$Nhat))
+  filtered_support$Nhat <- filtered_support$Nhat == largest_component
+  filtered_support$Nhat[!is.finite(filtered_support$Nhat)] <- FALSE
+  
+  # ..........................................
+  # Manually add support for Canada
+  # ..........................................
+  
+  # Load region boundaries
+  regions.support <- targets::tar_read(regions)
+  
+  # Filter out Canada
+  regions.support <- regions.support[regions.support@data$region %in% c("GSL", "SCOS"),] 
+  
+  # Overlay regions onto current spatial support
+  regions.raster <- raster::rasterize(
+    x = regions.support,
+    y = raster::raster(x = regions.support,
+                       resolution = filtered_support@grid@cellsize,
+                       origin = raster::origin(raster::raster(filtered_support))))
+  
+  regions.raster[!is.na(regions.raster)] <- 1
+  
+  combined_support <- raster::merge(regions.raster, raster::raster(filtered_support))
+  
+  # ..........................................
+  # Mask out land
+  # ..........................................
+  
+  wrld <- targets::tar_read(world)
+  
+  outlines.raster <- raster::rasterize(
+    x = wrld, 
+    y = raster::raster(x = wrld, 
+                       resolution = filtered_support@grid@cellsize, 
+                       origin = raster::origin(raster::raster(combined_support))))
+  
+  # Mark land regions with a mask value
+  outlines.raster@data@values[outlines.raster@data@values > 0] <- -1
+  outlines.raster <- raster::crop(outlines.raster, combined_support)
+  
+  # Combine data to form mask
+  # Remove/mask land regions and non-labeled regions from spatial support
+  cleaned_support <- merge(outlines.raster, combined_support)
+  cleaned_support <- raster::crop(cleaned_support, raster::extent(filtered_support))
+  cleaned_support[cleaned_support <= 0] <- 0
+  
+  # Convert to logical
+  cleaned_support@data@values <- cleaned_support@data@values > 0
+  names(cleaned_support) <- "Nhat"
+  
+  # Trim
+  cleaned_support <- raster::trim(cleaned_support)
+  
+  # Convert to SGDF
+  as(cleaned_support, "SpatialGridDataFrame")
   
   
+  # sightings <- targets::tar_read(sightings)
+  # 
+  # # Project sighting coordinates
+  # sightings.pp = sp::SpatialPoints(
+  #   coords = sightings[,c("Longitude","Latitude")], 
+  #   proj4string = sp::CRS("+proj=longlat"))
+  # 
+  # sightings.proj = sp::spTransform(x = sightings.pp, CRSobj = narw_crs())
+  # 
+  # # Calculate proportion of sightings that lie in support
+  # perc.sightings = sp::over(sightings.proj, cleaned_support)
+  # cat("Sightings in support:", round(100*mean(is.finite(unlist(perc.sightings))),1), "%")
+  # 
+  # # Make simulation support plottable
+  # ddf = data.frame(cleaned_support)
+  # 
+  # # Build spatial support plot
+  # pl <- ggplot2::ggplot() + 
+  #   # Simulation support
+  #   ggplot2::geom_raster(
+  #     mapping = ggplot2::aes(x = s1, y = s2, fill = layer),
+  #     data = ddf
+  #   ) + 
+  #   # Sightings
+  #   ggplot2::geom_point(
+  #     mapping = ggplot2::aes(x = Longitude, y = Latitude),
+  #     data = as.data.frame(sightings.proj),
+  #     size = .001
+  #   ) + 
+  #   # Land
+  #   ggplot2::geom_sf(data = world_sf, fill = "lightgrey", color = "black", size = 0.25) +
+  #   ggplot2::guides(fill = "none") +
+  #   coord_sf(xlim = raster::extent(cleaned_support)[1:2], 
+  #            ylim = raster::extent(cleaned_support)[3:4], expand = TRUE) +
+  #   xlab("") + ylab("")
+  # 
+  # print(pl)
   
+}
+
+sum_Nhat <- function(df, reg = "GSL", Ntot = 336){
+  
+  # Ntot is the latest population abundance estimate
+  # See NARWC report card 2021.
+  # https://www.narwc.org/uploads/1/1/6/6/116623219/2021report_cardfinal.pdf
+  
+  if(!"month" %in% names(df)) stop("Cannot find <month> variable")
+  
+  # Assign grid cells to regions
+  ppts <- sp::SpatialPoints(coords = df[, c("x", "y")], proj4string = narw_crs())
+  myregions <- sp::spTransform(regions, CRSobj = narw_crs())
+  df$region <- regions$region[sp::over(sp::geometry(ppts), sp::geometry(myregions), returnList = FALSE)]
+  
+  # Ntot <- df |> dplyr::group_by(month) |> dplyr::summarise(Ntot = round(sum(Nhat),0))
+  
+  df.out <- df |> 
+    dplyr::group_by(region,month) |> 
+    dplyr::summarise(Nhat = round(sum(Nhat),0)) |> 
+    dplyr::arrange(region) |> 
+    dplyr::filter(!is.na(region)) |> 
+    dplyr::mutate(perc = round(100* Nhat / Ntot, 1)) |> 
+    dplyr::filter(region == reg) |> 
+    dplyr::ungroup()
+  
+  # df.out <- dplyr::left_join(df, Ntot, by = "month") |> 
+  #   dplyr::mutate(perc = round(100* Nhat / Ntot, 1)) |> 
+  #   dplyr::filter(region == reg) |> 
+  #   dplyr::ungroup()
+  
+  print(df.out)
+  cat(paste0("Average: ", round(mean(df.out[df.out$perc>0,]$perc),1), "%"))
+  
+}
+
+
+
+# geodesic_dist <- function(grid.res = 85){
+#   
+#   # Density support
+#   d.support <- targets::tar_read(density_support) |> raster::raster()
+#   d.support[d.support < 1] <- NA
+#   d.poly <- raster::rasterToPolygons(d.support) |> rgeos::gUnionCascaded()
+#   d.support[is.na(d.support)] <- 3
+#   
+#   # Create grid
+#   r.grid <- sp::makegrid(d.poly, cellsize = grid.res) |>
+#     dplyr::mutate(cell = NA) |> 
+#     dplyr::rename(x = x1, y = x2)
+#   
+#   r.grid <- sp::SpatialPointsDataFrame(coords = r.grid[, c("x", "y")], 
+#                                        data = r.grid,
+#                                        proj4string = narw_crs())
+#   
+#   r.grid <- r.grid[which(sp::over(r.grid, d.poly) == 1),]
+#   
+#   r.grid$cell <- purrr::map_dbl(.x = 1:length(r.grid), 
+#                                 .f = ~raster::cellFromXY(d.support, r.grid[.x,]@coords))
+#   
+#   d <- targets::tar_read(density_narw)[[1]] |> 
+#     raster::raster() |> raster::mask(mask = d.poly)
+#   vor <- dismo::voronoi(r.grid)
+#   vr <- raster::intersect(vor, d.poly)
+#   vr <- raster::rasterize(vr, d, 'cell')
+#   
+#   # Calculate geodesic distances from each grid point -- return a raster
+#   future::plan(future::multisession)
+#   
+#   suppressMessages(gd <- furrr::future_map(.x = r.grid$cell,
+#                                            .f = ~{
+#                                              library(raster)
+#                                              r <- d.support
+#                                              r[.x] <- 2
+#                                              terra::gridDistance(r, origin = 2, omit = 3)}, 
+#                                            .options = furrr::furrr_options(seed = TRUE)))
+#   
+#   # gd <- raster::stack(gd)
+#   names(gd) <- r.grid$cell
+#   
+#   return(list(grid = r.grid, cellno = vr, raster = gd))
+#   
+# }
+
+plot_preds <- function(dat, month = NULL, do.facet = TRUE, plot.sightings = TRUE, hide.lgd = FALSE, alpha = 1){
+  
+  if(!is.null(month)){
+    do.facet <- FALSE
+    dat <- dat[dat$month == month,]
+  }
+  
+  colour.breaks <-  colour_breaks(dat)
+  legend.title <- expression(atop(atop(textstyle("Individuals"),
+                                       atop(textstyle("per 25 km"^2)))))
+  
+  dat <- dat |> 
+    dplyr::mutate(Ncol = cut(Nhat, breaks = colour.breaks, include.lowest = TRUE)) |> 
+    dplyr::mutate(Ncol = factor(Ncol))
+  
+  levels(dat$Ncol) <-  gsub(pattern = ",", replacement = " – ", levels(dat$Ncol))
+  levels(dat$Ncol) <-  gsub(pattern = "\\[|\\]", replacement = "", levels(dat$Ncol))
+  levels(dat$Ncol) <-  gsub(pattern = "\\(|\\)", replacement = "", levels(dat$Ncol))
+  
+  r.dat <- raster::rasterFromXYZ(dat[, c("x", "y", "Nhat")], res = d.res, crs = narw_crs())
+  x.lim <- raster::extent(r.dat)[1:2]
+  y.lim <- raster::extent(r.dat)[3:4]
+  
+  # world.df <- ggplot2::fortify(world) |> dplyr::rename(x = long, y = lat)
+  
+  p <- ggplot2::ggplot(data = dat) +  
+    ggplot2::geom_raster(aes(x,y, fill = Ncol)) +
+    # ggplot2::geom_polygon(data = world.df, aes(x,y,group = group),
+    # fill = "lightgrey", color = "black", size = 0.25) +
+    ggplot2::geom_sf(data = world_sf, fill = "lightgrey", color = "black", size = 0.25) +
+    ylab("") + xlab("") +
+    coord_sf(xlim = x.lim, ylim = y.lim, expand = FALSE) +
+    scale_fill_manual(name = legend.title,
+                      values = pals::viridis(length(levels(dat$Ncol))),
+                      guide = guide_legend(reverse = TRUE))
+  
+  if(hide.lgd) p <- p + theme(legend.position = "none")
+  
+  if(plot.sightings){
+    
+    narwc_df <- narwc.sp@data
+    
+    if(!is.null(month)) narwc_df <- narwc_df[narwc_df$month == month,]
+    
+    p <- p + geom_point(data = narwc_df, aes(x, y), alpha = alpha)
+  }
+  
+  if(do.facet) p <- p + facet_wrap(~month)
+  return(p)
+}
+
+add_country <- function(df){
+  ppts <- sp::SpatialPoints(coords = df[, c("x", "y")], proj4string = narw_crs())
+  df$region <- "U.S."
+  df$region[sp::over(sp::geometry(canada_ocean), sp::geometry(ppts), returnList = TRUE)[[1]]] <- "Canada"
+  return(df)
+}
+
+add_xy <- function(dat, CRS.obj = narw_crs()){
+  
+  tmp <- sp::SpatialPoints(
+    coords = dat[, c("longitude", "latitude")],
+    proj4string = sp::CRS("+proj=longlat")) |>
+    sp::spTransform(CRSobj = CRS.obj)
+  
+  xy <- sp::coordinates(tmp) |> as.data.frame()
+  names(xy) <- c("x", "y")
+  
+  cbind(dat, xy)
+  
+}
+
+add_latlon <- function(dat, CRS.obj = narw_crs()){
+  
+  tmp <- sp::SpatialPoints(
+    coords = dat[, c("easting", "northing")],
+    proj4string = narw_crs()) |>
+    sp::spTransform(CRSobj = sp::CRS("+proj=longlat"))
+  
+  xy <- sp::coordinates(tmp) |> as.data.frame()
+  names(xy) <- c("long", "lat")
+  
+  cbind(dat, xy)
+  
+}
+
+pointcount = function(r, pts, mask = NULL){
+  # Make a raster of zeroes like the input
+  r2 = r
+  r2[] = 0
+  
+  # Get the cell index for each point and make a table:
+  counts = table(raster::cellFromXY(r, pts))
+  
+  # Fill in the raster with the counts from the cell index:
+  r2[as.numeric(names(counts))] = counts
+  
+  if(!is.null(mask)){
+    r2 <- raster::crop(r2, raster::extent(mask))
+    r2 <- raster::mask(r2, mask)
+  }
+  
+  return(r2)
+}
+
+toRaster_area <- function(poly, bufferwidth = NULL){
+  
+  if(!is.null(bufferwidth)) poly <- terra::buffer(poly, width = bufferwidth)
+  
+  r <- raster::raster(ext = raster::extent(poly), resolution = d.res, crs = narw_crs())
+  r <- suppressWarnings(raster::projectRaster(from = r, to = d[[1]], alignOnly = TRUE))
+  r <- raster::setValues(r, 0)
+  
+  # Crop the raster to Canadian waters
+  r <- raster::crop(r, raster::extent(poly))
+  r <- raster::mask(r, poly)
+  
+  # Convert raster cells to polygons to calculate areas
+  r.poly <- raster::rasterToPolygons(r)
+  r.overlap <- sp::over(r.poly, world, returnList = TRUE)
+  r.overlap <- purrr::map_dbl(.x = r.overlap, .f = ~nrow(.x))
+  r.overlap <- r.overlap == 1
+  r.poly.overlap <- r.poly[r.overlap,]
+  
+  r.poly.overlap <- 
+    rgeos::gIntersection(spgeom1 = poly, spgeom2 = r.poly.overlap, byid = TRUE, drop_lower_td = TRUE)
+  
+  r.area <- rgeos::gArea(r.poly, byid = TRUE)
+  r.area[r.overlap] <- rgeos::gArea(r.poly.overlap, byid = TRUE)
+  r.poly$area <- r.area
+  r.poly$layer <- NULL
+  
+  r <- raster::rasterize(r.poly, r, field = "area")
+  names(r) <- c("area")
+  r$d <- 0
+  r$d[is.na(r$area)] <- NA
+  
+  r
+}
+
 #' Clip and fill input raster
 #'
 #' Fill NA values within a mask region
@@ -126,7 +400,7 @@ run_model <- function(nsim = 1e3){
 #' @param offset Additional value to add to all locations within mask.
 #' @param clamp Logical. Set to TRUE to give all locations outside mask region an NA value.
 
-mask_density <- function(x, mask, fill, offset = 0, clamp = FALSE) {
+fill_mask <- function(x, mask, fill, offset = 0, clamp = FALSE) {
 
   if(!is.logical(mask$Nhat)){
     stop('mask raster must have logical entries')
@@ -138,6 +412,35 @@ mask_density <- function(x, mask, fill, offset = 0, clamp = FALSE) {
     x$Nhat[!mask$Nhat] = NA
   }
   return(x)
+}
+
+#' Title
+#'
+#' @export
+
+clip_density <- function(){
+  
+  # Load density surfaces
+  d <- targets::tar_read(density_merge)
+  density.support <- targets::tar_read(density_support)
+  
+  # Apply spatial mask
+
+  map_spgrd <- lapply(d, function(x) {
+    dens <- as(x, "SpatialGridDataFrame")
+    fill_mask(x = dens, mask = density.support, fill = 1e-6, offset = 1e-6, clamp = TRUE)
+  })
+  
+  return(map_spgrd)
+}
+
+regions_matrix <- function(){
+  regions <- targets::tar_read(regions)
+  support <- targets::tar_read(density_support)
+  regions.m <- raster::rasterize(regions, raster::raster(support)) |> as("SpatialGridDataFrame")
+  regions.m$regionID <- as.numeric(factor(regions.m$region))
+  regions.m$region <- NULL
+  regions.m
 }
 
 #' Download density maps
@@ -629,6 +932,94 @@ get_farms <- function(){
   return(windfarms)
 }
 
+TL <- function(r, a = 0.185){
+  loss <- 20*log10(r*1000)
+  loss <- 15*log10(r*1000)
+  loss[loss < 0] <- 0
+  loss <- loss + a * r
+  return(loss)
+}
+
+summary_geo <- function(obj, lims, res, geomap) {
+  lapply(seq(dim(obj)[3]), function(x){
+    obj.ind <- obj[,,x]
+    obj.ind <- cbind(obj.ind, c(obj.ind[-1, 1], NA), c(obj.ind[-1, 2], NA))
+    dd <- sapply(1:nrow(obj.ind), FUN = function(r) geoD(geomap, obj.ind[r,1], obj.ind[r,2], obj.ind[r,3], obj.ind[r,4], lims, res))
+    unname(dd)
+  })
+}
+
+piling_noise <- function(source.lvl = 180, x, y){
+  
+  # ambient <- targets::tar_read(density_narw)[[1]] |> raster::raster()
+  # ambient[!is.na(ambient)] <- 60
+  
+  d.support <- targets::tar_read(density_support) |> raster::raster()
+  d.support[d.support < 1] <- NA
+  d.support[is.na(d.support)] <- 3
+  
+  d.support[raster::cellFromXY(d.support, cbind(x,y))] <- 2
+
+  rdist <- terra::gridDistance(d.support, origin = 2, omit = 3)
+  
+  dB <- source.lvl - TL(rdist)
+  dB[dB < 60] <- 60
+  plot(terra::rast(dB), col = pals::viridis(100), main = "Noise levels (dB)", xlab = "Easting (km)")
+}
+
+geodesic_dist <- function(){
+
+  
+  r.grid <- r.grid[which(sp::over(r.grid, d.poly) == 1),]
+  
+  r.grid$cell <- purrr::map_dbl(.x = 1:length(r.grid), 
+                                .f = ~raster::cellFromXY(d.support, r.grid[.x,]@coords))
+  
+  d <- targets::tar_read(density_narw)[[1]] |> 
+    raster::raster() |> raster::mask(mask = d.poly)
+  vor <- dismo::voronoi(r.grid)
+  vr <- raster::intersect(vor, d.poly)
+  vr <- raster::rasterize(vr, d, 'cell')
+  
+  # Calculate geodesic distances from each grid point -- return a raster
+  future::plan(future::multisession)
+  
+  suppressMessages(gd <- furrr::future_map(.x = r.grid$cell,
+                                           .f = ~{
+                                             library(raster)
+                                             r <- d.support
+                                             r[.x] <- 2
+                                             terra::gridDistance(r, origin = 2, omit = 3)}, 
+                                           .options = furrr::furrr_options(seed = TRUE)))
+  
+  # gd <- raster::stack(gd)
+  names(gd) <- r.grid$cell
+  
+  return(list(grid = r.grid, cellno = vr, raster = gd))
+  
+}
+
+
+
+
+
+
+
+
+get_turbines <- function(){
+  
+  turbines <- readr::read_csv("data/windfarms/turbine_locs.csv", col_types = "fdd") |> 
+    janitor::clean_names()
+  
+  if(!all(names(turbines) %in% c("farm", "longitude", "latitude"))) 
+    stop("Cannot find all required fields")
+  
+  turbines <- add_xy(dat = turbines)
+  
+  split(x = turbines, f = turbines$farm)
+    
+}
+
 get_regions <- function(eez = FALSE) {
   
   if(eez){
@@ -658,6 +1049,8 @@ get_world <- function(sc = "medium"){
   wrld <- wrld[wrld$admin %in% c("Canada", "United States of America"),]
   return(wrld)
 }
+
+# BIOENERGETICS ------------------------------------------------------
 
 #' Decrease in milk feeding efficiency as a function of calf age
 #'
@@ -716,180 +1109,7 @@ cop_threshold <- function(gamma, D){
   1/(1+exp(gamma-D))
 }
 
-predict_hgam <- function(object, newdata, type, n.chunks = 5){
-  
-  N <- nrow(newdata)
-  n <- ceiling(N/n.chunks)
-  new.data <- split(1:N, ceiling(seq_along(1:N)/n)) |> 
-    purrr::map(.f = ~newdata[.x,])
-  
-  purrr::map(.x = new.data, .f = ~predict(object, newdata = .x, type = type)) |>
-    do.call(what = c)
-  
-}
-
-spatial_support <- function(min_density = 0.001){
-
-  # ..........................................
-  # Density surfaces
-  # ..........................................
-  
-  map_rasters <- targets::tar_read(density_narw) |> 
-    purrr::map(.f = ~as(.x, "SpatialGridDataFrame"))
-  
-  # ..........................................
-  # Spatial support
-  # ..........................................
-  
-  # Identify locations that exceed a minimum density value in some raster
-  filtered_support <- map_rasters[[1]]
-  filtered_support$Nhat <- FALSE
-  for(m in map_rasters) {
-    m$Nhat[is.na(m$Nhat)] <- 0
-    filtered_support$Nhat <- filtered_support$Nhat | (m$Nhat > min_density)
-  }
-  
-  # Identify connected components within the filtered support
-  coords <- sp::coordinates(filtered_support)
-  colnames(coords) <- c("x", "y")
-  rowseq <- sort(unique(coords[,"x"]))
-  colseq <- sort(unique(coords[,"y"]))
-  fs <- spatstat.geom::im(mat = as.matrix(filtered_support), xcol = colseq, yrow = rowseq)
-  components <- spatstat.geom::connected(fs)
-  
-  # Use the largest component to define the spatial mask
-  filtered_support$Nhat <- as.numeric(components$v)
-  largest_component <- which.max(table(filtered_support$Nhat))
-  filtered_support$Nhat <- filtered_support$Nhat == largest_component
-  filtered_support$Nhat[!is.finite(filtered_support$Nhat)] <- FALSE
-  
-  # ..........................................
-  # Manually add support for Canada
-  # ..........................................
-  
-  # Load region boundaries
-  regions.support <- targets::tar_read(regions)
-  
-  # Filter out Canada
-  regions.support <- regions.support[regions.support@data$region %in% c("GSL", "SCOS"),] 
-  
-  # Overlay regions onto current spatial support
-  regions.raster <- raster::rasterize(
-    x = regions.support,
-    y = raster::raster(x = regions.support,
-                       resolution = filtered_support@grid@cellsize,
-                       origin = raster::origin(raster::raster(filtered_support))))
-
-  regions.raster[!is.na(regions.raster)] <- 1
- 
-  combined_support <- raster::merge(regions.raster, raster::raster(filtered_support))
-  
-  # ..........................................
-  # Mask out land
-  # ..........................................
-  
-  wrld <- targets::tar_read(world)
-  
-  outlines.raster <- raster::rasterize(
-    x = wrld, 
-    y = raster::raster(x = wrld, 
-                       resolution = filtered_support@grid@cellsize, 
-                       origin = raster::origin(raster::raster(combined_support))))
-  
-  # Mark land regions with a mask value
-  outlines.raster@data@values[outlines.raster@data@values > 0] <- -1
-  outlines.raster <- raster::crop(outlines.raster, combined_support)
-  
-  # Combine data to form mask
-  # Remove/mask land regions and non-labeled regions from spatial support
-  cleaned_support <- merge(outlines.raster, combined_support)
-  cleaned_support <- raster::crop(cleaned_support, raster::extent(filtered_support))
-  cleaned_support[cleaned_support <= 0] <- 0
-  
-  # Convert to logical
-  cleaned_support@data@values <- cleaned_support@data@values > 0
-  names(cleaned_support) <- "Nhat"
-  
-  # Trim
-  cleaned_support <- raster::trim(cleaned_support)
-  
-  # Convert to SGDF
-  as(cleaned_support, "SpatialGridDataFrame")
-  
-  
-  # sightings <- targets::tar_read(sightings)
-  # 
-  # # Project sighting coordinates
-  # sightings.pp = sp::SpatialPoints(
-  #   coords = sightings[,c("Longitude","Latitude")], 
-  #   proj4string = sp::CRS("+proj=longlat"))
-  # 
-  # sightings.proj = sp::spTransform(x = sightings.pp, CRSobj = narw_crs())
-  # 
-  # # Calculate proportion of sightings that lie in support
-  # perc.sightings = sp::over(sightings.proj, cleaned_support)
-  # cat("Sightings in support:", round(100*mean(is.finite(unlist(perc.sightings))),1), "%")
-  # 
-  # # Make simulation support plottable
-  # ddf = data.frame(cleaned_support)
-  # 
-  # # Build spatial support plot
-  # pl <- ggplot2::ggplot() + 
-  #   # Simulation support
-  #   ggplot2::geom_raster(
-  #     mapping = ggplot2::aes(x = s1, y = s2, fill = layer),
-  #     data = ddf
-  #   ) + 
-  #   # Sightings
-  #   ggplot2::geom_point(
-  #     mapping = ggplot2::aes(x = Longitude, y = Latitude),
-  #     data = as.data.frame(sightings.proj),
-  #     size = .001
-  #   ) + 
-  #   # Land
-  #   ggplot2::geom_sf(data = world_sf, fill = "lightgrey", color = "black", size = 0.25) +
-  #   ggplot2::guides(fill = "none") +
-  #   coord_sf(xlim = raster::extent(cleaned_support)[1:2], 
-  #            ylim = raster::extent(cleaned_support)[3:4], expand = TRUE) +
-  #   xlab("") + ylab("")
-  # 
-  # print(pl)
-  
-}
-
-sum_Nhat <- function(df, reg = "GSL", Ntot = 336){
-  
-  # Ntot is the latest population abundance estimate
-  # See NARWC report card 2021.
-  # https://www.narwc.org/uploads/1/1/6/6/116623219/2021report_cardfinal.pdf
-  
-  if(!"month" %in% names(df)) stop("Cannot find <month> variable")
-  
-  # Assign grid cells to regions
-  ppts <- sp::SpatialPoints(coords = df[, c("x", "y")], proj4string = narw_crs())
-  myregions <- sp::spTransform(regions, CRSobj = narw_crs())
-  df$region <- regions$region[sp::over(sp::geometry(ppts), sp::geometry(myregions), returnList = FALSE)]
-  
-  # Ntot <- df |> dplyr::group_by(month) |> dplyr::summarise(Ntot = round(sum(Nhat),0))
-  
-  df.out <- df |> 
-    dplyr::group_by(region,month) |> 
-    dplyr::summarise(Nhat = round(sum(Nhat),0)) |> 
-    dplyr::arrange(region) |> 
-    dplyr::filter(!is.na(region)) |> 
-    dplyr::mutate(perc = round(100* Nhat / Ntot, 1)) |> 
-    dplyr::filter(region == reg) |> 
-    dplyr::ungroup()
-  
-  # df.out <- dplyr::left_join(df, Ntot, by = "month") |> 
-  #   dplyr::mutate(perc = round(100* Nhat / Ntot, 1)) |> 
-  #   dplyr::filter(region == reg) |> 
-  #   dplyr::ungroup()
-  
-  print(df.out)
-  cat(paste0("Average: ", round(mean(df.out[df.out$perc>0,]$perc),1), "%"))
-  
-}
+# PLOTTING ------------------------------------------------------
 
 # Jason's colour scale
 colour_breaks <- function(dat){
@@ -900,358 +1120,10 @@ colour_breaks <- function(dat){
   return(colour.breaks)
 }
 
+# UTILITY ------------------------------------------------------
 
-# PLOTTING ----------------------------------------------------------------
-
-# ............................................................
-# Plot simulated animal against static spatial background
-# ............................................................
-
-# TODO: restrict the plotted path to the time range the region was active, or 
-# other types of animations
-# plot_simtrack()
-
-#' Title
-#'
-#' @param animals 
-#' @param id 
-#' @param n 
-#' @param animate 
-#' @param raster.id 
-#' @param hide.lgd 
-
-plot.narwsim <- function(obj, 
-                         id = NULL, 
-                         n = 1, 
-                         animate = FALSE, 
-                         raster.id = NULL, 
-                         hide.lgd = FALSE){
-
-  # ....................................
-  # Extract simulated tracks
-  # ....................................
-  
-  if(is.null(raster.id)) raster.id <- sample(1:12, 1)
-  
-  raster.df <- as.data.frame(raster::raster(map_spgrd[[raster_id]]), xy = TRUE)
-  
-  if(is.null(id)) animal_id <- sample(1:ncol(obj), size = 1)
-  
-  locs <- data.frame(t(obj[c('easting','northing'), animal_id, ])) |> 
-    dplyr::mutate(trackID = paste0("narwtrack_", stringr::str_pad(animal_id, 4, pad = "0"))) |> 
-    tibble::rownames_to_column(var = "date") |> 
-    dplyr::mutate(date = lubridate::as_date(date))
-  
-  # ....................................
-  # Create colour scale
-  # ....................................
-
-  legend.title <- bquote(atop(textstyle("Individuals per 25 km"^2),
-                                            atop(textstyle("--"~.(month.name[raster.id])~"--"))))
-  
-  colour.breaks <- colour_breaks(raster.df)
-  raster.df <- raster.df |> 
-    dplyr::mutate(Ncol = cut(Nhat, breaks = colour.breaks, include.lowest = TRUE)) |> 
-    dplyr::mutate(Ncol = factor(Ncol))
-  
-  levels(raster.df$Ncol) <-  gsub(pattern = ",", replacement = " – ", levels(raster.df$Ncol))
-  levels(raster.df$Ncol) <-  gsub(pattern = "\\[|\\]", replacement = "", levels(raster.df$Ncol))
-  levels(raster.df$Ncol) <-  gsub(pattern = "\\(|\\)", replacement = "", levels(raster.df$Ncol))
-  
-  base_p <- ggplot2::ggplot() + 
-    
-    # Density surface
-    ggplot2::geom_raster(
-      data = raster.df,
-      mapping = ggplot2::aes(x = x, y = y, fill = Ncol)) + 
-    
-    # Land
-    ggplot2::geom_sf(data = sf::st_as_sf(wrld), fill = "lightgrey", color = "black", size = 0.25) +
-    
-    # Formatting
-    ggplot2::scale_fill_manual(name = legend.title,
-                               values = pals::brewer.blues(length(levels(raster.df$Ncol))),
-                               guide = ggplot2::guide_legend(reverse = TRUE),
-                               na.value = "transparent",
-                               na.translate = TRUE) +
-    
-    ggplot2::coord_sf(xlim = range(raster.df$x), ylim = range(raster.df$y), expand = TRUE) +
-    ggplot2::xlab("") +
-    ggplot2::ylab("")
-  
-  if(hide.lgd) base_p <- base_p + theme(legend.position = "none")
-    
-  track_p <- base_p +
-    
-    # Simulated track
-    ggplot2::geom_path(
-      data = locs,
-      mapping = ggplot2::aes(x = easting, y = northing)) +
-    
-    # Start and end points
-    ggplot2::geom_point(data = locs[1,], 
-                        mapping = ggplot2::aes(x = easting, y = northing), 
-                        col = "orange") + 
-    
-    ggplot2::geom_point(data = locs[nrow(locs),], 
-                        mapping = ggplot2::aes(x = easting, y = northing), 
-                        col = "green")
-    
-  suppressWarnings(print(track_p))
-
-  if(animate){
-
-    # ....................................
-    # If multiple individuals 
-    # ....................................
-    
-    # Create all combinations of data
-    track.df <- tidyr::expand_grid(
-      id = unique(locs$trackID),
-      date = seq.Date(from = min(locs$date), to = max(locs$date), by = 1))
-    
-    # create complete dataset
-    df_all <- dplyr::left_join(track.df, locs)
-    
-    mov <- 
-      
-      # Base map
-      base_p + 
-      
-      # Simulated track
-      ggplot2::geom_path(
-        data = locs,
-        mapping = ggplot2::aes(x = easting, y = northing, group = trackID, fill = trackID), alpha = 0.3) +
-      
-      geom_point(data = locs,
-                 aes(x = easting, y = northing, group = trackID, fill = trackID), alpha = 0.7, shape = 21, size = 2)
-      
-      # lines and points
-      # geom_path(data = df_all, 
-      #           aes(x=lon,y=lat,group=id,color=spd), 
-      #           alpha = 0.3)+
-      # geom_point(data = df_all, 
-      #            aes(x=lon,y=lat,group=id,fill=spd),
-      #            alpha = 0.7, shape=21, size = 2)+
-    
-    anim <- mov + 
-      
-      # Reveal data along given dimension - here, allows data to gradually appear through time.
-      gganimate::transition_reveal(along = date) +
-      
-      # Control easing of aesthetics – easing defines how a value changes to another during tweening
-      gganimate::ease_aes('linear') +
-      
-      # Use date as title
-      ggplot2::ggtitle("Date: {frame_along}")
-    
-    anim.out <- gganimate::animate(anim, 
-                                   nframes = 5, 
-                                   fps = 10,
-                                   height = 2, 
-                                   width = 3, 
-                                   units = "in", 
-                                   res = 150)
-    
-    locs$time <- as.POSIXct(locs$date)
-    locs$date <- lubridate::parse_date_time(locs$date, "Ymd")
-    locs.m <- moveVis::df2move(df = locs, proj = narw_crs(), x = "easting", y = "northing", time = "date") 
-    m <- moveVis::align_move(locs.m, res = 1, digit = 0, unit = "days", spaceMethod = "greatcircle")
-    frames <- moveVis::frames_spatial(m,  # move object
-                             map_service = "carto",
-                             map_type = "dark",  # base map
-                             path_size = 2, 
-                             path_colours = c("orange"), 
-                             alpha = 0.5) |>   # path
-      moveVis::add_labels(x = "Longitude", y = "Latitude") |>  # add some customizations
-      moveVis::add_northarrow(colour = "black", position = "bottomright") |>  
-      moveVis::add_scalebar(colour = "black", position = "bottomleft") |>  
-      moveVis::add_timestamps(m, type = "label") |> 
-      moveVis::add_progress(size = 2)
-    
-    world_sf <- get_world() |> sf::st_as_sf()
-    frames.gg <- moveVis::add_gg(frames, 
-       gg = ggplot2::expr(ggplot2::geom_sf(data = sf::st_as_sf(wrld), fill = "lightgrey", color = "black", size = 0.25)))
-    moveVis::animate_frames(frames.gg, out_file = "animation2.gif", overwrite = TRUE, display = FALSE)
-  }
-    
-  return(p)
-
+format_table <- function(df, top = TRUE, bottom = TRUE, sign = "-"){
+  # dashes <- purrr::map_dbl(.x = names(df), .f = ~nchar(.x))
+  # dashes <- purrr::map(.x = dashes, .f = ~paste0(rep(sign, .x), collapse = ""))
+  rbind(df[1:nrow(df) - 1,], c("---", rep("",ncol(df)-1)), df[nrow(df),])
 }
-
-#' Title
-#'
-#' @param res 
-
-geodesic_dist <- function(grid.res = 85){
-  
-  # Density support
-  d.support <- targets::tar_read(density_support) |> raster::raster()
-  d.support[d.support < 1] <- NA
-  d.poly <- raster::rasterToPolygons(d.support) |> rgeos::gUnionCascaded()
-  d.support[is.na(d.support)] <- 3
-  
-  # Create grid
-  r.grid <- sp::makegrid(d.poly, cellsize = grid.res) |>
-    dplyr::mutate(cell = NA) |> 
-    dplyr::rename(x = x1, y = x2)
-  
-  r.grid <- sp::SpatialPointsDataFrame(coords = r.grid[, c("x", "y")], 
-                                       data = r.grid,
-                                       proj4string = narw_crs())
-  
-  r.grid <- r.grid[which(sp::over(r.grid, d.poly) == 1),]
-  
-  r.grid$cell <- purrr::map_dbl(.x = 1:length(r.grid), 
-                            .f = ~raster::cellFromXY(d.support, r.grid[.x,]@coords))
-  
-  d <- targets::tar_read(density_narw)[[1]] |> raster::mask(mask = d.poly)
-  vor <- dismo::voronoi(r.grid)
-  vr <- raster::intersect(vor, d.poly)
-  vr <- raster::rasterize(vr, d, 'cell')
-
-  # Calculate geodesic distances from each grid point -- return a raster
-  future::plan(future::multisession)
-
-  suppressMessages(gd <- furrr::future_map(.x = r.grid$cell,
-                          .f = ~{
-                            library(raster)
-                            r <- d.support
-                            r[.x] <- 2
-                            terra::gridDistance(r, origin = 2, omit = 3)}, 
-                          .options = furrr::furrr_options(seed = TRUE)))
- 
-  gd <- raster::stack(gd)
-  names(gd) <- paste0("r", r.grid$cell)
-  
-  return(list(grid = r.grid, cellno = vr, stack = gd))
-  
-  }
-
-plot_preds <- function(dat, month = NULL, do.facet = TRUE, plot.sightings = TRUE, hide.lgd = FALSE, alpha = 1){
-  
-  if(!is.null(month)){
-    do.facet <- FALSE
-    dat <- dat[dat$month == month,]
-  }
-  
-  colour.breaks <-  colour_breaks(dat)
-  legend.title <- expression(atop(atop(textstyle("Individuals"),
-                                       atop(textstyle("per 25 km"^2)))))
-  
-  dat <- dat |> 
-    dplyr::mutate(Ncol = cut(Nhat, breaks = colour.breaks, include.lowest = TRUE)) |> 
-    dplyr::mutate(Ncol = factor(Ncol))
-  
-  levels(dat$Ncol) <-  gsub(pattern = ",", replacement = " – ", levels(dat$Ncol))
-  levels(dat$Ncol) <-  gsub(pattern = "\\[|\\]", replacement = "", levels(dat$Ncol))
-  levels(dat$Ncol) <-  gsub(pattern = "\\(|\\)", replacement = "", levels(dat$Ncol))
-  
-  r.dat <- raster::rasterFromXYZ(dat[, c("x", "y", "Nhat")], res = d.res, crs = narw_crs())
-  x.lim <- raster::extent(r.dat)[1:2]
-  y.lim <- raster::extent(r.dat)[3:4]
-  
-  # world.df <- ggplot2::fortify(world) |> dplyr::rename(x = long, y = lat)
-  
-  p <- ggplot2::ggplot(data = dat) +  
-    ggplot2::geom_raster(aes(x,y, fill = Ncol)) +
-    # ggplot2::geom_polygon(data = world.df, aes(x,y,group = group),
-    # fill = "lightgrey", color = "black", size = 0.25) +
-    ggplot2::geom_sf(data = world_sf, fill = "lightgrey", color = "black", size = 0.25) +
-    ylab("") + xlab("") +
-    coord_sf(xlim = x.lim, ylim = y.lim, expand = FALSE) +
-    scale_fill_manual(name = legend.title,
-                      values = pals::viridis(length(levels(dat$Ncol))),
-                      guide = guide_legend(reverse = TRUE))
-  
-  if(hide.lgd) p <- p + theme(legend.position = "none")
-  
-  if(plot.sightings){
-    
-    narwc_df <- narwc.sp@data
-    
-    if(!is.null(month)) narwc_df <- narwc_df[narwc_df$month == month,]
-    
-    p <- p + geom_point(data = narwc_df, aes(x, y), alpha = alpha)
-  }
-  
-  if(do.facet) p <- p + facet_wrap(~month)
-  return(p)
-}
-
-add_country <- function(df){
-  ppts <- sp::SpatialPoints(coords = df[, c("x", "y")], proj4string = narw_crs())
-  df$region <- "U.S."
-  df$region[sp::over(sp::geometry(canada_ocean), sp::geometry(ppts), returnList = TRUE)[[1]]] <- "Canada"
-  return(df)
-}
-
-add_xy <- function(dat, CRS.obj = narw_crs()){
-  
-  tmp <- sp::SpatialPoints(
-    coords = dat[, c("longitude", "latitude")],
-    proj4string = sp::CRS("+proj=longlat")) |>
-    sp::spTransform(CRSobj = CRS.obj)
-  
-  xy <- sp::coordinates(tmp) |> as.data.frame()
-  names(xy) <- c("x", "y")
-  
-  cbind(dat, xy)
-  
-}
-
-pointcount = function(r, pts, mask = NULL){
-  # Make a raster of zeroes like the input
-  r2 = r
-  r2[] = 0
-  
-  # Get the cell index for each point and make a table:
-  counts = table(raster::cellFromXY(r, pts))
-  
-  # Fill in the raster with the counts from the cell index:
-  r2[as.numeric(names(counts))] = counts
-  
-  if(!is.null(mask)){
-    r2 <- raster::crop(r2, raster::extent(mask))
-    r2 <- raster::mask(r2, mask)
-  }
-  
-  return(r2)
-}
-
-toRaster_area <- function(poly, bufferwidth = NULL){
-  
-  if(!is.null(bufferwidth)) poly <- terra::buffer(poly, width = bufferwidth)
-  
-  r <- raster::raster(ext = raster::extent(poly), resolution = d.res, crs = narw_crs())
-  r <- suppressWarnings(raster::projectRaster(from = r, to = d[[1]], alignOnly = TRUE))
-  r <- raster::setValues(r, 0)
-  
-  # Crop the raster to Canadian waters
-  r <- raster::crop(r, raster::extent(poly))
-  r <- raster::mask(r, poly)
-  
-  # Convert raster cells to polygons to calculate areas
-  r.poly <- raster::rasterToPolygons(r)
-  r.overlap <- sp::over(r.poly, world, returnList = TRUE)
-  r.overlap <- purrr::map_dbl(.x = r.overlap, .f = ~nrow(.x))
-  r.overlap <- r.overlap == 1
-  r.poly.overlap <- r.poly[r.overlap,]
-  
-  r.poly.overlap <- 
-    rgeos::gIntersection(spgeom1 = poly, spgeom2 = r.poly.overlap, byid = TRUE, drop_lower_td = TRUE)
-  
-  r.area <- rgeos::gArea(r.poly, byid = TRUE)
-  r.area[r.overlap] <- rgeos::gArea(r.poly.overlap, byid = TRUE)
-  r.poly$area <- r.area
-  r.poly$layer <- NULL
-  
-  r <- raster::rasterize(r.poly, r, field = "area")
-  names(r) <- c("area")
-  r$d <- 0
-  r$d[is.na(r$area)] <- NA
-  
-  r
-}
-
-narw_crs <- function(){sp::CRS("+proj=aea +lat_0=34 +lon_0=-78 +lat_1=27.3333333333333 +lat_2=40.6666666666667 +x_0=0 +y_0=0 +datum=WGS84 +units=km +no_defs")}
