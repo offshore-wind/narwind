@@ -5,6 +5,9 @@
 # Session Data files
 .RData
 
+# Custom folders
+/src/backup
+
 # User-specific files
 .Ruserdata
 

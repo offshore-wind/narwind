@@ -6,8 +6,15 @@
 #define EIGEN_PERMANENTLY_DISABLE_STUPID_WARNINGS
 #include <Eigen/Eigen>
 #include <RcppEigen.h>
+#include <Rcpp.h> // For lists
+#include <iostream>
+#include <cstdlib>
 #include "environments.h"
 #include "movements.h"
+#include "geodesic.h"
+#include "progressbar.hpp"
+using namespace std;
+
 
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(cpp11)]]
@@ -23,7 +30,7 @@
 // - which means that they can be accessed and modified from outside the code.
 
 /**
- * basic state for an animal
+ * Basic state for an animal
  */
 struct Animal {
     double x, y;
@@ -31,13 +38,14 @@ struct Animal {
     Animal(const double & x0, const double & y0) : x(x0), y(y0) { }
 };
 
-//' @name Animal
+/**
 //' @title Animal with capacity for attraction to other latent animals
 //'
 //' @description Initialize an animal with latent members, and couple the observed position to one of the latent animals
 //' 
 //' @param init_latent latent animals to be attracted to
 //' @param init_animal index of latent animal to use as starting location
+*/
 
  struct CouplingAnimal : public Animal {
      std::vector<Animal> latent;
@@ -62,19 +70,25 @@ struct Animal {
  * @param m object used to update animal's position
  * @return array of simulated locations with indices [coord, animal, time]
  */
-template<typename AnimalType, typename EnvironmentContainer,
-         typename MovementRule, int CoordSize = 2>
+template<typename AnimalType, 
+         typename EnvironmentContainer,
+         typename MovementRule, 
+         int CoordSize = 2>
 Rcpp::NumericVector movesim(
     std::vector<AnimalType> & animals,
     EnvironmentContainer & environments,
-    MovementRule & m
-) {
+    MovementRule & m,
+    Eigen::MatrixXd support,
+    Eigen::VectorXd limits, 
+    Eigen::VectorXd resolution,
+    double stepsize,
+    bool progress) {
 
-    // number of animals and timepoints to simulate
+    // Number of animals and time points to simulate
     std::size_t n = animals.size();
     std::size_t t = environments.size();
-
-    // initialize and label output
+    
+    // Initialize and label output
     Rcpp::NumericVector out(n*t*CoordSize);
     out.attr("dim") = Rcpp::Dimension(CoordSize,n,t);
     out.attr("dimnames") = Rcpp::List::create(
@@ -82,16 +96,27 @@ Rcpp::NumericVector movesim(
         R_NilValue
     );
 
-    // loop over timepoints and environments: one environment per timepoint
+    // Loop over time points and environments: One environment per time point
     Rcpp::NumericVector::iterator data_out = out.begin();
+    
     auto env_end = environments.end();
     auto animals_end = animals.end();
+    
+    // Initialize progress bar
+    progressbar bar(t);
+    
+    // 365 steps per animal
     for(auto env = environments.begin(); env != env_end; ++env) {
+      
+      if(progress) bar.update();
+      
         for(auto animal = animals.begin(); animal != animals_end; ++animal) {
-            // save current coords
+          
+            // Save current coordinates
             *(data_out++) = animal->x;
             *(data_out++) = animal->y;
-            // update the animal's state
+            
+            // Update coordinates
             m.update(*animal, *env);
         }
     }
@@ -99,25 +124,198 @@ Rcpp::NumericVector movesim(
     return out;
 }
 
-// [[Rcpp::export]]
-Rcpp::NumericVector simBasic(
-    std::size_t t, std::size_t n, Eigen::MatrixXd cov1, Eigen::MatrixXd cov2,
-    Eigen::VectorXd beta, Eigen::VectorXd lim, Eigen::VectorXd res, double allr
-) {
+template<typename AnimalType, 
+         typename EnvironmentContainer,
+         typename MovementRule, 
+         int CoordSize = 2>
+Rcpp::NumericVector movesim_geo(
+    std::vector<AnimalType> & animals,
+    EnvironmentContainer & environments,
+    MovementRule & m,
+    Eigen::MatrixXd support,
+    Eigen::VectorXd limits, 
+    Eigen::VectorXd resolution,
+    double stepsize,
+    bool progress) {
+  
+  // Number of animals and time points to simulate
+  std::size_t n = animals.size();
+  std::size_t t = environments.size();
+  
+  // int nD = std::round(stepsize/resolution[0])*resolution[0];
+  
+  // Initialize and label output
+  Rcpp::NumericVector out(n*t*CoordSize);
+  out.attr("dim") = Rcpp::Dimension(CoordSize,n,t);
+  out.attr("dimnames") = Rcpp::List::create(
+    Rcpp::CharacterVector::create("easting", "northing"), R_NilValue,
+    R_NilValue
+  );
+  
+  // Loop over time points and environments: One environment per time point
+  Rcpp::NumericVector::iterator data_out = out.begin();
+  
+  auto env_end = environments.end();
+  auto animals_end = animals.end();
 
-    // initialize population
-    std::vector<Animal> animals(n);
+  progressbar bar(t);
+  
+  // 365 steps per animal
+  for(auto env = environments.begin(); env != env_end; ++env) {
+    
+    if(progress) bar.update();
+    
+    for(auto animal = animals.begin(); animal != animals_end; ++animal) {
 
-    // initialize environment container
-    RSFEnvironment env(cov1, cov2, beta, lim, res);
-    ConstEnvironment<RSFEnvironment> environments(env, t);
+      // Save current coordinates
+      *(data_out++) = animal->x;
+      *(data_out++) = animal->y;
+      
+      double x_0 = animal->x;
+      double y_0 = animal->y;
 
-    // initialize movement rule
-    // RandomMovement<Animal, RSFEnvironment> rm;
-    ReweightedRandomWalk<Animal, RSFEnvironment> rm(100, allr);
+      bool calc_geo = false;
+      double x_1, y_1;
+      int gd;
+      int *gdptr;
+      gdptr = &gd;
 
-    return movesim(animals, environments, rm);
+      if((x_0 >= 685 & x_0 <= 1420 & y_0 >= 1070 & y_0 <= 1865) ||
+         (x_0 >= 520 & x_0 <= 730 & y_0 >= 825 & y_0 <= 960)
+         ) {
+        calc_geo = true;
+      }
+      
+      if(!calc_geo){
+        
+        // Update the animal's state
+        m.update(*animal, *env);
+        
+      } else {
+       
+       while(calc_geo == true){
+         
+         // i++;
+         
+         // Update the animal's state
+         m.update(*animal, *env);
+         
+         x_1 = animal->x;
+         y_1 = animal->y;
+         
+         // D = abs(x_1-x_0) + abs(y_1-y_0);
+         
+         // Calculate geodesic distance
+         *gdptr = geoD(support, x_0, y_0, x_1, y_1, limits, resolution);
+         
+         // std::cout << gd  << " points(" << x_0 << "," << y_0 << ") " << "points(" << x_1 << "," << y_1 << ")\n";
+         // if(gd <= 5*stepsize) pass = true;
+         // abs(gd - D) < 3
+         // if(abs(gd - D) < 2){
+         if(*gdptr >= 0 & *gdptr < 100){
+           // if(gd > 0){
+           calc_geo = false;
+         } else {
+           animal->x = x_0;
+           animal->y = y_0;
+         }
+         
+       }
+        
+      }
+      
+      
+
+    }
+  }
+  
+  return out;
 }
+
+template<typename AnimalType, 
+         typename EnvironmentContainer,
+         typename MovementRule, 
+         int CoordSize = 2>
+Rcpp::NumericVector movesim_repeat(
+    int r,
+    std::vector<AnimalType> & animals,
+    EnvironmentContainer & environments,
+    MovementRule & m,
+    Eigen::MatrixXd support,
+    Eigen::VectorXd limits, 
+    Eigen::VectorXd resolution,
+    double stepsize,
+    bool progress) {
+  
+  // Number of animals and time points to simulate
+  std::size_t n = animals.size();
+  std::size_t t = environments.size();
+  
+  // Initialize and label output
+  Rcpp::NumericVector out(n*t*CoordSize);
+  out.attr("dim") = Rcpp::Dimension(CoordSize,n,t);
+  out.attr("dimnames") = Rcpp::List::create(
+    Rcpp::CharacterVector::create("easting", "northing"), R_NilValue,
+    R_NilValue
+  );
+  
+  std::cout << "movesim_repeat" <<"\n";
+  
+  // Loop over time points and environments: One environment per time point
+  Rcpp::NumericVector::iterator data_out = out.begin();
+  
+  auto env_end = environments.end();
+  auto animals_end = animals.end();
+  progressbar bar(t);
+  
+  // 365 steps per animal
+  for(auto env = environments.begin(); env != env_end; ++env) {
+    
+    if(progress) bar.update();
+    
+    for(auto animal = animals.begin(); animal != animals_end; ++animal) {
+      
+      // Save current coordinates
+      *(data_out++) = animal->x;
+      *(data_out++) = animal->y;
+
+      for (int i = 0; i < r; ++i) m.update(*animal, *env);
+      
+    }
+  }
+  
+  return out;
+}
+
+// // [[Rcpp::export]]
+// Rcpp::NumericVector simBasic(
+//     Eigen::MatrixXd support,
+//     std::size_t t, 
+//     std::size_t n, 
+//     Eigen::MatrixXd cov1, 
+//     Eigen::MatrixXd cov2,
+//     Eigen::VectorXd beta, 
+//     Eigen::VectorXd limits, 
+//     Eigen::VectorXd resolution,
+//     double stepsize,
+//     double allr
+// ) {
+// 
+//     // initialize population
+//     std::vector<Animal> animals(n);
+// 
+//     // initialize environment container
+//     RSFEnvironment env(cov1, cov2, beta, limits, resolution);
+//     ConstEnvironment<RSFEnvironment> environments(env, t, limits, resolution);
+// 
+//     // initialize movement rule
+//     // RandomMovement<Animal, RSFEnvironment> rm;
+//     ReweightedRandomWalk<Animal, RSFEnvironment> rm(100, allr);
+// 
+//     return movesim(animals, environments, rm, support, limits, resolution, stepsize);
+// }
+
+
 
 /**
  * Simulate
@@ -140,37 +338,75 @@ Rcpp::NumericVector simBasic(
  * @param yinit initial y coordinates for animals to simulate
  * @return
  */
-// [[Rcpp::export]]
-Rcpp::NumericVector simAnnual(
-    std::vector<Eigen::MatrixXd> densities, std::vector<std::size_t> densitySeq,
-    Eigen::VectorXd limits, Eigen::VectorXd resolution, std::size_t M,
-    double stepsize, std::vector<double> xinit, std::vector<double> yinit
-) {
+// // [[Rcpp::export]]
+// Rcpp::NumericVector simAnnual(
+//     Eigen::MatrixXd support,
+//     std::vector<Eigen::MatrixXd> densities, 
+//     std::vector<std::size_t> densitySeq,
+//     Eigen::VectorXd limits, 
+//     Eigen::VectorXd resolution, 
+//     std::size_t M,
+//     double stepsize, 
+//     std::vector<double> xinit, 
+//     std::vector<double> yinit
+// ) {
+// 
+//     // 0-index densitySeq since, coming from R, we assume it is 1-indexed
+//     for(auto d = densitySeq.begin(); d != densitySeq.end(); ++d)
+//         --(*d);
+// 
+//     // initialize environments
+//     std::vector<Environment> environments;
+//     auto dend  = densitySeq.end();
+//     for(auto d = densitySeq.begin(); d != dend; ++d)
+//         environments.emplace_back(densities[*d], limits, resolution, *d); // Phil
+//         // environments.emplace_back(densities[*d], limits, resolution, *d);
+// 
+//     // initialize population
+//     std::vector<Animal> animals;
+//     auto xend = xinit.end();
+//     auto xiter = xinit.begin();
+//     auto yiter = yinit.begin();
+//     while(xiter != xend) {
+//         animals.push_back(Animal(*(xiter++), *(yiter++)));
+//     }
+// 
+//     // initialize movement rule
+//     ReweightedRandomWalk<Animal, Environment> rm(M, stepsize);
+// 
+//     return movesim(animals, environments, rm, support, limits, resolution, stepsize);
+// }
 
-    // 0-index densitySeq since, coming from R, we assume it is 1-indexed
-    for(auto d = densitySeq.begin(); d != densitySeq.end(); ++d)
-        --(*d);
+// //' Retrieve nested list elements
+// //' 
+// //' @param l Input list
+// //' @param loc
+// //' @param month
+// //' @return List element
+// // [[Rcpp::export]]
+// Eigen::MatrixXd accessLOL(Rcpp::List l, std::string loc, int month) {
+//   Rcpp::List louter = l[loc];
+//   return louter[month-1];
+// }
 
-    // initialize environments
-    std::vector<Environment> environments;
-    auto dend  = densitySeq.end();
-    for(auto d = densitySeq.begin(); d != dend; ++d)
-        environments.emplace_back(densities[*d], limits, resolution, *d);
+// //' Convert integer to character string
+// // [[Rcpp::export]]
+// std::string int2char(int i) {
+//   std::string c = std::to_string(i);
+//   return(c);
+// }
+// 
 
-    // initialize population
-    std::vector<Animal> animals;
-    auto xend = xinit.end();
-    auto xiter = xinit.begin();
-    auto yiter = yinit.begin();
-    while(xiter != xend) {
-        animals.push_back(Animal(*(xiter++), *(yiter++)));
-    }
-
-    // initialize movement rule
-    ReweightedRandomWalk<Animal, Environment> rm(M, stepsize);
-
-    return movesim(animals, environments, rm);
-}
+// void my_func(double threshold){
+//   bool obj = false;
+//   int i = 0;
+//   while(!obj){
+//     i++;
+//     std::cout << i << "\n";
+//     double a = R::runif(0,1);
+//     if(a > threshold) obj = true;
+//   }
+// }
 
 
 //' Simulate right whale movements
@@ -181,29 +417,48 @@ Rcpp::NumericVector simAnnual(
 //' @param densitySeq 1-indexed vector specifying which density maps should be
 //' used to simulate movement at each timepoint; number of timepoints to
 //' simulate comes from length of vector densitySeq
-//' @param latentDensitySeq 1-indexed vector specifying which density maps should
-//' be used to simulate movement for each latent animal
-//' @param limits vector (xmin, xmax, ymin, ymax) of spatial coordinate extents
-//' for spatial densities
-//' @param resolution vector (xres, yres) of spatial step sizes for spatial
-//' densities
-//' @param M specify the number of proposals used in the importance sampler for
-//' movement (Michelot, 2019)
-//' @param stepsize the radius of the proposal circle for movement
-//' (Michelot, 2019)
+//' @param latentDensitySeq 1-indexed vector specifying which density maps should be used to simulate movement for each latent animal
+//' @param limits vector (xmin, xmax, ymin, ymax) of spatial coordinate extents for spatial densities
+//' @param resolution vector (xres, yres) of spatial step sizes for spatial densities
+//' @param M Number of proposals used in the importance sampler for movement (Michelot, 2019)
+//' @param stepsize Rradius of the proposal circle for movement (Michelot, 2019)
 //' @param xinit matrix of initial x coordinates for latent animals (nlatent x n)
 //' @param yinit matrix of initial y coordinates for latent animals (nlatent x n)
 //' @return List of coordinates
 // [[Rcpp::export]]
 
 Rcpp::NumericVector simAnnualCoupled(
-    std::vector<Eigen::MatrixXd> densities, std::vector<std::size_t> densitySeq,
+    bool geodesic,
+    Eigen::MatrixXd support,
+    std::vector<Eigen::MatrixXd> densities,
+    std::vector<std::size_t> densitySeq,
     std::vector<std::size_t> latentDensitySeq,
-    Eigen::VectorXd limits, Eigen::VectorXd resolution, std::size_t M,
-    double stepsize, Eigen::MatrixXd xinit, Eigen::MatrixXd yinit
+    Eigen::VectorXd limits, 
+    Eigen::VectorXd resolution,
+    std::size_t M,
+    double stepsize, 
+    Eigen::MatrixXd xinit, 
+    Eigen::MatrixXd yinit,
+    bool progress
 ) {
+  
+  // 
+  // bool geodesic,
+  // bool dorepeat,
+  
+    // Eigen::MatrixXd regions,
+  
+    // int maxstep = stepsize;
+    // int r = 1;
+    // 
+    // if(dorepeat){
+    //   maxstep = 15; // Maximum "true" step size allowed to avoid land crossings
+    //   r = std::round(stepsize / maxstep);
+    // } 
 
     // 0-index latentDensitySeq since, coming from R, we assume it is 1-indexed
+    // .begin = Returns an iterator pointing to the first element in the sequence
+    // .end = Returns an iterator pointing to the last element in the sequence
     for(auto d = latentDensitySeq.begin(); d != latentDensitySeq.end(); ++d)
         --(*d);
 
@@ -211,19 +466,22 @@ Rcpp::NumericVector simAnnualCoupled(
     for(auto d = densitySeq.begin(); d != densitySeq.end(); ++d)
         --(*d);
 
-    // initialize environments for latent animals
+    // Initialize environments for latent animals
     std::vector<Environment> latent_environments;
     auto dend  = latentDensitySeq.end();
+    // emplace_back: inserts a new element at the end of a vector
     for(auto d = latentDensitySeq.begin(); d != dend; ++d)
-        latent_environments.emplace_back(densities[*d], limits, resolution, *d);
+      latent_environments.emplace_back(densities[*d], limits, resolution, *d);
+           // latent_environments.emplace_back(densities[*d], regions, limits, resolution, *d); // Phil
 
-    // initialize environments with attraction to latent animals
+        
+    // Initialize environments with attraction to latent animals
     std::vector<LatentAttractor> environments;
     auto dattrend = densitySeq.end();
     for(auto d = densitySeq.begin(); d != dattrend; ++d)
         environments.emplace_back(*d);
 
-    // initialize population
+    // Initialize population
     std::vector<CouplingAnimal> animals;
     double *xiter = xinit.data();
     double *yiter = yinit.data();
@@ -235,16 +493,34 @@ Rcpp::NumericVector simAnnualCoupled(
         animals.push_back(CouplingAnimal(latent_animals, densitySeq[0]));
     }
 
-    // initialize latent movement rule
+    // Initialize latent movement rule
+    // typedef gives a type a new name
     typedef ReweightedRandomWalk<Animal, Environment> LatentMvmt;
     LatentMvmt rm(M, stepsize);
 
-    // initialize observed movement rule
+    // Initialize observed movement rule
     CoupledRandomWalk<
         CouplingAnimal, LatentAttractor, LatentMvmt, std::vector<Environment>
     > crm(rm, latent_environments, M, stepsize);
 
-    return movesim(animals, environments, crm);
+    
+    
+    if (geodesic) {
+      return movesim_geo(animals, environments, crm, support, limits, resolution, stepsize, progress);
+    } else {
+      return movesim(animals, environments, crm, support, limits, resolution, stepsize, progress);
+    }
+    // 
+    // if(dorepeat){
+    //   return movesim_repeat(r, animals, environments, crm, support, limits, resolution, stepsize, progress);
+    // }
+    // 
+    // if(geodesic == false & dorepeat == false) {
+    //   
+    // }
+    
+    // return movesim(animals, environments, crm, support, limits, resolution, stepsize, progress);
+
 }
 
 /**
@@ -262,10 +538,23 @@ Rcpp::NumericVector simAnnualCoupled(
  * @return the density map value at location (x,y)
  */
 // [[Rcpp::export]]
-double evalEnvironment(
-    Eigen::MatrixXd density, Eigen::VectorXd limits, Eigen::VectorXd resolution,
-    double x, double y
-) {
-    Environment e(density, limits, resolution, 0);
+double evalEnvironment(Eigen::MatrixXd density, 
+                       Eigen::VectorXd limits, 
+                       Eigen::VectorXd resolution,
+    double x, double y) {
+  Environment e(density, limits, resolution, 0);
     return e(x, y);
 }
+
+// Version with regions
+// Eigen::VectorXd evalEnvironment(Eigen::MatrixXd density, 
+//                                 Eigen::MatrixXd regions,
+//                                 Eigen::VectorXd limits, 
+//                                 Eigen::VectorXd resolution,
+//                                 double x, double y) {
+//   Environment e(density, regions, limits, resolution, 0);
+//   return e(x, y);
+// }
+// 
+// 
+

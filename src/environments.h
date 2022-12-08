@@ -7,119 +7,85 @@
 // [[Rcpp::plugins(cpp11)]]
 
 class LatentAttractor {
-    public:
-        // index of latent animal toward which movement is attracted
-        const std::size_t &id;
-        LatentAttractor(const std::size_t & animal_id) : id(animal_id) { }
+  
+public:
+  
+  // Index of latent animal toward which movement is attracted
+  const std::size_t &id;
+  LatentAttractor(const std::size_t & animal_id) : id(animal_id) { }
 };
 
-/**
- * Environment that captures features for NARW simulation
- */
+// Environment that captures features for NARW simulation
+
 class Environment {
 
     private:
 
         using MatrixType = Eigen::MatrixXd;
 
-        // population density raster (in projected coordinates)
+        // Population density raster (in projected coordinates)
         const MatrixType &m_density;
-        // spatial extents and resolution of density raster
-        const Eigen::VectorXd &m_limits, &m_resolution;
-
+        // const MatrixType &m_regions;
+        
     public:
-
-        // numeric id for map
+      
+      // Spatial extents and resolution of density raster
+      const Eigen::VectorXd &m_limits, &m_resolution;
+      
+        // Numeric id for map
         const std::size_t id;
 
+        // Initialize class members
         Environment(
-            const MatrixType & density, const Eigen::VectorXd & limits,
-            const Eigen::VectorXd & resolution, const std::size_t & mapid
-        ) : m_density(density), m_limits(limits), m_resolution(resolution),
-            id(mapid) { }
+            const MatrixType & density,
+            // const MatrixType & regions,
+            const Eigen::VectorXd & limits,
+            const Eigen::VectorXd & resolution, 
+            const std::size_t & mapid
+        ) : 
+          m_density(density),
+          // m_regions(regions),
+          m_limits(limits), 
+          m_resolution(resolution),
+          id(mapid) { }
 
         /**
          * Return the density value at the specified coordinates
          * @param x
          * @param y
-         * @return
+         * @return Density value
          */
+        // Eigen::VectorXd operator()(const double & x, const double & y) {
         double operator()(const double & x, const double & y) {
-            if(x < m_limits[0] || x > m_limits[1] || y < m_limits[2] ||
-               y > m_limits[3])
-                return 0;
+          
+          // Return 0 if outside the study area boundaries
+            if(x < m_limits[0] || x > m_limits[1] || y < m_limits[2] || 
+               y > m_limits[3]){
+              return 0;
+              // return Eigen::Matrix2d::Zero().row(0);
+            }
 
-            std::size_t i = std::floor((x-m_limits[0])/m_resolution[0]);
-            std::size_t j = std::floor((m_limits[3]-y)/m_resolution[1]);
+
+            // Phil (Nov 16, 2022) - changed floor to round
+            // Retrieve row and col of cell corresponding to x,y
+            std::size_t i = std::round((x-m_limits[0])/m_resolution[0]);
+            std::size_t j = std::round((m_limits[3]-y)/m_resolution[1]);
 
             double d = m_density(i,j);
-
-            if(!std::isfinite(d))
-                return 0;
+            // int r = m_regions(i,j);
+            
+            if(!std::isfinite(d)) {
+              return 0;
+              // return Eigen::Matrix2d::Zero().row(0);
+            }
 
             return d;
+            // Eigen::VectorXd out(2);
+            // out[0] = d;
+            // out[1] = r;
+            // return out;
         }
 
-};
-
-/**
- * dummy environment for use when simulation does not require environment state
- */
-struct EmptyEnvironment { };
-
-/**
- * Environment that provides a resource selection function, as in Theo's example
- */
-class RSFEnvironment {
-
-    private:
-
-        using MatrixType = Eigen::MatrixXd;
-
-        const MatrixType &m_cov1, &m_cov2;
-        const Eigen::VectorXd &m_beta, &m_lim, &m_res;
-
-    public:
-
-        const std::size_t id = 0;
-
-        /**
-         * @param cov1 Matrix of values for the first resource
-         * @param cov2 Matrix of values for the second resource
-         * @param beta Vector of resource selection coefficients
-         * @param lim Four values: x min, x max, y min, y max
-         * @param res Two values: resolution in x, and resolution in y
-         */
-        RSFEnvironment(
-            const MatrixType &cov1, const MatrixType &cov2,
-            const Eigen::VectorXd &beta, const Eigen::VectorXd &lim,
-            const Eigen::VectorXd &res
-        ) : m_cov1(cov1), m_cov2(cov2), m_beta(beta), m_lim(lim), m_res(res) { }
-
-        /**
-         * Evaluate the resource selection function at the specified coordinates
-         *
-         * @param x
-         * @param y
-         * @return
-         */
-        double operator()(const double &x, const double &y) {
-            if(x < m_lim[0] || x > m_lim[1] || y < m_lim[2] || y > m_lim[3])
-                return 0;
-
-            std::size_t i = std::floor((m_lim[3]-y)/m_res[1]);
-            std::size_t j = std::floor((x-m_lim[0])/m_res[0]);
-
-            double res1 = m_cov1(i,j);
-            double res2 = m_cov2(i,j);
-
-            if(!std::isfinite(res1) || !std::isfinite(res2))
-                return 0;
-
-            double reg = m_beta[0]*res1 + m_beta[1]*res2;
-
-            return std::exp(reg);
-        }
 };
 
 /**
@@ -131,7 +97,9 @@ class RSFEnvironment {
 template<typename EnvironmentType>
 struct ConstEnvironment {
 
-    // iterator keeps count of iterations, but always points to the same object
+    using MatrixType = Eigen::MatrixXd;
+  
+    // Iterator keeps count of iterations, but always points to the same object
     struct Iterator {
 
         using iterator_category = std::forward_iterator_tag;
@@ -165,16 +133,19 @@ struct ConstEnvironment {
 
     EnvironmentType & m_env;
     std::size_t n_elem;
+    const Eigen::VectorXd &m_limits, &m_resolution;
 
     /**
      * @param environment Environment object iterator should point to
      * @param n Number of virtual copies to "create"
      */
-    ConstEnvironment(EnvironmentType & environment, std::size_t n) :
-        m_env(environment), n_elem(n) { }
-
+    ConstEnvironment(EnvironmentType & environment, 
+                     std::size_t n, 
+                     const Eigen::VectorXd &lim,
+                     const Eigen::VectorXd &res) :
+      m_env(environment), n_elem(n), m_limits(lim), m_resolution(res) { }
+    
     std::size_t size() { return n_elem; }
-
     Iterator begin() { return Iterator(&m_env, 0); }
     Iterator end()   { return Iterator(&m_env, n_elem); }
 };
