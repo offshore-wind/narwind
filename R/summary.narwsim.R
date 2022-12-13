@@ -13,7 +13,15 @@
 #' plot(animals)
 #' }
 
-summary.narwsim <- function(obj, do.plot = FALSE, show.legend = FALSE, geodesic = FALSE){
+summary.narwsim <- function(obj,
+                            do.plot = FALSE,
+                            show.legend = FALSE,
+                            geodesic = FALSE){
+  
+  # obj = m
+  # do.plot = FALSE
+  # show.legend = FALSE
+  # geodesic = FALSE
   
   if(!"narwsim" %in% class(obj)) stop("Input must be of class <narwsim>")
   
@@ -26,18 +34,23 @@ summary.narwsim <- function(obj, do.plot = FALSE, show.legend = FALSE, geodesic 
   cat("-------------------------------------------------------------\n")
   cat("-------------------------------------------------------------\n\n")
   
-  n.ind <- dim(obj)[3]
+  locations <- obj$locs
+  n.ind <- dim(locations[[1]])[3]
+  
+  cohorts <- obj$param$cohorts
+  cohort.names <- obj$param$cohort.names
+  cohort.ab <- unname(obj$param$cohort.ab)
   
   if(show.legend){
-  cat("BOF: Bay of Fundy\n")
-  cat("CABOT: Cabot Strait\n")
-  cat("CCB: Cape Cod Bay\n")
-  cat("GOM: Gulf of Maine and Georges Bank\n")
-  cat("GSL: Gulf of St Lawrence\n")
-  cat("MIDA: Mid-Atlantic\n")
-  cat("SCOS: Scotian Shelf\n")
-  cat("SEUS: South-east United States\n")
-  cat("SNE: Southern New England\n\n")
+    cat("BOF: Bay of Fundy\n")
+    cat("CABOT: Cabot Strait\n")
+    cat("CCB: Cape Cod Bay\n")
+    cat("GOM: Gulf of Maine and Georges Bank\n")
+    cat("GSL: Gulf of St Lawrence\n")
+    cat("MIDA: Mid-Atlantic\n")
+    cat("SCOS: Scotian Shelf\n")
+    cat("SEUS: South-east United States\n")
+    cat("SNE: Southern New England\n\n")
   }
   
   # Dynamic scoping to make sure geodesic calculations are fast
@@ -47,105 +60,86 @@ summary.narwsim <- function(obj, do.plot = FALSE, show.legend = FALSE, geodesic 
   # Load spatial support
   # ............................................................
   
-  geomap <- targets::tar_read(density_support)
-  coords <- sp::coordinates(geomap)
+  coords <- sp::coordinates(density_support)
   colnames(coords) <- c("x", "y")
   map_limits <- c(range(coords[,1]), range(coords[,2]))
-  map_resolution <- raster::res(raster::raster(geomap))
-  
-  geomap <- geomap |> raster::as.matrix()
-  geomap <- t(1*geomap)
+  map_resolution <- raster::res(raster::raster(density_support))
+  geomap <- t(1*raster::as.matrix(density_support))
   
   # ............................................................
-  # Load regions
+  # Calculate distances travelled and tally regions visited
   # ............................................................
   
-  regions <- targets::tar_read(regions)
-
-  # ............................................................
-  # Calculate Euclidean distances between pairs of sequential points
-  # ............................................................
-  
-  dist.euclid <- lapply(seq(n.ind), function(x){
-    obj.ind <- obj[,,x]
-    obj.ind <- cbind(obj.ind, c(obj.ind[-1, 1], NA), c(obj.ind[-1, 2], NA))
-    dd <- sqrt((obj.ind[, 3]-obj.ind[, 1])^2+(obj.ind[, 4]-obj.ind[, 2])^2)
-    dd <- dd[!is.na(dd)]
-    unname(dd)
-  }) 
-  
-  # D <- lapply(seq(dim(obj)[3]), function(x){
-  #   obj.ind <- obj[,,x]
-  #   cbind(obj.ind, c(obj.ind[-1, 1], NA), c(obj.ind[-1, 2], NA))})
-  
-  # ............................................................
-  # Calculate geodesic distances between pairs of sequential points
-  # ............................................................
-
-  if(geodesic){
-    dist.geo <- summary_geo(obj, map_limits, map_resolution, geomap)
-  } else {
-    dist.geo <- list(NA)
-  }
-
-  # ............................................................
-  # Total migration distances
-  # ............................................................
-  
-  tot.dist.euclid <- purrr::map_dbl(.x = dist.euclid, .f = ~sum(.x))
-  if(geodesic) tot.dist.geo <- purrr::map_dbl(.x = dist.geo, .f = ~sum(.x)) else tot.dist.geo <- NULL
-  
-  # ............................................................
-  # Tally points by region
-  # ............................................................
- 
-  #  obj.sf <- lapply(seq(dim(obj)[3]), function(x){
-  #   tmp <- sf::st_as_sf(x = data.frame(obj[ , c("easting", "northing"), x]), coords = c("easting", "northing"), crs = narw_crs())
-  #   sf::st_agr(tmp) <- "constant"
-  #   tmp
-  # })
-   
-   obj.sp <- lapply(seq(dim(obj)[3]), function(x){
-     sp::SpatialPoints(coords = obj[ , c("easting", "northing"), x], proj4string = narw_crs())
-   })
-  
-  locations.per.region <- sp::over(regions, do.call(rbind, obj.sp), returnList = TRUE) |> 
-    purrr::set_names(nm = regions$region)
-   
-  # sf::st_agr(regions) <- "constant"
-  
-  pr.ind <- purrr::map(.x = obj.sp, .f = ~sp::over(regions, .x, returnList = TRUE)) |> 
-    purrr::map(.f = ~purrr::set_names(x = .x, nm = regions$region))
-  regions.per.ind <- purrr::map_dbl(.x = pr.ind, .f = ~length(purrr::discard(.x = .x, .p = function(x) length(x)==0)))
-  # pr.ind <- purrr::map(.x = obj.sf, .f = ~sf::st_intersection(regions, .x)$region)
- 
-  # regions.per.ind <- purrr::map_dbl(.x = pr.ind, .f = ~length(unique(.x)))
-  
-  days.per.regions <- purrr::map(sort(regions$region), .f = ~{
-    sapply(X = pr.ind, FUN = function(x) length(x[[.x]]))
-  }) |> purrr::set_names(sort(regions$region))
-  
-  # days.per.regions <- purrr::set_names(regions$region) |> 
-  #   purrr::map(.f = ~{sapply(X = pr.ind, function(i) sum(grepl(pattern = .x, x = i)))})
-  
-  ind.per.regions <- purrr::map(.x = days.per.regions, .f = ~as.numeric(sum(.x>0)))
-    
-  # locations.per.region <- purrr::set_names(sort(regions$region)) |> 
-  #   purrr::map(.f = ~sf::st_intersection(regions[regions$region == .x,], do.call(what = rbind, obj.sf))$region)
-  
-  locations.per.country <- list("Canada" = length(unlist(locations.per.region[c("GSL", "SCOS", "CABOT", "BOF_lower", "BOF_upper")])),
-                                "U.S" = length(unlist(locations.per.region[c("CCB", "MIDA", "SNE", "SEUS", "GOM")])))
-  
-  # locations.per.country <- 
-  #   purrr::map(.x = locations.per.region, 
-  # .f = ~unname(sapply(X = .x, FUN = function(x) ifelse(x %in% c("GSL", "SCOS", "CABOT", "BOF_lower", "BOF_upper"), "Canada", "U.S."))))
-  
-  # locations.per.region <- sp::over(regions, do.call(rbind, obj.sp), returnList = TRUE) |> purrr::map(.f = ~length(.x)) |> 
-  #   purrr::set_names(nm = regions$region)
-  
-  locations.per.region <- purrr::map(.x = locations.per.region, .f = ~length(.x))
-  # locations.per.country <- unname(unlist(locations.per.country))
-  
+  out <- purrr::set_names(cohort.ab) |> 
+    purrr::map2(.y = cohort.names, .f = ~{
+      
+      # ............................................................
+      # Calculate Euclidean distances between pairs of sequential points
+      # ............................................................
+      
+      dist.euclid <- lapply(seq(n.ind), function(x){
+        obj.ind <- locations[[.x]][,,x]
+        obj.ind <- cbind(obj.ind, c(obj.ind[-1, 1], NA), c(obj.ind[-1, 2], NA))
+        dd <- sqrt((obj.ind[, 3]-obj.ind[, 1])^2+(obj.ind[, 4]-obj.ind[, 2])^2)
+        dd <- dd[!is.na(dd)]
+        unname(dd)
+      }) 
+      
+      # ............................................................
+      # Calculate geodesic distances between pairs of sequential points
+      # ............................................................
+      
+      if(geodesic){
+        dist.geo <- summary_geo(obj, map_limits, map_resolution, geomap)
+      } else {
+        dist.geo <- NA
+      }
+      
+      # ............................................................
+      # Total migration distances
+      # ............................................................
+      
+      tot.dist.euclid <- purrr::map_dbl(.x = dist.euclid, .f = ~sum(.x))
+      if(geodesic) tot.dist.geo <- purrr::map_dbl(.x = dist.geo, .f = ~sum(.x)) else tot.dist.geo <- NULL
+      
+      # ............................................................
+      # Tally points by region
+      # ............................................................
+      
+      obj.sp <- lapply(seq(dim(locations[[.x]])[3]), function(x){
+        sp::SpatialPoints(coords = locations[[.x]][ , c("easting", "northing"), x], proj4string = narw_crs())
+      })
+      
+      locations.per.region <- sp::over(regions, do.call(rbind, obj.sp), returnList = TRUE) |> 
+        purrr::set_names(nm = regions$region)
+      
+      pr.ind <- purrr::map(.x = obj.sp, .f = ~sp::over(regions, .x, returnList = TRUE)) |> 
+        purrr::map(.f = ~purrr::set_names(x = .x, nm = regions$region))
+      
+      regions.per.ind <- purrr::map_dbl(.x = pr.ind, .f = ~length(purrr::discard(.x = .x, .p = function(x) length(x)==0)))
+      
+      days.per.regions <- purrr::map(sort(regions$region), .f = ~{
+        sapply(X = pr.ind, FUN = function(x) length(x[[.x]]))
+      }) |> purrr::set_names(sort(regions$region))
+      
+      ind.per.regions <- purrr::map(.x = days.per.regions, .f = ~as.numeric(sum(.x>0)))
+      
+      locations.per.country <- 
+        list("Canada" = length(unlist(locations.per.region[c("GSL", "SCOS", "CABOT", "BOF_lower", "BOF_upper")])),
+             "U.S" = length(unlist(locations.per.region[c("CCB", "MIDA", "SNE", "SEUS", "GOM")])))
+      
+      locations.per.region <- purrr::map(.x = locations.per.region, .f = ~length(.x))
+      
+      # Return outputs
+      
+      list(dist = list(euclid = dist.euclid, geo = dist.geo),
+           totdist = list(euclid = tot.dist.euclid, geo = tot.dist.geo),
+           n = list(locreg = locations.per.region,
+                    locctry = locations.per.country,
+                    dayreg = days.per.regions,
+                    indreg = ind.per.regions,
+                    regind = regions.per.ind))
+    }) # End purrr loop
   
   # ............................................................
   # OUTPUTS
@@ -158,13 +152,17 @@ summary.narwsim <- function(obj, do.plot = FALSE, show.legend = FALSE, geodesic 
     par(mfrow = c(1,1))
   }
   
-  locs.by.region <- tibble::enframe(locations.per.region) |> 
-    dplyr::mutate(value = unlist(value)) |> 
-    dplyr::rename(region = name, n = value) |>
-    dplyr::mutate(percent = 100*n/sum(n)) |> 
-    janitor::adorn_totals() |>
-    dplyr::mutate(n = formatC(n, big.mark = ","), percent = formatC(percent, digits = 1, format = "f")) 
-
+  locs.by.region <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
+    tibble::enframe(.x$n$locreg) |> 
+      dplyr::mutate(value = unlist(value)) |> 
+      dplyr::rename(region = name, n = value) |>
+      dplyr::mutate(cohort = .y) |> 
+      dplyr::relocate(cohort, .after = region)
+  }) |> do.call(what = rbind) |> 
+    tidyr::pivot_wider(names_from = cohort, values_from = n) |> 
+    dplyr::arrange(region) |>
+    janitor::adorn_totals()
+  
   locs.by.region <- format_table(locs.by.region)
   
   cat("=============================================================\n")
@@ -172,13 +170,16 @@ summary.narwsim <- function(obj, do.plot = FALSE, show.legend = FALSE, geodesic 
   cat("=============================================================\n")
   
   print(knitr::kable(locs.by.region, format = "simple"))
-
-  locs.by.country <- tibble::enframe(locations.per.country) |> 
-    dplyr::mutate(value = unlist(value)) |> 
-    dplyr::rename(country = name, n = value) |>
-    dplyr::mutate(percent = 100 * n/sum(n)) |> 
-    janitor::adorn_totals() |>
-    dplyr::mutate(n = formatC(n, big.mark = ","), percent = formatC(percent, digits = 1, format = "f")) 
+  
+  locs.by.country <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
+    tibble::enframe(.x$n$locctry) |> 
+      dplyr::mutate(value = unlist(value)) |> 
+      dplyr::rename(country = name, n = value) |>
+      dplyr::mutate(cohort = .y)
+  }) |> do.call(what = rbind) |> 
+    tidyr::pivot_wider(names_from = cohort, values_from = n) |> 
+    dplyr::arrange(country) |>
+    janitor::adorn_totals()
   
   locs.by.country <- format_table(locs.by.country)
   
@@ -187,69 +188,72 @@ summary.narwsim <- function(obj, do.plot = FALSE, show.legend = FALSE, geodesic 
   # ............................................................
   
   print(knitr::kable(locs.by.country, format = "simple"))
-  # print.data.frame(locs.by.country, right = F, row.names = F)
   cat("\n")
   
   cat("=============================================================\n")
   cat("DAILY MOVEMENTS (km)\n")
   cat("=============================================================")
   
-  dist.df <- fivenum(unlist(dist.euclid))[c(1,3,5)] |> 
-    tibble::as_tibble(.name_repair = "minimal") |> 
-    dplyr::mutate(param = c("min", "mean", "max")) |> 
-    dplyr::rename(distance = value) |> 
-    dplyr::mutate(distance = round(distance, 1)) |> 
-    tidyr::pivot_wider(names_from = param, values_from = distance) |> 
-    dplyr::relocate(mean, .after = max)
+  dist.df <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
+    fivenum(unlist(.x$dist$euclid))[c(1,3,5)] |> 
+      tibble::as_tibble(.name_repair = "minimal") |> 
+      dplyr::mutate(param = c("min", "mean", "max")) |> 
+      dplyr::bind_rows(tibble::tibble(value = sd(unlist(.x$dist$euclid)), param = "sd", cohort = .y)) |> 
+      dplyr::rename(distance = value) |> 
+      dplyr::mutate(distance = round(distance, 1)) |> 
+      dplyr::mutate(cohort = .y)
+  }) |> do.call(what = rbind) |> 
+    tidyr::pivot_wider(names_from = param, values_from = distance)
   
-  geodesic.df <- fivenum(unlist(dist.geo))[c(1,3,5)] |> 
-    tibble::as_tibble(.name_repair = "minimal") |> 
-    dplyr::mutate(param = c("min", "mean", "max")) |> 
-    dplyr::rename(distance = value) |> 
-    dplyr::mutate(distance = round(distance, 1)) |> 
-    tidyr::pivot_wider(names_from = param, values_from = distance) |> 
-    dplyr::relocate(mean, .after = max)
+  geodesic.df <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
+    fivenum(unlist(.x$dist$geo))[c(1,3,5)] |> 
+      tibble::as_tibble(.name_repair = "minimal") |> 
+      dplyr::mutate(param = c("min", "mean", "max")) |> 
+      dplyr::bind_rows(tibble::tibble(value = sd(unlist(.x$dist$geo)), param = "sd", cohort = .y)) |> 
+      dplyr::rename(distance = value) |> 
+      dplyr::mutate(distance = round(distance, 1)) |> 
+      dplyr::mutate(cohort = .y)
+  }) |> do.call(what = rbind) |> 
+    tidyr::pivot_wider(names_from = param, values_from = distance)
   
   dist.type <- "euclidean"
+  
   if(geodesic){
     dist.type <-  c(dist.type, "geodesic")
     dist.df <- rbind(dist.df, geodesic.df)
   }
-    
+  
   dist.df <- dist.df |> 
     dplyr::mutate(type = dist.type) |> 
-    dplyr::relocate(type, .before = min)
+    dplyr::relocate(type, .before = cohort)
   
-  # dist.df <- format_table(dist.df, bottom = FALSE)
-
   # ............................................................
   # Print outputs
   # ............................................................
   
   print(knitr::kable(dist.df, format = "simple"))
-  # print.data.frame(dist.df, right = F, row.names = F)
   cat("\n")
   
   cat("=============================================================\n")
   cat("MIGRATORY MOVEMENTS (km)\n")
   cat("=============================================================\n")
   
-  tot.df <- tibble::tibble(d = c(tot.dist.euclid, tot.dist.geo), 
-                           type = rep(dist.type, each = length(tot.dist.euclid))) |> dplyr::group_by(type) |> 
-    dplyr::summarise(min = format(round(min(d),0), big.mark = ","), 
-                     max = format(round(max(d),0), big.mark = ","), 
-                     mean = format(round(mean(d),0), big.mark = ","),
-                     sd = format(round(sd(d),0), big.mark = ",")) |> 
-    as.data.frame()
-  
-  # tot.df <- format_table(tot.df, bottom = FALSE)
+  tot.df <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
+    tibble::tibble(d = c(.x$totdist$euclid, .x$totdist$geo), 
+                   type = rep(dist.type, each = length(.x$totdist$euclid))) |> 
+      dplyr::mutate(cohort = .y) |> 
+      dplyr::group_by(type, cohort) |> 
+      dplyr::summarise(min = format(round(min(d),0), big.mark = ","), 
+                       max = format(round(max(d),0), big.mark = ","), 
+                       mean = format(round(mean(d),0), big.mark = ","),
+                       sd = format(round(sd(d),0), big.mark = ","), .groups = 'drop')
+  }) |> do.call(what = rbind)
   
   # ............................................................
   # Print outputs
   # ............................................................
   
   print(knitr::kable(tot.df, format = "simple"))
-  # print.data.frame(tot.df, right = F, row.names = F)
   cat("\n")
   
   cat("=============================================================\n")
@@ -258,40 +262,55 @@ summary.narwsim <- function(obj, do.plot = FALSE, show.legend = FALSE, geodesic 
   
   # Number of individuals visiting each region 
   
-  indreg.df <- tibble::enframe(ind.per.regions) |> 
-    dplyr::mutate(value = unlist(value)) |> 
-    dplyr::rename(n = value, region = name) |> 
-    dplyr::mutate(percent = round(100 * n / n.ind), 1)
-  
-  # indreg.df <- format_table(indreg.df)
+  indreg.df <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
+    tibble::enframe(.x$n$indreg) |> 
+      dplyr::mutate(value = unlist(value)) |> 
+      dplyr::rename(n = value, region = name) |> 
+      dplyr::mutate(cohort = .y)
+  }) |> do.call(what = rbind) |> 
+    tidyr::pivot_wider(names_from = cohort, values_from = n) 
   
   # Days spent in each region
   
-  days.df <- purrr::map(.x = days.per.regions, .f = ~{
-    if(all(.x == 0)){
-      0
-    } else {.x[.x >0]}
-  }) |> tibble::enframe() |> 
-    dplyr::rename(region = name, days = value) |> 
-    dplyr::group_by(region) |> 
-    dplyr::summarise(min = min(unlist(days)),
-                     max = max(unlist(days)),
-                     mean = round(mean(unlist(days)),1),
-                     sd = round(sd(unlist(days)), 1))
+  days.df <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
+    
+    purrr::map(.x = .x$n$dayreg , .f = ~{
+      if(all(.x == 0)) 0 else .x[.x >0]
+    }) |> tibble::enframe() |> 
+      dplyr::rename(region = name, days = value) |> 
+      dplyr::group_by(region) |> 
+      dplyr::mutate(cohort = .y) |> 
+      dplyr::group_by(region, cohort) |> 
+      dplyr::summarise(min = min(unlist(days)),
+                       max = max(unlist(days)),
+                       mean = round(mean(unlist(days)),1),
+                       sd = round(sd(unlist(days)), 1), .groups = 'drop')
+  }) |> do.call(what = rbind)
   
-  days.df <- format_table(days.df)
+  days.min <- days.df |> dplyr::select(region, cohort, min) |> 
+    tidyr::pivot_wider(names_from = cohort, values_from = min)
+  
+  days.max <- days.df |> dplyr::select(region, cohort, max) |> 
+    tidyr::pivot_wider(names_from = cohort, values_from = max) 
+  
+  days.mean <- days.df |> dplyr::select(region, cohort, mean) |> 
+    tidyr::pivot_wider(names_from = cohort, values_from = mean) 
+  
+  days.sd <- days.df |> dplyr::select(region, cohort, sd) |> 
+    tidyr::pivot_wider(names_from = cohort, values_from = sd) 
   
   # Number of regions per individual
   
-  regind.df <- fivenum(regions.per.ind)[c(1,3,5)] |> 
-    tibble::as_tibble(.name_repair = "minimal") |> 
-    dplyr::mutate(param = c("min", "mean", "max")) |> 
-    dplyr::rename(n = value) |> 
-    tidyr::pivot_wider(names_from = param, values_from = n) |> 
-    dplyr::relocate(mean, .after = max)
+  regind.df <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
+    fivenum(.x$n$regind)[c(1,3,5)] |> 
+      tibble::as_tibble(.name_repair = "minimal") |> 
+      dplyr::mutate(param = c("min", "mean", "max")) |> 
+      dplyr::rename(n = value) |> 
+      dplyr::mutate(cohort = .y)
+  }) |> do.call(what = rbind) |> 
+    tidyr::pivot_wider(names_from = param, values_from = n) 
   
-  # regind.df <- format_table(regind.df, bottom = FALSE)
-
+  
   # ............................................................
   # Print outputs
   # ............................................................
@@ -301,7 +320,14 @@ summary.narwsim <- function(obj, do.plot = FALSE, show.legend = FALSE, geodesic 
   cat("\n")
   
   cat("** Days spent in each region -------------------")
-  print(knitr::kable(days.df, format = "simple"))
+  cat("\n\n++ Minimum")
+  print(knitr::kable(days.min, format = "simple"))
+  cat("\n++ Maximum")
+  print(knitr::kable(days.max, format = "simple"))
+  cat("\n++ Mean")
+  print(knitr::kable(days.mean, format = "simple"))
+  cat("\n++ Standard deviation")
+  print(knitr::kable(days.sd, format = "simple"))
   cat("\n")
   
   cat("** Number of regions visited by each animal -------------------")

@@ -9,8 +9,75 @@ initialize_model <- function(){
   assign("init.model", value = TRUE, envir = .GlobalEnv)
 }
 
-# SPATIAL DATA ------------------------------------------------------
+# NOISE ------------------------------------------------------
+
+TL <- function(r, logfac = 15, a = 1){
+  # r in km
+  # alpha is in dB/km
+  loss <- logfac * log10(r*1000)
+  loss[loss < 0] <- 0
+  loss <- loss + a * r
+  return(loss)
+}
+
+dB2km <- function(target.dB, SL = 220, logfac = 15, a = 1){
+  opt.fun <- function(r, SL, target.L, logfac){
+    return((SL-TL(r, logfac = logfac, a = a)-target.L)^2)}
+  out <- optimize(f = opt.fun, interval = c(0,30000), SL = SL, target.L = target.dB, logfac = logfac)
+  return(out$minimum)
+}
+
+km2dB <- function(r, SL = 220, logfac = 15, a = 1){
+  return(SL-TL(r, logfac = logfac, a = a))
+}
+
+dummy_noise <- function(ambient = 60, source.lvl = 220, mitigation = 10, x, y){
   
+  # Source at 220 dB as reasonable worst case
+  
+  d.support <- targets::tar_read(density_support) |> raster::raster()
+  d.support[d.support < 1] <- NA
+  d.support[is.na(d.support)] <- 3
+  
+  d.support[raster::cellFromXY(d.support, cbind(x,y))] <- 2
+  rdist <- terra::gridDistance(d.support, origin = 2, omit = 3)
+  
+  dB <- (source.lvl - mitigation) - TL(rdist)
+  dB[dB < ambient] <- ambient
+  # plot(terra::rast(dB), col = pals::viridis(100), main = "Noise levels (dB)", xlab = "Easting (km)")
+  return(dB)
+}
+
+# PREY LAYERS ------------------------------------------------------
+  
+dummy_prey <- function(){
+  
+  d.support <- targets::tar_read(density_support) |> raster::raster()
+  d.support[d.support < 1] <- NA
+  d.support[!is.na(d.support)] <- 0
+
+  # Cape Cod Bay
+  ccb <- raster::cellsFromExtent(object = d.support, 
+     extent = raster::extent(data.frame(x = c(610, 660, 660, 610), y = c(923, 923, 883, 883)) |> as.matrix()))
+  
+  # Cape Cod Bay
+  gsl <- raster::cellsFromExtent(object = d.support, 
+     extent = raster::extent(data.frame(x = c(965, 1355, 1355, 965), y = c(1660, 1660, 1370, 1370)) |> as.matrix()))
+  
+  r <- c(ccb, gsl)
+  r <- r[which(!is.na(d.support[r]))]
+  
+  d.support[r] <- rnorm(length(r), 110, 10)
+  
+  out <- purrr::map(.x = month.abb, .f = ~as(d.support, "SpatialGridDataFrame"))
+  names(out) <- month.abb
+  
+  return(out)
+}
+
+# SPATIAL DATA ------------------------------------------------------
+
+
 #' Projected coordinate system
 #'
 #' @return An object of class \code{CRS}.
@@ -20,7 +87,6 @@ narw_crs <- function(){
 }
 
 predict_hgam <- function(object, newdata, type, n.chunks = 5){
-  
   N <- nrow(newdata)
   n <- ceiling(N/n.chunks)
   new.data <- split(1:N, ceiling(seq_along(1:N)/n)) |> 
@@ -28,7 +94,6 @@ predict_hgam <- function(object, newdata, type, n.chunks = 5){
   
   purrr::map(.x = new.data, .f = ~predict(object, newdata = .x, type = type)) |>
     do.call(what = c)
-  
 }
 
 support_as_polygon <- function(){
@@ -932,14 +997,6 @@ get_farms <- function(){
   return(windfarms)
 }
 
-TL <- function(r, a = 0.185){
-  loss <- 20*log10(r*1000)
-  loss <- 15*log10(r*1000)
-  loss[loss < 0] <- 0
-  loss <- loss + a * r
-  return(loss)
-}
-
 summary_geo <- function(obj, lims, res, geomap) {
   lapply(seq(dim(obj)[3]), function(x){
     obj.ind <- obj[,,x]
@@ -947,24 +1004,6 @@ summary_geo <- function(obj, lims, res, geomap) {
     dd <- sapply(1:nrow(obj.ind), FUN = function(r) geoD(geomap, obj.ind[r,1], obj.ind[r,2], obj.ind[r,3], obj.ind[r,4], lims, res))
     unname(dd)
   })
-}
-
-piling_noise <- function(source.lvl = 180, x, y){
-  
-  # ambient <- targets::tar_read(density_narw)[[1]] |> raster::raster()
-  # ambient[!is.na(ambient)] <- 60
-  
-  d.support <- targets::tar_read(density_support) |> raster::raster()
-  d.support[d.support < 1] <- NA
-  d.support[is.na(d.support)] <- 3
-  
-  d.support[raster::cellFromXY(d.support, cbind(x,y))] <- 2
-
-  rdist <- terra::gridDistance(d.support, origin = 2, omit = 3)
-  
-  dB <- source.lvl - TL(rdist)
-  dB[dB < 60] <- 60
-  plot(terra::rast(dB), col = pals::viridis(100), main = "Noise levels (dB)", xlab = "Easting (km)")
 }
 
 geodesic_dist <- function(){
@@ -1024,16 +1063,14 @@ get_regions <- function(eez = FALSE) {
   
   if(eez){
     
-    regions <- raster::shapefile(dir(path = "data/regions",
-                                     pattern = "regions_eez.shp$", 
+    regions <- raster::shapefile(dir(path = "data/regions", pattern = "regions_eez.shp$", 
                                      full.names = TRUE)) |> 
       sp::spTransform(CRSobj = narw_crs())
     
   } else {
   
   # Load shapefile of spatial regions (CCB, MIDA, SEUS, etc.)
-  regions <- raster::shapefile(dir(path = "data/regions", 
-                                   pattern = "regions.shp$", 
+  regions <- raster::shapefile(dir(path = "data/regions", pattern = "regions.shp$", 
                                    full.names = TRUE))
   regions$Id <- NULL
 
@@ -1114,13 +1151,19 @@ cop_threshold <- function(gamma, D){
 # Jason's colour scale
 colour_breaks <- function(dat){
   colour.breaks <- 25*c(0,0.016,0.025,0.04,0.063,0.1,0.16,0.25,0.4,0.63,1,1.6,2.5,4,6.3,10)/100
-  colour.breaks <- c(colour.breaks, seq(max(colour.breaks), ceiling(max(dat$Nhat, na.rm = TRUE)), 
-                                        length.out = 5))
+  colour.breaks <- c(colour.breaks, seq(max(colour.breaks), ceiling(max(dat$Nhat, na.rm = TRUE)), length.out = 5))
   colour.breaks <- round(colour.breaks[!duplicated(colour.breaks)],3)
   return(colour.breaks)
 }
 
 # UTILITY ------------------------------------------------------
+
+save_objects <- function(){
+  obj <- c("regions", "world", "support_poly", "density_narw", "density_support", "turbines", "prey_maps")
+  suppressWarnings(targets::tar_load(obj))
+  usethis::use_data(regions, world, support_poly, density_narw, density_support, turbines, prey_maps, 
+                    internal = FALSE, overwrite = TRUE)
+}
 
 format_table <- function(df, top = TRUE, bottom = TRUE, sign = "-"){
   # dashes <- purrr::map_dbl(.x = names(df), .f = ~nchar(.x))

@@ -40,10 +40,8 @@ plot.narwsim <- function(obj,
   if(!"narwsim" %in% class(obj)) stop("Input must be an object of class <narwsim>")
   cohorts <- obj$param$cohorts
   cohort.names <- obj$param$cohort.names
-  cohort.ab <- obj$param$cohort.ab
+  cohort.ab <- unname(obj$param$cohort.ab)
   locations <- obj$locs
-  
-  if(!cohorts) locations <- list(locations)
   
   n <- dim(locations[[1]])[3]
   if(n > 100) {warning("Plotting only the first 100 tracks"); n <- 100}
@@ -115,7 +113,7 @@ plot.narwsim <- function(obj,
   
   if(web){
     web_p <- purrr::map(.x = plot.list, .f = ~plotly::ggplotly(.x))
-    return(web_p)
+    purrr::walk(web_p, print)
   } else {
     print(patchwork::wrap_plots(plot.list))
   }

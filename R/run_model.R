@@ -3,6 +3,7 @@
 #' Prepare data required for model runs. 
 #'
 #' @param nsim Number of simulated animals
+#' @param n.prop Number of proposals used in the importance sampler (Michelot, 2019)
 #'
 #' @importFrom foreach `%dopar%`
 #' @importFrom doParallel registerDoParallel
@@ -17,10 +18,22 @@
 
 run_model <- function(nsim = 1e3,
                       init.month = 9,
-                      step.size = 79.8,
+                      step.size = 120,
                       cohorts = FALSE,
                       n.cores = NULL,
+                      n.prop = 50,
                       show.progress = TRUE){
+  
+  # nsim = 10
+  # init.month = 9
+  # step.size = 79.8
+  # cohorts = FALSE
+  # n.cores = NULL
+  # prey = NULL
+  # show.progress = TRUE
+  
+  if(!init.month %in% 1:12) stop("<init.month> must be an integer between 1 and 12")
+  if(!"init.model" %in% ls(envir = .GlobalEnv)) stop("The model must first be initialized")
   
   cat("-------------------------------------------------------------\n")
   cat("-------------------------------------------------------------\n")
@@ -31,21 +44,14 @@ run_model <- function(nsim = 1e3,
   cat("-------------------------------------------------------------\n")
   cat("-------------------------------------------------------------\n\n")
   
-  if(!init.month %in% 1:12) stop("<init.month> must be an integer between 1 and 12")
-  if(!"init.model" %in% ls(envir = .GlobalEnv)){
-    message("-- WARNING -------------------------\nThe model has not been initialized, and may be slower to run.")
-    message("Use <initialize_model()> before calling <run_model>.\n------------------------------------")}
-
   cat("Starting up ...\n")
   
   # ............................................................
   # Define cohorts and their parameters
   # ............................................................
-
+  
   if(cohorts){
     
-    # cohort.names <- c("Calves", 
-    #                   "Juveniles (male)")
     cohort.names <- c("Calves",
                       "Juveniles (male)",
                       "Juveniles (female)",
@@ -58,6 +64,11 @@ run_model <- function(nsim = 1e3,
     cohort.ab <- gsub(pattern = "j\\(", replacement = "jv\\(", x = cohort.ab)
     cohort.ab <- unname(gsub(pattern = "a\\(", replacement = "ad\\(", x = cohort.ab))
     
+  } else {
+    
+    cohort.names <- "North Atlantic right whales"
+    cohort.ab <- abbreviate(tolower(cohort.names), minlength = 4)
+    
   }
   
   # Calculate maximum Manhattan distance for given step size
@@ -68,15 +79,19 @@ run_model <- function(nsim = 1e3,
   # ............................................................
   
   # Convert from logical to numeric; also need to flip when converting from SpatialGridDataFrame to matrix
-  geomap <- targets::tar_read(density_support) |> raster::as.matrix()
-  geomap <- t(1*geomap)
+  geomap <- t(1*raster::as.matrix(density_support))
   
   # ............................................................
   # Load density surfaces
   # ............................................................
   
-  map.spgrd <- targets::tar_read(density_narw)
-  maps <- lapply(map.spgrd, raster::as.matrix)
+  maps <- lapply(density_narw, raster::as.matrix)
+  
+  # ............................................................
+  # Load prey surfaces
+  # ............................................................
+  
+  preymaps <- lapply(prey_maps, raster::as.matrix)
   
   # ............................................................
   # Check inputs
@@ -88,10 +103,10 @@ run_model <- function(nsim = 1e3,
   # Reference information for maps
   # ............................................................
   
-  coords <- sp::coordinates(map.spgrd[[1]])
+  coords <- sp::coordinates(density_narw[[1]])
   colnames(coords) <- c("x", "y")
   map_limits <- c(range(coords[,1]), range(coords[,2]))
-  map_resolution <- map.spgrd[[1]]@grid@cellsize
+  map_resolution <- density_narw[[1]]@grid@cellsize
   
   # ............................................................
   # Set up simulation parameters
@@ -130,21 +145,33 @@ run_model <- function(nsim = 1e3,
     isDarwin <- Sys.info()[['sysname']] == "Darwin"
     isWindows <- Sys.info()[['sysname']] == "Windows"
     
-    # Create a parallel cluster and register the backend
-    cl <- suppressMessages(parallel::makeCluster(n.cores))
+    # Trying snow
+    cl <- snow::makeSOCKcluster(n.cores)
+    doSNOW::registerDoSNOW(cl)
+    on.exit(snow::stopCluster(cl))
+    sink(tempfile())
+    pb <- utils::txtProgressBar(max = length(cohort.names), style = 3)
+    sink()
+    progress <- function(n) utils::setTxtProgressBar(pb, n)
+    opts <- list(progress = progress)
     
-    # After the function is run, shutdown the cluster.
-    on.exit(parallel::stopCluster(cl))
-    
-    # Register parallel backend
-    doParallel::registerDoParallel(cl)   # Modify with any do*::registerDo*()
+    # # Create a parallel cluster and register the backend
+    # cl <- suppressMessages(parallel::makeCluster(n.cores))
+    # 
+    # # After the function is run, shutdown the cluster.
+    # on.exit(parallel::stopCluster(cl))
+    # 
+    # # Register parallel backend
+    # doParallel::registerDoParallel(cl)   # Modify with any do*::registerDo*()
     
     cat("Running simulations ...\n")
     
     # # Compute estimates
     locs <- foreach::foreach(i = seq_along(cohort.names), 
+                             # .options.snow = opts,
                              .packages = c("Rcpp"), 
                              .noexport = c("simAnnualCoupled")) %dopar% {
+                               
                                Rcpp::sourceCpp("src/simtools.cpp")
                                
                                # Simulate initial locations for latent animals
@@ -159,17 +186,20 @@ run_model <- function(nsim = 1e3,
                                  geodesic = TRUE,
                                  densities = maps,
                                  densitySeq = map_seq,
-                                 latentDensitySeq = seq_along(map.spgrd),
-                                 M = 50, # Number of proposals used in the importance sampler (Michelot, 2019)
+                                 latentDensitySeq = 1:12,
+                                 prey = preymaps,
+                                 M = n.prop, # Number of proposals used in the importance sampler (Michelot, 2019)
                                  stepsize = step.size / 2, # Movement framework involves two steps (Michelot 2019)
                                  xinit = matrix(data = coords[init_inds, 'x'], nrow = nrow(init_inds)),
                                  yinit = matrix(data = coords[init_inds, 'y'], nrow = nrow(init_inds)),
                                  support = geomap,
                                  limits = map_limits,
                                  resolution = map_resolution,
-                                 progress = show.progress)} # End foreach loop
+                                 progress = TRUE)} # End foreach loop
     
     names(locs) <- cohort.ab
+    
+    close(pb)
     
   } else {
     
@@ -183,25 +213,23 @@ run_model <- function(nsim = 1e3,
       sample(x = 1:length(p), size = nsim, replace = TRUE, prob = p)
     }))
     
-    locs <- list(locs = simAnnualCoupled(
+    locs <- list(simAnnualCoupled(
       geodesic = TRUE,
       densities = maps,
       densitySeq = map_seq,
-      latentDensitySeq = seq_along(map.spgrd),
-      M = 50, # Number of proposals used in the importance sampler for movement (Michelot, 2019)
+      latentDensitySeq = seq_along(density_narw),
+      prey = preymaps,
+      M = n.prop, # Number of proposals used in the importance sampler for movement (Michelot, 2019)
       stepsize = step.size / 2, # Movement framework involves two steps (Michelot 2019)
       xinit = matrix(data = coords[init_inds, 'x'], nrow = nrow(init_inds)),
       yinit = matrix(data = coords[init_inds, 'y'], nrow = nrow(init_inds)),
       support = geomap,
       limits = map_limits,
       resolution = map_resolution,
-      progress = show.progress))
-    
-    # # Transpose the output array to have x,y coordinates for each day as rows
-    # locs <- aperm(locs, c(3,1,2))
-    # dimnames(locs)[[1]] <- format(date_seq)
-    # dimnames(locs)[[3]] <- stringi::stri_rand_strings(n = dim(locs)[3], pattern = "[[A-Z][0-9]]", length = 8)
-    # outsim <- list(locs)
+      progress = ifelse(show.progress, TRUE, FALSE)))
+
+   names(locs) <- cohort.ab
+
   }
   
   # Transpose the output array to have x,y coordinates for each day as rows
@@ -213,7 +241,7 @@ run_model <- function(nsim = 1e3,
     .x
   })
   
-  if(cohorts) outsim <- list(locs = outsim)
+  outsim <- list(locs = outsim)
   
   end.time <- Sys.time()
   run_time <- hms::round_hms(hms::as_hms(difftime(time1 = end.time, time2 = start.time, units = "auto")), 1)
@@ -242,7 +270,6 @@ run_model <- function(nsim = 1e3,
                        cohort.ab = cohort.ab)
   
   class(outsim) <- c("narwsim", class(outsim))
-  
   cat("\nDone!\n")
   cat(paste0("Time elapsed: ", run_time))
   
