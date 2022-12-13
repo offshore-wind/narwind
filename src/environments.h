@@ -25,29 +25,30 @@ class Environment {
 
         // Population density raster (in projected coordinates)
         const MatrixType &m_density;
-        // const MatrixType &m_regions;
         
     public:
       
       // Spatial extents and resolution of density raster
       const Eigen::VectorXd &m_limits, &m_resolution;
       
-        // Numeric id for map
-        const std::size_t id;
-
-        // Initialize class members
-        Environment(
-            const MatrixType & density,
-            // const MatrixType & regions,
-            const Eigen::VectorXd & limits,
-            const Eigen::VectorXd & resolution, 
-            const std::size_t & mapid
-        ) : 
-          m_density(density),
-          // m_regions(regions),
-          m_limits(limits), 
-          m_resolution(resolution),
-          id(mapid) { }
+      // Numeric id for map
+      const std::size_t id;
+      
+      // Define a constructor for Environment - gets called every time en environment is constructed
+      // This is used to initialize the class members
+      // The code after the : is a member initializer list
+      // m_density(density) is the same as m_density = density; and ensures that the value
+      // passed to the <density> parameter during initialization is assigned to class member m_density
+      Environment(
+        const MatrixType & density,
+        const Eigen::VectorXd & limits,
+        const Eigen::VectorXd & resolution, 
+        const std::size_t & mapid
+      ) : 
+        m_density(density),
+        m_limits(limits), 
+        m_resolution(resolution),
+        id(mapid) { }
 
         /**
          * Return the density value at the specified coordinates
@@ -72,7 +73,6 @@ class Environment {
             std::size_t j = std::round((m_limits[3]-y)/m_resolution[1]);
 
             double d = m_density(i,j);
-            // int r = m_regions(i,j);
             
             if(!std::isfinite(d)) {
               return 0;
@@ -86,6 +86,63 @@ class Environment {
             // return out;
         }
 
+        void Print(){
+          std::cout << "I am happy" << std::endl;
+        }
+      
+};
+
+// Prey environment
+
+class PreyEnv {
+  
+private:
+  
+  using MatrixType = Eigen::MatrixXd;
+  
+  // Population density raster (in projected coordinates)
+  const MatrixType &m_prey;
+  
+public:
+  
+  // Spatial extents and resolution of density raster
+  const Eigen::VectorXd &m_limits, &m_resolution;
+  
+  // Numeric id for map
+  const std::size_t id;
+  
+  // Initialize class members
+  PreyEnv(
+    const MatrixType & prey,
+    const Eigen::VectorXd & limits,
+    const Eigen::VectorXd & resolution, 
+    const std::size_t & mapid
+  ) : 
+    m_prey(prey),
+    m_limits(limits), 
+    m_resolution(resolution),
+    id(mapid) { }
+  
+  /**
+   * Return the prey concentration at the specified coordinates
+   * @param x
+   * @param y
+   * @return Prey concentration
+   */
+  double operator()(const double & x, const double & y) {
+    
+    // Return 0 if outside the study area boundaries
+    if(x < m_limits[0] || x > m_limits[1] || y < m_limits[2] || y > m_limits[3]) return 0;
+    
+    // Retrieve row and col of cell corresponding to x,y
+    std::size_t i = std::round((x-m_limits[0])/m_resolution[0]);
+    std::size_t j = std::round((m_limits[3]-y)/m_resolution[1]);
+    
+    double p = m_prey(i,j);
+    if(!std::isfinite(p)) return 0;
+    return p;
+  }
+  
 };
 
 /**
