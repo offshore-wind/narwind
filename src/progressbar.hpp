@@ -178,7 +178,7 @@ inline void progressbar::update() {
             // refill with 'todo_char'
             for (int j = 0; j < 50-(perc-1)/2-1; ++j) output << todo_char;
 
-            // readd trailing percentage characters
+            // read trailing percentage characters
             output << closing_bracket_char << ' ' << perc << '%';
         }
     }
