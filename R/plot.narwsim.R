@@ -27,7 +27,8 @@ plot.narwsim <- function(obj,
                          animate = FALSE,
                          color.by = FALSE,
                          web = FALSE,
-                         world.fill = "lightgrey"
+                         world.fill = "lightgrey",
+                         nmax = 100
 ){
   
   # obj = m
@@ -36,15 +37,19 @@ plot.narwsim <- function(obj,
   # color.by = FALSE
   # web = FALSE
   # world.fill = "lightgrey"
+  # nmax = 100
   
   if(!"narwsim" %in% class(obj)) stop("Input must be an object of class <narwsim>")
-  cohorts <- obj$param$cohorts
+
   cohort.names <- obj$param$cohort.names
   cohort.ab <- unname(obj$param$cohort.ab)
+  cohort.id <- obj$param$cohort.id
+  if(cohort.id == 5) cohort.names <- paste0(cohort.names, " + calves")
+
   locations <- obj$locs
   
   n <- dim(locations[[1]])[3]
-  if(n > 100) {warning("Plotting only the first 100 tracks"); n <- 100}
+  if(n > nmax) {warning("Plotting only the first ", nmax, " tracks"); n <- nmax}
   
   # Provide id (integer) to pick an animal
   # Set id = -1 for a random animal
@@ -66,7 +71,7 @@ plot.narwsim <- function(obj,
     ggplot2::ylab("") +
     ggplot2::theme(axis.text.y = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 0.5),
                    axis.text = ggplot2::element_text(colour = "black"),
-                   panel.border = ggplot2::element_rect(colour = "black", fill = NA, size = 0.5))
+                   panel.border = ggplot2::element_rect(colour = "black", fill = NA, linewidth = 0.5))
   
   # ....................................
   # Generate plots
@@ -85,7 +90,7 @@ plot.narwsim <- function(obj,
     
     # Select tracks
     if(is.null(id)) animal_id <- 1:n else animal_id <- unique(locs$trackID)[id]
-    locs <- locs |> dplyr::filter(trackID %in% paste0("sim", animal_id))
+    locs <- locs |> dplyr::filter(trackID %in% paste0("whale.", animal_id))
     
     # ....................................
     # Plot base map (land)
@@ -101,7 +106,7 @@ plot.narwsim <- function(obj,
       ggplot2::geom_path(
         data = locs,
         mapping = ggplot2::aes(x = easting, y = northing, colour = trackID), alpha = 0.7, linewidth = 0.2) +
-      {if(color.by) ggplot2::scale_color_manual(name = "Animal ID")} +
+      {if(color.by) ggplot2::scale_color_manual(name = "Animal ID", values = pals::glasbey(length(animal_id)))} +
       {if(!color.by) ggplot2::scale_color_manual(name = "Animal ID", values = rep("black", length(animal_id)))} +
       ggplot2::theme(legend.position = "none") + 
       ggplot2::coord_sf(expand = FALSE) +
