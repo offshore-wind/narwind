@@ -1,7 +1,7 @@
 #' Run the bioenergetic model
 #'
 #' Prepare data required for model runs. 
-#'
+#' @export
 #' @param nsim Number of simulated animals
 #' @param n.prop Number of proposals used in the importance sampler (Michelot, 2019)
 #'
@@ -17,23 +17,24 @@
 #' }
 
 run_model <- function(nsim = 1e3,
-                      init.month = 9,
+                      init.month = 2,
                       step.size = 120,
-                      cohorts = FALSE,
+                      cohort.id = 1:6,
                       n.cores = NULL,
-                      n.prop = 50,
+                      n.prop = 50, # In line with sample sizes used in case studies from Michelot (2020)
                       show.progress = TRUE){
-  
-  # nsim = 10
-  # init.month = 9
-  # step.size = 79.8
-  # cohorts = FALSE
+
+  # nsim = 1
+  # init.month = 2
+  # step.size = 120
+  # cohort.id = 5
   # n.cores = NULL
-  # prey = NULL
+  # n.prop = 50
   # show.progress = TRUE
-  
+
   if(!init.month %in% 1:12) stop("<init.month> must be an integer between 1 and 12")
-  if(!"init.model" %in% ls(envir = .GlobalEnv)) stop("The model must first be initialized")
+  if(!"init.model" %in% ls(envir = .GlobalEnv)) stop("The model must first be initialized using <load_model>")
+  if(any(!cohort.id %in% 1:6)) stop("Unrecognized cohort")
   
   cat("-------------------------------------------------------------\n")
   cat("-------------------------------------------------------------\n")
@@ -50,29 +51,22 @@ run_model <- function(nsim = 1e3,
   # Define cohorts and their parameters
   # ............................................................
   
-  if(cohorts){
-    
-    cohort.names <- c("Calves",
-                      "Juveniles (male)",
-                      "Juveniles (female)",
-                      "Adults (male)",
-                      "Adults (female, pregnant)",
-                      "Adults (female, lactating)",
-                      "Adults (female, resting)")
-    
-    cohort.ab <- abbreviate(tolower(cohort.names), minlength = 6)
-    cohort.ab <- gsub(pattern = "j\\(", replacement = "jv\\(", x = cohort.ab)
-    cohort.ab <- unname(gsub(pattern = "a\\(", replacement = "ad\\(", x = cohort.ab))
-    
-  } else {
-    
-    cohort.names <- "North Atlantic right whales"
-    cohort.ab <- abbreviate(tolower(cohort.names), minlength = 4)
-    
-  }
+  cohort.names <- c("Juveniles (male)", # 1
+                    "Juveniles (female)", # 2
+                    "Adults (male)", # 3
+                    "Adults (female, pregnant)", # 4
+                    "Adults (female, lactating)", # 5
+                    "Adults (female, resting)") # 6
   
-  # Calculate maximum Manhattan distance for given step size
-  # D <- max(sin(seq(0,90)*pi/180) * step.size + cos(seq(0,90)*pi/180) * step.size)
+  cohort.ab <- abbreviate(tolower(cohort.names), minlength = 6)
+  cohort.ab <- gsub(pattern = "j\\(", replacement = "jv\\(", x = cohort.ab)
+  cohort.ab <- unname(gsub(pattern = "a\\(", replacement = "ad\\(", x = cohort.ab))
+  
+  # age.minmax <- matrix(data = c(rep(c(1,9), 2), rep(c(9,69), 4)), nrow = 6, ncol = 2, byrow = TRUE)
+  # row.names(age.minmax) <- cohort.ab
+  
+  cohort.names <- cohort.names[cohort.id]
+  cohort.ab <- cohort.ab[cohort.id] 
   
   # ............................................................
   # Load spatial support and regions
@@ -86,12 +80,17 @@ run_model <- function(nsim = 1e3,
   # ............................................................
   
   maps <- lapply(density_narw, raster::as.matrix)
+  maps.weighted <- lapply(density_weighted, raster::as.matrix)
   
   # ............................................................
-  # Load prey surfaces
+  # Load prey, daylight, and stressor surfaces
   # ............................................................
   
-  preymaps <- lapply(prey_maps, raster::as.matrix)
+  preymaps <- lapply(dummy_prey, raster::as.matrix)
+  fishingmaps <- lapply(dummy_fishing, raster::as.matrix)
+  vesselmaps <- lapply(dummy_vessels, raster::as.matrix)
+  noisemaps <- lapply(dummy_noise, raster::as.matrix)
+  daylightmaps <- lapply(daylight, raster::as.matrix)
   
   # ............................................................
   # Check inputs
@@ -118,17 +117,19 @@ run_model <- function(nsim = 1e3,
   date_seq <- seq(from = lubridate::ymd(start.date), by = 'day', length.out = 365)
   map_seq <- lubridate::month(date_seq)
   
+  # Simulate initial locations for latent animals
+  # Return cell ID for each animal (columns) x month (rows)
+  init.inds <- purrr::map(.x = cohort.id, 
+    .f = ~init_xy(maps = maps, maps.weighted = maps.weighted, coords = coords, cohort.id = .x, nsim = nsim)) |> 
+    purrr::set_names(nm = cohort.ab)
+  
   # ............................................................
   # Run simulation
   # ............................................................
   
   # TODO: estimate spatial step size
   
-  start.time <- Sys.time()
-  
-  # if(method == "geodesic") geo <- TRUE else geo <- FALSE
-  
-  if(cohorts){
+  if(length(cohort.id) > 1){
     
     Ncores <- parallel::detectCores(all.tests = FALSE, logical = TRUE)-1
     
@@ -166,114 +167,142 @@ run_model <- function(nsim = 1e3,
     
     cat("Running simulations ...\n")
     
+    start.time <- Sys.time()
+    
     # # Compute estimates
-    locs <- foreach::foreach(i = seq_along(cohort.names), 
-                             # .options.snow = opts,
-                             .packages = c("Rcpp"), 
-                             .noexport = c("simAnnualCoupled")) %dopar% {
-                               
-                               Rcpp::sourceCpp("src/simtools.cpp")
-                               
-                               # Simulate initial locations for latent animals
-                               # Return cell ID for each animal (columns) x month (rows)
-                               init_inds <- do.call(rbind, lapply(maps, function(m) {
-                                 p <- as.numeric(m)
-                                 p[!is.finite(p)] <- 0
-                                 sample(x = 1:length(p), size = nsim, replace = TRUE, prob = p)
-                               }))
-                               
-                               simAnnualCoupled(
-                                 geodesic = TRUE,
-                                 densities = maps,
-                                 densitySeq = map_seq,
-                                 latentDensitySeq = 1:12,
-                                 prey = preymaps,
-                                 M = n.prop, # Number of proposals used in the importance sampler (Michelot, 2019)
-                                 stepsize = step.size / 2, # Movement framework involves two steps (Michelot 2019)
-                                 xinit = matrix(data = coords[init_inds, 'x'], nrow = nrow(init_inds)),
-                                 yinit = matrix(data = coords[init_inds, 'y'], nrow = nrow(init_inds)),
-                                 support = geomap,
-                                 limits = map_limits,
-                                 resolution = map_resolution,
-                                 progress = TRUE)} # End foreach loop
+    out <- foreach::foreach(i = seq_along(cohort.id), 
+                            .options.snow = opts,
+                            .packages = c("Rcpp"), 
+                            .noexport = c("MovementSimulator")) %dopar% {
+                              
+                              # Set environments
+                              .GlobalEnv$coords <- coords
+
+                              Rcpp::sourceCpp("src/simtools.cpp")
+
+                              if(cohort.id[i] == 5) d <- maps.weighted else d <- maps
+                              
+                              MovementSimulator(
+                                cohortID = cohort.id[i],
+                                densities = d,
+                                densitySeq = map_seq,
+                                latentDensitySeq = 1:12,
+                                prey = preymaps,
+                                fishing = fishingmaps,
+                                vessels = vesselmaps,
+                                noise = noisemaps,
+                                daylight = daylightmaps,
+                                M = n.prop, # No.proposals in the importance sampler (Michelot, 2019)
+                                stepsize = step.size / 2, # Movement model involves two half-steps (Michelot, 2019, 2020)
+                                xinit = matrix(data = coords[init.inds[[i]], 'x'], nrow = nrow(init.inds[[i]])),
+                                yinit = matrix(data = coords[init.inds[[i]], 'y'], nrow = nrow(init.inds[[i]])),
+                                support = geomap,
+                                limits = map_limits,
+                                resolution = map_resolution,
+                                progress = FALSE)} # End foreach loop
     
-    names(locs) <- cohort.ab
+    names(out) <- cohort.ab
     
-    close(pb)
+    close(pb) # Close progress bar
     
   } else {
     
     cat("Running simulations ...\n")
+
+    if(cohort.id == 5) d <- maps.weighted else d <- maps
     
-    # Simulate initial locations for latent animals
-    # Return cell ID for each animal (columns) x month (rows)
-    init_inds <- do.call(rbind, lapply(maps, function(m) {
-      p <- as.numeric(m)
-      p[!is.finite(p)] <- 0
-      sample(x = 1:length(p), size = nsim, replace = TRUE, prob = p)
-    }))
+    # Simulated animals begin at the position of their corresponding latent animal for the starting month
+    # This can be checked by running the below code
+    # xpos <- apply(init_inds, 2, FUN = function(x) raster::xFromCell(raster::raster(density_narw$Feb), x))
+    # ypos <- apply(init_inds, 2, FUN = function(x) raster::yFromCell(raster::raster(density_narw$Feb), x))
     
-    locs <- list(simAnnualCoupled(
-      geodesic = TRUE,
-      densities = maps,
+    start.time <- Sys.time()
+    
+    out <- list(MovementSimulator(
+      cohortID = cohort.id,
+      densities = d,
       densitySeq = map_seq,
       latentDensitySeq = seq_along(density_narw),
       prey = preymaps,
+      fishing = fishingmaps,
+      vessels = vesselmaps,
+      noise = noisemaps,
+      daylight = daylightmaps,
       M = n.prop, # Number of proposals used in the importance sampler for movement (Michelot, 2019)
-      stepsize = step.size / 2, # Movement framework involves two steps (Michelot 2019)
-      xinit = matrix(data = coords[init_inds, 'x'], nrow = nrow(init_inds)),
-      yinit = matrix(data = coords[init_inds, 'y'], nrow = nrow(init_inds)),
+      stepsize = step.size / 2, # Movement framework involves two half-steps (Michelot 2019, 2020)
+      xinit = matrix(data = coords[init.inds[[1]], 'x'], nrow = nrow(init.inds[[1]])),
+      yinit = matrix(data = coords[init.inds[[1]], 'y'], nrow = nrow(init.inds[[1]])),
       support = geomap,
       limits = map_limits,
       resolution = map_resolution,
       progress = ifelse(show.progress, TRUE, FALSE)))
-
-   names(locs) <- cohort.ab
-
+    
   }
-  
-  # Transpose the output array to have x,y coordinates for each day as rows
-  outsim <- purrr::map(.x = locs, .f = ~{
-    .x <- aperm(.x, c(3,1,2))
-    dimnames(.x)[[1]] <- format(date_seq)
-    dimnames(.x)[[3]] <- paste0("sim", seq_len(dim(.x)[3]))
-    # dimnames(.x)[[3]] <- stringi::stri_rand_strings(n = dim(.x)[3], pattern = "[[A-Z][0-9]]", length = 8)
-    .x
-  })
-  
-  outsim <- list(locs = outsim)
   
   end.time <- Sys.time()
   run_time <- hms::round_hms(hms::as_hms(difftime(time1 = end.time, time2 = start.time, units = "auto")), 1)
   
-  # ............................................................
-  # Validate sampling scheme
-  # ............................................................
+  # Transpose the output array to have data for each day as rows
+
+  out.t <- transpose_array(out, "locs", date_seq) |> 
+    transpose_array("attrib", date_seq) |> 
+    transpose_array("kj", date_seq) 
+    
+  # Flip list elements
+  outsim <- list()
+  outsim[["locs"]] <- purrr::map(out.t, "locs") |> purrr::set_names(nm = cohort.ab)
+  if(cohort.id == 5){
+    outsim[["attrib"]] <- sapply(X = 1:2, FUN = function(x){
+      purrr::map(out.t, ~abind::abind(.x[["attrib"]][[x]], .x[["kj"]][["in"]][[x]], .x[["kj"]][["out"]][[x]], along = 2)) |> purrr::set_names(nm = c(cohort.ab, "calves")[x])
+    })
+  } else {
+    outsim[["attrib"]] <- purrr::map(out.t, ~abind::abind(.x[["attrib"]], .x[["kj"]][["in"]], .x[["kj"]][["out"]], along = 2)) |> purrr::set_names(nm = cohort.ab)
+  }
+
+
   
-  # tidy version of map rasters
-  # raster_id <- map_seq[1]
-  # df <- as.data.frame(raster::raster(map.spgrd[[raster_id]]), xy = TRUE)
   
-  # TODO: do data format checks on df here?
-  # scroll across longitude first, so we're in row-major order
-  # head(coords)
-  # we start with (xmin,ymax) and work our way over.  the cells are all center-offset,
-  # so the bounding box is not the correct xmin value
-  # map.spgrd[[raster_id]]@bbox
+                 
+                 
+                 # attrib = purrr::map2(.x = outsim[[1]][["kj"]]["in"], .y = outsim[[1]][["kj"]]["in"], .f = ~cbind(.x, .y))
+                 
+                   
+                 #   purrr::map(outsim, "attrib") |> purrr::set_names(nm = cohort.ab),
+                 # kj = list(`in` = purrr::map(outsim[[1]]["kj"], "in") |> purrr::set_names(nm = cohort.ab),
+                 #           `out` = purrr::map(outsim[[1]]["kj"], "out") |> purrr::set_names(nm = cohort.ab)))
+  
+  # Move nested elements up and rename them
+  # outsim$attrib <- lapply(rapply(outsim$attrib, enquote, how = "unlist"), eval)
+  # names(outsim$attrib) <- gsub(pattern = ".adjuv", replacement = "", x =  names(outsim$attrib))
+  # names(outsim$attrib)[which(grepl(pattern = "calv", x = names(outsim$attrib)))] <- "calves"
+  # 
+  # outsim$kj[["in"]] <- lapply(rapply(outsim$kj[["in"]], enquote, how = "unlist"), eval)
+  # names(outsim$kj[["in"]]) <- gsub(pattern = ".adjuv", replacement = "", x =  names(outsim$kj[["in"]]))
+  # names(outsim$kj[["in"]])[which(grepl(pattern = "calv", x = names(outsim$kj[["in"]])))] <- "calves"
+  # 
+  # outsim$kj[["out"]] <- lapply(rapply(outsim$kj[["out"]], enquote, how = "unlist"), eval)
+  # names(outsim$kj[["out"]]) <- gsub(pattern = ".adjuv", replacement = "", x =  names(outsim$kj[["out"]]))
+  # names(outsim$kj[["out"]])[which(grepl(pattern = "calv", x = names(outsim$kj[["out"]])))] <- "calves"
   
   # ............................................................
   # Add parameters to list output
   # ............................................................
   
-  outsim$param <- list(cohorts = cohorts,
+  outsim$param <- list(nsim = nsim, 
+                       cohort.id = cohort.id,
                        cohort.names = cohort.names,
                        cohort.ab = cohort.ab)
   
+  outsim$init <- list(month = init.month,
+                      xy = init.inds,
+                      attrib = purrr::map(outsim$attrib, ~.x[1,,] |> t()))
+  
+  outsim$run <- run_time
+  
   class(outsim) <- c("narwsim", class(outsim))
+  class(outsim$init$xy) <- c("xyinits", class(outsim$init$xy))
   cat("\nDone!\n")
   cat(paste0("Time elapsed: ", run_time))
-  
-  # suppressWarnings(rm("init.model", envir = .GlobalEnv))
   
   return(outsim)
 }
