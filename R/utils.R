@@ -1,17 +1,590 @@
 # MODEL ------------------------------------------------------
 
+meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, comb = NULL, input = list(), theoretic.bounds = NULL){
+  
+  set.seed(seed)
+  
+  if(length(input) > 0){
+    param.input <- input$param.input
+    bycols <- input$bycols
+    fill.NA <- input$fill.NA
+    fillers <- input$fillers
+    min.yr <- input$min.yr
+    max.yr <- input$max.yr
+    comb <- input$comb
+    remove.study <- input$remove.study
+    if(is.null(bycols)) bycols <- ""
+  }
+
+  # See https://bookdown.org/MathiasHarrer/Doing_Meta_Analysis_in_R/pooling-es.html
+  # for a detailed explanation
+  
+  # dat <- readr::read_csv("data/parameters/BOEM_140M0121C0008_ModelParameters.csv", na = c("-", "NA"), col_types = readr::cols()) |> 
+  #   janitor::clean_names()
+  dat <- params
+  dat <- dplyr::select(dat, 1:which(names(dat) == "first_author")) |> 
+    dplyr::select(-note_comments, -description_definition, -symbol)
+  
+  allp <- sort(unique(dat$parameter))
+  allp <- allp[!allp == ""]
+  
+  if(length(input) == 0){
+    print(data.frame(Parameter = allp), right = FALSE)
+    cat("\n")
+    param.input <- readline(prompt = "Select parameter: ")
+  }
+  
+  if(length(input) > 0){
+    isnumeric <- suppressWarnings(!is.na(as.numeric(param.input)))
+    if(isnumeric){
+      param <- allp[as.numeric(param.input)]
+    } else {
+      param <- param.input
+    }
+  }
+  
+  dat.f <- dat |> dplyr::filter(parameter == param)
+  if(!is.null(min.yr)) dat.f <- dat.f |> dplyr::filter(year > min.yr)
+  if(!is.null(max.yr)) dat.f <- dat.f |> dplyr::filter(year < max.yr)
+  if(!is.null(remove.study)) dat.f <- dat.f |> dplyr::filter(!first_author %in% remove.study)
+  
+  # Separate rows where needed
+  dat.f <- tidyr::separate_rows(dat.f, "age_class", sep = ",") |> 
+    dplyr::mutate(age_class = trimws(age_class))
+  
+  dat.f <- tidyr::separate_rows(dat.f, "sex", sep = ",") |> 
+    dplyr::mutate(sex = trimws(sex))
+  
+  dat.f <- tidyr::separate_rows(dat.f, "reproductive_state", sep = ",") |> 
+    dplyr::mutate(reproductive_state = trimws(reproductive_state))
+  
+  cat("\n")
+  print(dat.f)
+  cat("\n")
+  
+  if(length(input) == 0){
+    print(data.frame(Column = names(dat.f)), right = FALSE)
+    bycols <- readline(prompt = "Select columns: ")
+  } else {
+    isnumeric <- suppressWarnings(!all(is.na(as.numeric(bycols))))
+    if(isnumeric){
+      bycols <- names(dat.f)[as.numeric(bycols)]
+    } else {
+      bycols <- bycols
+    }
+  }
+  
+  if(all(bycols == "")){
+    dat.f$dummy <- "All"
+    bycols <- "dummy"
+  } else {
+    if(length(input) == 0) bycols <- names(dat.f)[as.numeric(stringr::str_trim(unlist(strsplit(bycols, ","))))]
+      # bycols <- names(dat.f)[bycols] else 
+  }
+  
+  # Fill NA values if necessary
+  if(fill.NA){
+    if(length(input) > 0){
+      for(k in 1:length(bycols)){
+        dat.f[[bycols[k]]] <- ifelse(is.na(dat.f[[bycols[k]]]), fillers[k], dat.f[[bycols[k]]])
+      }
+    } else {
+      fillers <- vector(length = length(bycols))
+      for(k in bycols){
+        word <- readline(prompt = paste0("Fill NA for <", k, "> with: "))
+        dat.f[[k]] <- ifelse(is.na(dat.f[[k]]), word, dat.f[[k]])
+      }
+    }
+  } else {
+      for(k in bycols){
+        dat.f[[k]] <- ifelse(is.na(dat.f[[k]]), "<NA>", dat.f[[k]])
+      }
+  }
+  
+  # If sample size is not given, assume 1
+  dat.f <- dat.f |> 
+    dplyr::rowwise() |> 
+    dplyr::mutate(sample_size = ifelse(is.na(sample_size), 1, sample_size)) |> 
+    dplyr::ungroup()
+  
+  # Combine categories if needed
+  if(!is.null(comb)){
+    for(k in 1:length(bycols)){
+      dat.f[[bycols[k]]] <- ifelse(dat.f[[bycols[k]]] %in% comb[[1]], paste0(comb[[1]], collapse = ", "), dat.f[[bycols[k]]])
+    }
+  }
+  
+  dat.list <- split(dat.f, purrr::map(.x = bycols, .f = ~dplyr::pull(dat.f, .x)), drop = FALSE)
+  
+  dat.out <- purrr::map(.x = dat.list, .f = ~{
+    
+    if(nrow(.x) > 0){
+    
+    for(j in 1:nrow(.x)){
+
+      myvars <- .x[j, c("min", "max", "mean_median", "sd_se")]
+      myvars <- which(!is.na(myvars))
+      
+      varmin <- ifelse(all(is.na(.x$min)), NA, min(.x$min, na.rm = TRUE))
+      varmax <- ifelse(all(is.na(.x$max)), NA, max(.x$max, na.rm = TRUE))
+      
+      if(is.na(varmin) & !is.null(theoretic.bounds)) varmin <- theoretic.bounds[1]
+      if(is.na(varmax) & !is.null(theoretic.bounds)) varmax <- theoretic.bounds[2]
+      
+      if(length(myvars) == 1){
+        
+        if(myvars == 3){       
+          
+          # If sample size > 1, estimate SD based on methods of Wan et al. (2014) - https://doi.org/10.1186/1471-2288-14-135
+          # else: take weighted mean of other SD, weighted by sample size
+          
+          if(.x[j,]$sample_size > 1){
+
+          .x[j,]$sd_se <- (varmax-varmin)/(2*(qnorm((max(.x[j,]$sample_size, 1, na.rm = TRUE)-0.375)/(max(.x[j,]$sample_size, 1, na.rm = TRUE)+0.25),0,1)))
+          
+          } else {
+
+          w <- .x[, c("sd_se", "sample_size")]
+          wm <- weighted.mean(w$sd_se, w = w$sample_size, na.rm = TRUE)
+          if(nrow(.x) > 1) .x[j,]$sd_se <- wm
+          }
+
+        } else if(myvars == 1){ 
+          
+          # Only min -- take mean/SD of random draws from Uniform bounded by min value and max across records
+          
+          n <- runif(10000, .x[j,]$min, varmax)
+          .x[j,]$mean_median <- mean(n)
+          .x[j,]$sd_se <- sd(n)
+          
+        } else if(myvars == 2){ 
+          
+          # Only max -- take mean/SD of random draws from Uniform bounded by min across records and max value
+          
+          n <- runif(10000, varmin, .x[j,]$max)
+          .x[j,]$mean_median <- mean(n)
+          .x[j,]$sd_se <- sd(n)
+          
+        }
+        
+      } else {
+        
+        if(sum(myvars) == 3){
+          
+          # Only min and max
+          
+          n <- runif(10000, .x[j,]$min, .x[j,]$max)
+          .x[j,]$mean_median <- mean(n)
+          .x[j,]$sd_se <- sd(n)
+          
+        } else if(sum(myvars) == 4){ 
+          
+          # Only min and mean
+          
+          if(.x[j,]$sample_size > 1){
+          
+          .x[j,]$sd_se <- (varmax-.x[j,]$min)/(2*(qnorm((max(.x[j,]$sample_size, 1, na.rm = TRUE)-0.375)/(max(.x[j,]$sample_size, 1, na.rm = TRUE)+0.25),0,1)))
+          
+          } else {
+            
+            w <- .x[, c("sd_se", "sample_size")]
+            w <- w[complete.cases(w),]
+            wm <- weighted.mean(w$sd_se, w = w$sample_size, na.rm = TRUE)
+            if(nrow(.x) > 1) .x[j,]$sd_se <- wm
+            
+          }
+        }
+      }
+    }
+
+    if(nrow(.x) > 1) {
+      
+      # Apply the inverse-variance method to calculate a weighted mean, using adjusted random-effects weights
+      # if(all(is.na(.x$sd_se)) | sum(!is.na(.x$sd_se) == 1)){
+      #   weights <- 1 / ((1/.x$sample_size^2) + sd(.x$mean_median)^2)
+      #   combined.mean <- sum(weights * .x$mean_median) / sum(weights)
+      #   combined.se <- sqrt (sum(weights ^ 2 * .x$sample_size ^ 2) / sum(weights ^ 2))
+      # } else {
+      weights <- 1 / ((.x$sd_se^2) + sd(.x$mean_median)^2)
+      combined.mean <- sum(weights * .x$mean_median) / sum(weights)
+      combined.se <- sqrt (sum(weights ^ 2 * .x$sd_se ^ 2) / sum(weights ^ 2))
+      # }
+
+      tibble::tibble(mean = combined.mean, se = combined.se)
+
+    } else if (nrow(.x) <= 1){
+      
+      tibble::tibble(mean = .x$mean_median, se = .x$sd_se)
+     
+    } 
+    }
+  }) |> tibble::enframe() |> 
+    tidyr::unnest(cols = c(value)) |> 
+    dplyr::arrange(name)
+
+  return(dat.out)
+}
+
 #' Initialize model
 #'
 #' @export
-initialize_model <- function(){
+load_model <- function(){
   Rcpp::sourceCpp("src/simtools.cpp")
+  Rcpp::sourceCpp("src/bioenergetics_functions.cpp")
   source("R/run_model.R")
   assign("init.model", value = TRUE, envir = .GlobalEnv)
 }
 
+weighted_density <- function(){
+  
+  # Create raster from regions polygon
+  reg <- targets::tar_read(regions)
+  supportp <- targets::tar_read(support_poly)
+  dens <- targets::tar_read(density_narw)
+  densr <- purrr::map(.x = dens, .f = ~raster::raster(.x) |> raster::crop(dens[[1]]))
+  reg$rank <- rank(reg$region)
+  r <- raster::raster()
+  raster::extent(r) <- raster::extent(reg)
+  rp <- raster::rasterize(reg, r, 'rank')
+  rp <- raster::resample(rp, densr[[1]], method = "ngb")
+  rp <- raster::mask(rp, supportp)
+
+  rp.SEUS <- rp.GSL <- rp.CA <- rp
+
+  cabot.xy <- sp::SpatialPoints(coords = cbind(1400, 1600), proj4string = narw_crs())
+  
+  circular.d <- raster::distanceFromPoints(object = densr[[1]], xy = cabot.xy) |> 
+    raster::mask(mask = densr[[1]])
+  
+  # Set value to 1 in SEUS
+  rp.SEUS[!rp.SEUS$layer == which(sort(reg$region) == "SEUS")] <- 0
+  rp.SEUS[rp.SEUS>0] <- 1
+
+  # Set value to 1 in GSL
+  rp.GSL[!rp.GSL$layer == which(sort(reg$region) == "GSL")] <- 0
+  rp.GSL[rp.GSL>0] <- 1
+  
+  # Set value to 1 in SEUS
+  rp.CA[rp.CA$layer == which(sort(reg$region) == "GSL")] <- 99
+  rp.CA[rp.CA$layer == which(sort(reg$region) == "CABOT")] <- 99
+  rp.CA[rp.CA$layer == which(sort(reg$region) == "SCOS")] <- 99
+  rp.CA[rp.CA<99] <- 0
+  rp.CA[rp.CA==99] <- 1
+  
+  # Create latitudinal gradient
+  r_y <- sp::coordinates(rp.GSL, na.rm = TRUE)
+  r_y <- raster::rasterFromXYZ(cbind(r_y, r_y[, 2, drop = FALSE]))
+  r_y <- raster::mask(r_y, densr[[1]])
+
+  r_north <- 1/(1+exp(-0.004*(r_y-1380)))
+  r_south <- 1/(1+exp(0.004*(r_y-12)))
+  r_southbound <- 1/(1+exp(0.004*(r_y-500)))
+  r_northbound <- 1/(1+exp(-0.004*(r_y-800)))
+  
+  # Breeding season in the SEUS (Nov through to February - Krystan et al., 2018)
+  # Foraging season in the GSL (June though to Oct – Crowe et al., 2021)
+
+  wdens <- purrr::map(.x = seq_along(densr), .f = ~{
+
+    if(.x == 11){ # Migrating south in November
+      
+      # OPTION 1
+      
+      # # Determine mass outside of SEUS
+      # mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.SEUS)), na.rm = TRUE)
+      # # Redistribute mass across range according to north-south gradient
+      # d1 <- densr[[.x]] * rp.SEUS
+      # d2 <- mout * r_south/sum(raster::getValues(r_south), na.rm = TRUE) # Sums to mout
+      # d.out <- d1 + d2
+      
+      # OPTION 2
+      
+      # # Clip density to SEUS
+      # d1 <- densr[[.x]] * rp.SEUS
+      # # Re-scale gradient outside of SEUS
+      # d1[d1==0] <- NA
+      # dv <- na.omit(apply(X = as.matrix(d1), MARGIN = 1, FUN = mean, na.rm = TRUE))
+      # d2 <- rescale_raster(x = r_south * (1-rp.SEUS), new.max = dv[1])
+      # d2[d2==0] <- NA
+      # d.out <- raster::merge(d1, d2)
+      
+      # OPTION 3
+      pathGSL <- raster::shapefile("data/pathGSL.shp") |> sp::spTransform(CRSobj = narw_crs())
+      pts <- sp::spsample(pathGSL, n = 1000, type = "regular")
+      distances <- raster::distanceFromPoints(object = densr[[1]], xy = pts) |> 
+        raster::mask(mask = densr[[1]])
+      dist.r <- (1/distances)^(1/4) # Fourth root
+      d.out <- rescale_raster(dist.r, new.min = raster::cellStats(dist.r, "min"), 
+                               new.max = raster::cellStats(dist.r*(1-rp.CA), "max")) + r_southbound
+      
+      as(d.out, "SpatialGridDataFrame")
+
+    } else if(.x == 6) { # Migrating north in June
+
+      # OPTION 1
+      
+      # Determine mass outside of GSL
+      # mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.GSL)), na.rm = TRUE)
+      # Redistribute mass across range according to north-south gradient
+      # d1 <- densr[[.x]] * rp.GSL
+      # d2 <- mout * r_north/sum(raster::getValues(r_north), na.rm = TRUE) # sums to mout
+      # d.out <- d1 + d2
+      
+      # OPTION 2
+      
+      # # Clip density to GSL
+      # d1 <- densr[[.x]] * rp.GSL
+      # # Re-scale gradient outside of GSL
+      # d1[d1==0] <- NA
+      # dv <- na.omit(apply(X = as.matrix(d1), MARGIN = 1, FUN = mean, na.rm = TRUE))
+      # d2 <- rescale_raster(x = r_north * (1-rp.GSL), new.max = dv[1])
+      # d2[d2==0] <- NA
+      # d.out <- raster::merge(d1, d2)
+      
+      # OPTION 3
+      pathGSL <- raster::shapefile("data/pathGSL.shp") |> sp::spTransform(CRSobj = narw_crs()) |> rgeos::gBuffer(width = 50)
+      pts <- sp::spsample(pathGSL, n = 10000, type = "regular")
+      distances <- raster::distanceFromPoints(object = densr[[1]], xy = pts) |> raster::mask(mask = densr[[1]])
+      dist.r <- (1/distances)^(1/4) # Fourth root
+      d.out <- rescale_raster(dist.r, new.min = raster::cellStats(dist.r, "min"), 
+                              new.max = raster::cellStats(dist.r*rp.CA, "max")) + r_northbound
+
+      as(d.out, "SpatialGridDataFrame")
+      
+    } else if(.x %in% c(1:2, 12)) { # Breeding season in the SEUS
+      
+      # Mass outside of SEUS
+      mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.SEUS)), na.rm = TRUE)
+
+      # Redistribute mass
+      d <- densr[[.x]] * rp.SEUS
+      d <- d + d*mout/sum(raster::getValues(d), na.rm = TRUE) + 1e-06
+      as(d, "SpatialGridDataFrame")
+      
+    } else if(.x %in% c(7:10)) { # Foraging season in the GSL
+      
+      # Mass outside of GSL
+      mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.GSL)), na.rm = TRUE)
+      
+      # Redistribute mass
+      d <- densr[[.x]] * rp.GSL
+      d <- d + d*mout/sum(raster::getValues(d), na.rm = TRUE) + 1e-06
+      as(d, "SpatialGridDataFrame")
+
+    } else { # March through to May
+
+      dens[[.x]]
+
+    }
+
+  }) |> purrr::set_names(nm = month.abb)
+
+  return(wdens)
+  
+}
+
+init_xy <- function(maps, maps.weighted, coords, cohort.id, nsim, northSEUS = -12, southGSL = 1400){
+  
+  if(cohort.id == 5) m <- maps.weighted else m <- maps
+  
+  out <- do.call(rbind, lapply(seq_along(m), function(mo) {
+    
+    p <- as.numeric(m[[mo]])
+    p[!is.finite(p)] <- 0
+    
+    # Foraging season in the GSL (June though to Oct – Crowe et al., 2021)
+    if(mo %in% c(7:10)){
+      notGSL <- which(coords[,2] < southGSL)
+      GSL <- which(coords[,2] >= southGSL)
+      N.notGSL <- sum(p[notGSL])
+      p[notGSL] <- 0
+      p[GSL][p[GSL] > 0] <- p[GSL][p[GSL] > 0] + (N.notGSL / length(p[GSL][p[GSL] > 0]))
+      
+      # Breeding season (Nov through to February - Krystan et al. 2018)
+    } else if (mo %in% c(1:2, 11:12)){
+      notSEUS <- which(coords[,2] > northSEUS)
+      SEUS <- which(coords[,2] <= northSEUS)
+      N.notSEUS <- sum(p[notSEUS])
+      p[notSEUS] <- 0
+      p[SEUS][p[SEUS] > 0] <- p[SEUS][p[SEUS] > 0] + (N.notSEUS / length(p[SEUS][p[SEUS] > 0]))
+      
+    } else if (mo == 5){
+      
+      area <- which(coords[,2] <= 1200)
+      notarea <- setdiff(seq_along(p), area)
+      N.notarea <- sum(p[notarea])
+      p[notarea] <- 0
+      p[area][p[area] > 0] <- p[area][p[area] > 0] + (N.notarea / length(p[area][p[area] > 0]))
+      
+    } else if (mo == 6){
+      
+      SCOS <- which(coords[,1] >= 1400 & coords[,2] <=1500)
+      notSCOS <- setdiff(seq_along(p), SCOS)
+      N.notSCOS <- sum(p[notSCOS])
+      p[notSCOS] <- 0
+      p[SCOS][p[SCOS] > 0] <- p[SCOS][p[SCOS] > 0] + (N.notSCOS / length(p[SCOS][p[SCOS] > 0]))
+      
+    } else {
+      p[p <= 0.01] <- 0
+    }
+    sample(x = 1:length(p), size = nsim, replace = TRUE, prob = p)
+  }))
+  
+  return(out)
+}
+
+# 
+# init_inds <- function(x, nsim, northSEUS = -12, southGSL = 1500, cohort.id){
+#   # -12 northing marks the northermost boundary of the calving grounds
+#   coords <- sp::coordinates(density_narw[[1]])
+#   out <- do.call(rbind, lapply(seq_along(x), function(m) {
+#     
+#     p <- as.numeric(x[[m]])
+#     p[!is.finite(p)] <- 0
+#     
+#     # Pregnant females
+#     if(cohort.id == 5){
+#       
+#       # During the breeding season (Nov through to February - Krystan et al. 2018)
+#       if(m %in% c(1:2, 11:12)){
+#         notSEUS <- which(coords[,2] > northSEUS)
+#         SEUS <- which(coords[,2] <= northSEUS)
+#         N.notSEUS <- sum(p[notSEUS])
+#         p[notSEUS] <- 0
+#         p[SEUS][p[SEUS] > 0] <- p[SEUS][p[SEUS] > 0] + (N.notSEUS / length(p[SEUS][p[SEUS] > 0]))
+#       }
+#       
+#       # Foraging season in the GSL (June though to Oct – Crowe et al., 2021)
+#       if(m %in% c(6:10)){
+#         notGSL <- which(coords[,2] < southGSL)
+#         GSL <- which(coords[,2] >= southGSL)
+#         N.notGSL <- sum(p[notGSL])
+#         p[notGSL] <- 0
+#         p[GSL][p[GSL] > 0] <- p[GSL][p[GSL] > 0] + (N.notGSL / length(p[GSL][p[GSL] > 0]))
+#       }
+#       
+#     }
+#     sample(x = 1:length(p), size = nsim, replace = TRUE, prob = p)
+#   }))
+#   row.names(out) <- month.abb
+#   # plot(world, axes = TRUE, col = "grey")
+#   # points(raster::xyFromCell(raster::raster(density_narw$Jan), out[,1]), pch = 16)
+#   return(out)
+# 
+# }
+
+transpose_array <- function(input, array.name, dates){
+  purrr::map(.x = input, .f = ~{ # different cohorts
+    
+    dat <- .x[[array.name]]
+    
+    if(array.name == "attrib" & is.list(dat)){
+      tmp <- purrr::map(.x = dat, .f = ~{
+        
+        tmp.nested <- aperm(.x, c(3,1,2))
+        dimnames(tmp.nested)[[1]] <- format(dates)
+        dimnames(tmp.nested)[[3]] <- paste0("whale.", seq_len(dim(tmp.nested)[3]))
+        tmp.nested
+        
+      })
+      
+    } else if(array.name == "kj" & is.list(dat)) {
+      
+      if(class(dat[["in"]]) == "array"){
+        
+        tmp.in <- aperm(dat[["in"]], c(3,1,2))
+        dimnames(tmp.in)[[1]] <- format(dates)
+        dimnames(tmp.in)[[3]] <- paste0("whale.", seq_len(dim(tmp.in)[3]))
+        
+        tmp.out <- aperm(dat[["out"]], c(3,1,2))
+        dimnames(tmp.out)[[1]] <- format(dates)
+        dimnames(tmp.out)[[3]] <- paste0("whale.", seq_len(dim(tmp.out)[3]))
+
+      } else {
+        
+        tmp.in <- purrr::map(.x = dat[["in"]], .f = ~{
+          tmp <- aperm(.x, c(3,1,2))
+          dimnames(tmp)[[1]] <- format(dates)
+          dimnames(tmp)[[3]] <- paste0("whale.", seq_len(dim(tmp)[3]))
+          tmp
+        })
+        
+        tmp.out <- purrr::map(.x = dat[["out"]], .f = ~{
+          tmp <- aperm(.x, c(3,1,2))
+          dimnames(tmp)[[1]] <- format(dates)
+          dimnames(tmp)[[3]] <- paste0("whale.", seq_len(dim(tmp)[3]))
+          tmp
+        })
+      }
+      
+      tmp <- list(`in` = tmp.in, out = tmp.out)
+     
+    } else {
+      tmp <- aperm(dat, c(3,1,2))
+      dimnames(tmp)[[1]] <- format(dates)
+      dimnames(tmp)[[3]] <- paste0("whale.", seq_len(dim(tmp)[3]))
+    }
+    
+    .x[[array.name]] <- tmp
+    .x
+  })
+}
+
+optim_feeding <- function(bounds = list(c(0,0.2)), nm = NULL){
+  
+  # Assuming B > 0 And S > 0:
+  # - A is the value of the horizontal asymptote when x tends to -Inf
+  # - D is the value of the horizontal asymptote when x tends to Inf
+  # - B describes how rapidly the curve makes its transition between the two asymptotes;
+  # - C is a location parameter, which does not have a nice interpretation (except if S = 1)
+  # - S describes the asymmetry of the curve (the curve is symmetric when S = 1)
+  
+  # Define a 5-parameter logistic curve
+  f <- function(x, A = 1, D = 0, B, C, S) A + (D-A) / (1 + exp(B*(C-x)))^S
+  
+  # Define function to optimize
+  opt.f <- function(param, bounds, err = 0.001){
+    first <- (1 - f(bounds[1], B = param[1], C = param[2], S = param[3]) - err)^2
+    second <- (0 - f(bounds[2], B = param[1], C = param[2], S = param[3]) +  err)^2
+    sum(first, second)
+  }
+  
+  # Run optimization
+  res <- purrr::map(.x = seq_along(bounds), 
+             .f = ~ {
+               out <- optim(par = c(15, 1, 0.1, 0.01), fn = opt.f, bounds = bounds[[.x]])
+               
+               # Print results
+               cat("\nEstimated parameter values:\n")
+               cat("B",out$par[1],"\n")
+               cat("C",out$par[2],"\n")
+               cat("s",out$par[3],"\n\n")
+               print(data.frame(BC = bounds[[.x]], 
+                     effort = c(f(bounds[[.x]][1], 
+                                  B = out$par[1], 
+                                  C = out$par[2], 
+                                  S = out$par[3]), 
+                                f(bounds[[.x]][2], 
+                                  B = out$par[1],
+                                  C = out$par[2],
+                                  S = out$par[3]))))
+               return(out)
+             })
+
+  # Plot
+  x <- seq(0, 1, length.out = 100)
+  plot(x, f(x, B = res[[1]]$par[1], C = res[[1]]$par[2], S = res[[1]]$par[3]), 
+       type = "n", ylab = "Feeding effort", xlab = "Body condition (relative blubber mass, %)")
+  purrr::walk(.x = seq_along(bounds), .f = ~{
+    lines(x, f(x, B = res[[.x]]$par[1], C = res[[.x]]$par[2], S = res[[.x]]$par[3]), lty = .x)
+  })
+  if(!is.null(nm)) legend("topright", legend = nm, lty = seq_along(bounds))
+  
+}
+
 # NOISE ------------------------------------------------------
 
-TL <- function(r, logfac = 15, a = 1){
+TL <- function(r, logfac = 15, a = 1.175){
   # r in km
   # alpha is in dB/km
   loss <- logfac * log10(r*1000)
@@ -20,7 +593,7 @@ TL <- function(r, logfac = 15, a = 1){
   return(loss)
 }
 
-dB2km <- function(target.dB, SL = 220, logfac = 15, a = 1){
+dB2km <- function(target.dB, SL = 220, logfac = 15, a = 1.175){
   opt.fun <- function(r, SL, target.L, logfac){
     return((SL-TL(r, logfac = logfac, a = a)-target.L)^2)}
   out <- optimize(f = opt.fun, interval = c(0,30000), SL = SL, target.L = target.dB, logfac = logfac)
@@ -31,45 +604,216 @@ km2dB <- function(r, SL = 220, logfac = 15, a = 1){
   return(SL-TL(r, logfac = logfac, a = a))
 }
 
-dummy_noise <- function(ambient = 60, source.lvl = 220, mitigation = 10, x, y){
+proxy_noise <- function(ambient = 60, source.lvl = 220, mitigation = 10, x, y){
   
-  # Source at 220 dB as reasonable worst case
+  # Spatial support
+  support.poly <- targets::tar_read(support_poly)
   
-  d.support <- targets::tar_read(density_support) |> raster::raster()
-  d.support[d.support < 1] <- NA
-  d.support[is.na(d.support)] <- 3
+  # Load turbine locations for each wind farm
+  turbine.locs <- targets::tar_read(turbines)
   
-  d.support[raster::cellFromXY(d.support, cbind(x,y))] <- 2
-  rdist <- terra::gridDistance(d.support, origin = 2, omit = 3)
+  # Calculate central locations
+  farm.locs <- purrr::map(.x = turbine.locs, .f = ~{
+    x.avg <- mean(.x$x); y.avg <- mean(.x$y)
+    .x[, c("longitude", "latitude", "x", "y")] <- NULL
+    .x$easting <- x.avg; .x$northing <- y.avg
+    .x <- add_latlon(.x)
+    dplyr::distinct(.x)
+  }) |> do.call(what = rbind)
   
-  dB <- (source.lvl - mitigation) - TL(rdist)
-  dB[dB < ambient] <- ambient
-  # plot(terra::rast(dB), col = pals::viridis(100), main = "Noise levels (dB)", xlab = "Easting (km)")
-  return(dB)
+  # Calculate distances to source
+  r <- ambient.r <- targets::tar_read(density_support) |> raster::raster()
+  raster::values(r) <- NA
+  ambient.r <- ambient.r - 1
+  ambient.r[ambient.r < 0] <- NA
+  ambient.r[ambient.r == 0] <- ambient
+  
+  rdist <- purrr::map(.x = seq_along(turbine.locs), .f = ~{
+    tmp <- r
+    tmp[raster::cellFromXY(tmp, farm.locs[.x, c("easting", "northing")])] <- 1
+    terra::distance(tmp) |> terra::mask(mask = support.poly)}) |> 
+    purrr::set_names(nm = names(turbine.locs))
+
+  # Compute sound levels
+  db <- purrr::map(.x = rdist, .f = ~{
+    db.out <- source.lvl - mitigation - TL(.x)
+    db.out[db.out < ambient] <- NA
+    db.out})
+  
+  db.all <- raster::stack(db) |> raster::calc(fun = max)
+  db.all <- raster::stack(ambient.r, db.all) |> raster::calc(fun = sum, na.rm = TRUE)
+  db.all[db.all == 0] <- NA
+  
+  # plot(terra::rast(db.all), col = pals::viridis(100), main = "Noise levels (dB)", xlab = "Easting (km)")
+  
+  db.all <- rescale_raster(db.all, new.max = source.lvl)
+  db.list <- purrr::map(.x = month.abb, .f = ~db.all)
+  
+  out <- purrr::map(.x = db.list, .f = ~as(.x, "SpatialGridDataFrame"))
+  names(out) <- month.abb
+  
+  return(out)
 }
 
-# PREY LAYERS ------------------------------------------------------
-  
-dummy_prey <- function(){
-  
-  d.support <- targets::tar_read(density_support) |> raster::raster()
-  d.support[d.support < 1] <- NA
-  d.support[!is.na(d.support)] <- 0
+# FISHING GEAR ------------------------------------------------------
 
-  # Cape Cod Bay
-  ccb <- raster::cellsFromExtent(object = d.support, 
-     extent = raster::extent(data.frame(x = c(610, 660, 660, 610), y = c(923, 923, 883, 883)) |> as.matrix()))
+proxy_fishing <- function(){
   
-  # Cape Cod Bay
-  gsl <- raster::cellsFromExtent(object = d.support, 
-     extent = raster::extent(data.frame(x = c(965, 1355, 1355, 965), y = c(1660, 1660, 1370, 1370)) |> as.matrix()))
+  # Same as dummy prey layer, but rescale to 0–1 range
   
-  r <- c(ccb, gsl)
-  r <- r[which(!is.na(d.support[r]))]
+  support_poly <- targets::tar_read(support_poly)
+  density_narw <- targets::tar_read(density_narw)
   
-  d.support[r] <- rnorm(length(r), 110, 10)
+  # Create a correlated random field as a dummy prey surface
+  grid <- sp::makegrid(support_poly, cellsize = 15) |>
+    dplyr::rename(x = x1, y = x2)
+  area.ex <- raster::extent(support_poly)
+  grid <- expand.grid(seq(area.ex[1], area.ex[2], length.out = 200),
+                      seq(area.ex[3]-500, area.ex[4], length.out = 200))
+  names(grid) <- c("x", "y")
   
-  out <- purrr::map(.x = month.abb, .f = ~as(d.support, "SpatialGridDataFrame"))
+  target.r <- raster::raster(density_narw[[1]])
+  
+  out <- purrr::map(.x = month.abb, .f = ~{
+    g.dummy <- gstat::gstat(formula = z ~ 1, 
+                            locations = ~ x + y, 
+                            dummy = TRUE, 
+                            beta = 1, 
+                            model = gstat::vgm(psill = 1000, range = 150, model = 'Exp'), 
+                            nmax = 20)
+    
+    yy <- predict(g.dummy, newdata = grid, nsim = 4)
+    sp::gridded(yy) = ~x+y
+    yy <- raster::raster(yy)
+    
+    # Clip to area of interest
+    raster::resample(yy, target.r) |> 
+      raster::crop(target.r) |> 
+      raster::mask(target.r) |> 
+      rescale_raster(new.max = 0.4)
+  })
+  
+  out <- purrr::map(.x = out, .f = ~as(.x, "SpatialGridDataFrame"))
+  names(out) <- month.abb
+  
+  return(out)
+}
+
+
+# VESSEL TRAFFIC ------------------------------------------------------
+
+proxy_vessels <- function(){
+  
+  # Data from https://globalmaritimetraffic.org/ - monthly rasters between Jan and Dec 2022
+  
+  poly <- targets::tar_read(support_poly)
+  poly.v <- as(poly, "SpatVector")
+  
+  A.files <- list.files(path = "data/vessels/", pattern = "A.tif")
+  B.files <- list.files(path = "data/vessels/", pattern = "B.tif")
+  
+  # Prepare spatial rasters
+  A.maps <- purrr::map(.x = A.files, .f = ~{
+    raster::raster(file.path("data/vessels", .x)) |> 
+    as("SpatRaster") |> 
+    terra::project(y = as.character(narw_crs())) |>  
+    terra::mask(mask = poly.v)
+    }) |> purrr::set_names(nm = month.abb)
+    
+  B.maps <- purrr::map(.x = B.files, .f = ~{
+    raster::raster(file.path("data/vessels", .x)) |> 
+      as("SpatRaster") |> 
+      terra::project(y = as.character(narw_crs())) |>  
+      terra::mask(mask = poly.v)
+  }) |> purrr::set_names(nm = month.abb)  
+  
+  # Resample to desired resolution
+  target.r <- targets::tar_read(density_support) |> raster::raster() |> as("SpatRaster")
+  A.maps <- purrr::map(.x = A.maps, .f = ~terra::resample(.x, target.r))
+  B.maps <- purrr::map(.x = B.maps, .f = ~terra::resample(.x, target.r))
+  
+  # Merge rasters
+  vessels.r <- purrr::map2(.x = A.maps, .y = B.maps, 
+                           .f = ~{
+                             out.r <- raster::merge(raster::raster(.x), raster::raster(.y))
+                             out.r <- sqrt(out.r)
+                             out.r <- rescale_raster(out.r, new.max = 1)
+                             out.r[is.na(out.r)] <- 0
+                             raster::mask(out.r, mask = poly)})
+  
+  out <- purrr::map(.x = vessels.r, .f = ~as(.x, "SpatialGridDataFrame"))
+  names(out) <- month.abb
+  
+  return(out)
+}
+
+# PREY ------------------------------------------------------
+  
+proxy_prey <- function(seed = 215513){
+  
+  set.seed(seed)
+  
+  support_poly <- targets::tar_read(support_poly)
+  density_narw <- targets::tar_read(density_narw)
+  regions.support <- targets::tar_read(regions)
+  
+  target.r <- raster::raster(density_narw[[1]])
+
+  # regions.raster <- raster::rasterize(
+  #   x = regions.support,
+  #   y = raster::raster(x = regions.support,
+  #                      resolution = raster::res(target.r),
+  #                      origin = raster::origin(target.r),
+  #                      ext = raster::extent(target.r),
+  #                      crs = narw_crs())) |> 
+  #   raster::resample(target.r, method = "ngb") |> 
+  #   raster::mask(target.r)
+  # 
+  # # To zero out the prey layer in the SEUS and MIDA
+  # cells.OUT <- which(regions$region %in% c("SEUS", "MIDA"))
+  # for(i in seq_along(cells.OUT)) regions.raster[regions.raster$layer == cells.OUT[i]] <- -1
+  # regions.raster[regions.raster >= 0] <- 1
+  # regions.raster[regions.raster <0] <- 0
+  
+  gradient.r <- raster::as.data.frame(target.r, xy = TRUE)
+  gradient.r$val <- 1/(1+exp(-0.05*(gradient.r$x-550)))
+  gradient.r$val[which(is.na(gradient.r$Nhat))] <- NA
+  gradient.r <- raster::rasterFromXYZ(xyz = gradient.r[,c("x", "y", "val")], res = raster::res(target.r), crs = narw_crs())
+  # plot(gradient.r)
+  
+  # Create a correlated random field as a dummy prey surface
+  grid <- sp::makegrid(support_poly, cellsize = 15) |>
+    dplyr::rename(x = x1, y = x2)
+  area.ex <- raster::extent(support_poly)
+  grid <- expand.grid(seq(area.ex[1], area.ex[2], length.out = 200),
+                      seq(area.ex[3]-500, area.ex[4], length.out = 200))
+  names(grid) <- c("x", "y")
+  
+  out <- purrr::map(.x = month.abb, .f = ~{
+
+    g.dummy <- gstat::gstat(formula = 
+                            z ~ 1 + y, 
+                            locations = ~ x + y, 
+                            dummy = TRUE, 
+                            beta = 1800, 
+                            model = gstat::vgm(psill = 2000, range = 500, model = 'Exp'), 
+                            nmax = 20)
+    
+    yy <- predict(g.dummy, newdata = grid, nsim = 4)
+    sp::gridded(yy) = ~x+y
+    yy <- raster::raster(yy)
+
+    # Clip to area of interest
+    rout <- raster::resample(yy, target.r) |> 
+      raster::crop(target.r) |> 
+      raster::mask(target.r)
+    
+    rout * gradient.r
+    # r <- rout * gradient.r
+    # plot_raster(r, zero = TRUE)
+  })
+  
+  out <- purrr::map(.x = out, .f = ~as(.x, "SpatialGridDataFrame"))
   names(out) <- month.abb
   
   return(out)
@@ -85,6 +829,12 @@ dummy_prey <- function(){
 narw_crs <- function(){
   sp::CRS("+proj=aea +lat_0=34 +lon_0=-78 +lat_1=27.3333333333333 +lat_2=40.6666666666667 +x_0=0 +y_0=0 +datum=WGS84 +units=km +no_defs")
 }
+
+# rescale_raster <- function(x, new.min = 0, new.max = 1, x.min = NULL, x.max = NULL) {
+#   if(is.null(x.min)) x.min = raster::cellStats(x, "min")
+#   if(is.null(x.max)) x.max = raster::cellStats(x, "max")
+#   new.min + (x - x.min) * ((new.max - new.min) / (x.max - x.min))
+# }
 
 predict_hgam <- function(object, newdata, type, n.chunks = 5){
   N <- nrow(newdata)
@@ -396,7 +1146,6 @@ add_latlon <- function(dat, CRS.obj = narw_crs()){
   
   xy <- sp::coordinates(tmp) |> as.data.frame()
   names(xy) <- c("long", "lat")
-  
   cbind(dat, xy)
   
 }
@@ -1079,7 +1828,6 @@ get_regions <- function(eez = FALSE) {
 }
 
 get_world <- function(sc = "medium"){
-  
   wrld <- rnaturalearth::ne_countries(scale = sc, returnclass = "sp")
   wrld <- sp::spTransform(wrld, CRSobj = narw_crs()) |> 
     raster::crop(y = raster::extent(c(-574.1478, 1934.829, -1534.189, 2309.078)))
@@ -1088,6 +1836,17 @@ get_world <- function(sc = "medium"){
 }
 
 # BIOENERGETICS ------------------------------------------------------
+# 
+# body_condition <- function(n, cohorts, alpha = 6, beta = 20){
+#   
+#   sapply(X = cohorts, FUN = function(x) rbeta(n = n, shape1 = alpha, shape2 = beta), simplify = FALSE, USE.NAMES = TRUE)
+#   
+#   # curve(expr = dbeta(x = x, shape1 = 6, shape2 = 20),
+#   #       xlab = "", ylab = "", main = "Beta PDF with alpha = 6 and beta = 20",
+#   #       lwd = 2, col = 1, xlim = c(0, 1))
+#   
+# }
+
 
 #' Decrease in milk feeding efficiency as a function of calf age
 #'
@@ -1096,14 +1855,14 @@ get_world <- function(sc = "medium"){
 #' @param Tdecrease Time at which milk comsuption starts to decrease (in days).
 #' @param E Steepness of the decline
 
-milk_assimilation <- function(a = seq(0, 500), Tstop = 365, Tdecrease = 100, E = 0.9){
-  p <- (a-Tdecrease)/(Tstop-Tdecrease)
-  res <- (1 - p)/ (1 - (E*p))
-  res[res<0] <- 0
-  res[res>1 & a>Tdecrease] <- 0
-  res[res>1 & a<Tdecrease] <- 1
-  return(res)
-}
+# milk_assimilation_R <- function(a = seq(0, 500), Tstop = 365, Tdecrease = 100, E = 0.9){
+#   p <- (a-Tdecrease)/(Tstop-Tdecrease)
+#   res <- (1 - p)/ (1 - (E*p))
+#   res[res<0] <- 0
+#   res[res>1 & a>Tdecrease] <- 0
+#   res[res>1 & a<Tdecrease] <- 1
+#   return(res)
+# }
 
 #' Increase in milk provisioning by female as a function of her body condition.
 #'
@@ -1113,16 +1872,16 @@ milk_assimilation <- function(a = seq(0, 500), Tstop = 365, Tdecrease = 100, E =
 #' @param target_condition Target body condition, expressed as the ratio of reserve to maintenance mass.
 #' @param starvation Starvation threshold
 
-milk_provisioning <- function(E = -2, blubber_mass, maintenance_mass, target_condition = 0.3, starvation = 0.15){
-  p1 <- 1-E
-  p2 <- blubber_mass - starvation * maintenance_mass
-  p3 <- maintenance_mass * (target_condition - starvation)
-  p4 <- E * (blubber_mass - (starvation*maintenance_mass))
-  res <- p1*p2/(p3-p4)
-  res[blubber_mass/maintenance_mass < starvation] <- 0
-  res[blubber_mass/maintenance_mass >= target_condition] <- 1
-  return(res)
-}
+# milk_provisioning_R <- function(E = -2, blubber_mass, maintenance_mass, target_condition = 0.3, starvation = 0.15){
+#   p1 <- 1-E
+#   p2 <- blubber_mass - starvation * maintenance_mass
+#   p3 <- maintenance_mass * (target_condition - starvation)
+#   p4 <- E * (blubber_mass - (starvation*maintenance_mass))
+#   res <- p1*p2/(p3-p4)
+#   res[blubber_mass/maintenance_mass < starvation] <- 0
+#   res[blubber_mass/maintenance_mass >= target_condition] <- 1
+#   return(res)
+# }
 
 
 # Feeding effort as a function of body condition
@@ -1133,20 +1892,75 @@ milk_provisioning <- function(E = -2, blubber_mass, maintenance_mass, target_con
 #' @param maintenance_mass 
 #' @param blubber_mass 
 
-feeding_effort <- function(eta, target_condition = 0.3, maintenance_mass, blubber_mass){
-  1/(1+exp(-eta * ((target_condition*maintenance_mass/blubber_mass)-1)))
-}
+# feeding_effort_R <- function(eta, target_condition = 0.3, maintenance_mass, blubber_mass){
+#   1/(1+exp(-eta * ((target_condition*maintenance_mass/blubber_mass)-1)))
+# }
 
 #' Feeding effort as function of copepod density
-#'
+#' 
 #' @param gamma Feeding threshold
 #' @param D Coepepod density
 
-cop_threshold <- function(gamma, D){
-  1/(1+exp(gamma-D))
-}
+# feeding_threshold_R <- function(gamma, D){
+#   1/(1+exp(gamma-D))
+# }
+
+# mammary_mass_R <- function(M){
+#   10^(0.902*log(M, 10)-1.965)
+# }
+
+# milk_production_R <- function(mu){
+#   0.0835*mu^1.965
+# }
+
+# LC <- function(M, sr, sm, phi, psi, delta){
+#   
+#   (sum(phi*delta) * sr * (1.46+0.0005*M) + sum(psi*delta) * sm * (5.17+0.0002 *M))*M
+#   
+# }
 
 # PLOTTING ------------------------------------------------------
+
+plot_raster <- function(r, prob = FALSE, zero = FALSE){
+  
+  dat <- raster::as.data.frame(r, xy = TRUE)
+  names(dat)[3] <- "Nhat"
+  dat <- dat[complete.cases(dat),]
+  
+  if(zero){
+    dat.c <- dat |> dplyr::filter(Nhat > 0)
+    colour.breaks <- c(0, quantile(dat.c$Nhat, seq(0,1, 0.1)))
+  }else {
+    if(!prob){
+      colour.breaks <- colour_breaks(dat)
+    } else {
+      colour.breaks <- c(seq(0, 0.01, length.out = 5), seq(0.02, 0.1, length.out = 5), 0.2, 0.5, 0.8, 1)
+    }
+  }
+  
+  dat <- dat |> 
+    dplyr::mutate(Ncol = cut(Nhat, breaks = colour.breaks, include.lowest = TRUE)) |> 
+    dplyr::mutate(Ncol = factor(Ncol))
+  
+  levels(dat$Ncol) <-  gsub(pattern = ",", replacement = " – ", levels(dat$Ncol))
+  levels(dat$Ncol) <-  gsub(pattern = "\\[|\\]", replacement = "", levels(dat$Ncol))
+  levels(dat$Ncol) <-  gsub(pattern = "\\(|\\)", replacement = "", levels(dat$Ncol))
+  
+  r.dat <- raster::rasterFromXYZ(dat[, c("x", "y", "Nhat")], res = raster::res(r), crs = narw_crs())
+  x.lim <- raster::extent(r.dat)[1:2]
+  y.lim <- raster::extent(r.dat)[3:4]
+  
+  world.sf <- sf::st_as_sf(world)
+  
+  ggplot2::ggplot(data = dat) +  
+    ggplot2::geom_raster(aes(x,y, fill = Ncol)) +
+    ggplot2::geom_sf(data = world.sf, fill = "lightgrey", color = "black", size = 0.25) +
+    ylab("") + xlab("") +
+    coord_sf(xlim = x.lim, ylim = y.lim, expand = FALSE) +
+    scale_fill_manual(values = pals::viridis(length(levels(dat$Ncol))),
+                      guide = guide_legend(reverse = TRUE))
+  
+}
 
 # Jason's colour scale
 colour_breaks <- function(dat){
@@ -1156,13 +1970,187 @@ colour_breaks <- function(dat){
   return(colour.breaks)
 }
 
-# UTILITY ------------------------------------------------------
+#' @export
+plot.xyinits <- function(obj, month = NULL) {
+  if(is.null(month)) month <- 1:12
+  for(k in 1:length(obj)){
+    if(!"xyinits" %in% class(obj)) stop("Input not recognized")
+    par(mfrow = c(3,4))
+    for(h in month){
+      sp:::plot.SpatialPolygons(world, col = "grey", axes = TRUE, main = month.name[h])
+      xpos <- sapply(obj[[k]][h, ], FUN = function(x) raster::xFromCell(raster::raster(density_narw$Feb), x))
+      ypos <- sapply(obj[[k]][h, ], FUN = function(x) raster::yFromCell(raster::raster(density_narw$Feb), x))
+      points(cbind(xpos, ypos), pch = 16, col = "orange")
+      # legend("topleft", legend = month.abb, col = pals::glasbey(12), pch = 16)
+    }
+  }
+  par(mfrow = c(1,1))
+}
 
-save_objects <- function(){
-  obj <- c("regions", "world", "support_poly", "density_narw", "density_support", "turbines", "prey_maps")
+deg2radians_R <- function(angle){
+  angle*pi/180;
+}
+
+gape_size_R <- function(L, omega, alpha){
+  (deg2radians_R(alpha) * ((omega^2)/4 + (0.2077*L - 1.095)^2))/2
+}
+
+
+# UTILITIES ------------------------------------------------------
+
+get_daylight <- function(){
+  
+  out <- list()
+  
+  # For each month
+  for(m in 1:12){
+    
+    # Retrieve density surface
+    d <- targets::tar_read(density_narw)[[m]]
+    
+    # Convert to data.frame and add lat/lon coordinates
+    r <- d |> 
+      data.frame() |> 
+      dplyr::select(-Nhat) |> 
+      dplyr::rename(easting = s1, northing = s2) |> 
+      add_latlon()
+    
+    target.date <- lubridate::as_date(paste0("2023-", m, "-15"))
+    cat("\n")
+    print(target.date)
+    cat("\n")
+    
+    # Calculate duration of daylight hours on the 15th day of each month
+    pb <- progress::progress_bar$new(total = nrow(r))
+    for(u in 1:nrow(r)){
+      pb$tick()
+      daylight <- suncalc::getSunlightTimes(date = target.date, lat = r[u,"lat"], lon = r[u,"long"], tz = "EST")
+      r$daylight[u] <- daylight$sunset - daylight$sunrise
+    }
+    
+    # Return output raster
+    rdaylight <- raster::rasterFromXYZ(xyz = r[, c("easting", "northing", "daylight")],
+                                       res = raster::res(raster::raster(d)), crs = narw_crs())
+    rdaylight <- raster::resample(x = rdaylight, y = raster::raster(d))
+    rdaylight <- as(rdaylight, "SpatialGridDataFrame")
+    
+    out[[month.abb[m]]] <- rdaylight
+  }
+  
+  return(out)
+}
+
+estBetaParams <- function(mu, std) {
+  var <- std * std
+  alpha <- ((1 - mu) / var - 1 / mu) * mu ^ 2
+  beta <- alpha * (1 / mu - 1)
+  return(params = list(alpha = alpha, beta = beta))
+}
+
+estGammaParams <- function(mu, std) {
+  v <- std * std
+  shape <- (mu^2)/v
+  scale <- v/mu
+  return(params = list(shape = shape, scale = scale))
+}
+
+estTruncNorm <- function(target.mean, L, U){
+  
+  opt.f <- function(param, bounds, target.mean){
+    set.seed(20230126)
+    n <- sapply(1:10000, FUN = function(x) rtnorm(bounds[1], param[1], bounds[1], bounds[2]))
+    return((mean(n)-target.mean)^2)
+  }
+  
+  out <- optim(par = 2, fn = opt.f, bounds = c(L,U), target.mean = target.mean)
+  return(out$par)
+}
+
+draw <- function(distrib = "norm", mu, std = NULL, L = -Inf, U = Inf, seed = 215513, x.lab = "", y.lab = ""){
+  
+  set.seed(seed)
+  
+  if(!distrib %in% c("tnorm", "norm", "gamma", "beta", "halfnorm")) stop("Unrecognized distribution")
+  
+  if(distrib == "halfnorm"){
+    
+    truncN.param <- estTruncNorm(target.mean = mu, L = L, U = U)
+    print(truncN.param)
+    n <- truncnorm::rtruncnorm(10000, L, U, L, truncN.param)
+    
+    cat("min:", min(n), "\n")
+    cat("max:", max(n),  "\n")
+    cat("mean:", mean(n),  "\n")
+    cat("sd:", sd(n), "\n")
+    
+    curve(expr = truncnorm::dtruncnorm(x = x, L, U, L, truncN.param), from = min(n), to = max(n), main = "Half Normal distribution", ylab = y.lab, xlab = x.lab)
+    
+  } else if(distrib == "tnorm"){
+    
+    n <- truncnorm::rtruncnorm(10000, L, U, mu, std)
+
+    cat("min:", min(n), "\n")
+    cat("max:", max(n),  "\n")
+    cat("mean:", mean(n),  "\n")
+    cat("sd:", sd(n), "\n")
+    
+    curve(expr = truncnorm::dtruncnorm(x = x, a = L, b = U, mean = mu, sd = std), from = min(n), to = max(n), main = "Truncated Normal distribution", ylab = y.lab, xlab = x.lab)
+    
+  } else if(distrib == "norm"){
+    
+    n <- rnorm(10000, mu, std)
+    
+    cat("min:", min(n), "\n")
+    cat("max:", max(n),  "\n")
+    cat("mean:", mean(n),  "\n")
+    cat("sd:", sd(n), "\n")
+    
+    curve(expr = dnorm(x = x, mu, std), from = min(n), to = max(n), main = "Normal distribution", ylab = "", xlab = "")
+    
+  } else if(distrib == "gamma") {
+    
+    gamma.params <- estGammaParams(mu, std)
+    print(gamma.params)
+    n <- rgamma(10000, shape = gamma.params$shape, scale = gamma.params$scale)
+    
+    cat("min:", min(n), "\n")
+    cat("max:", max(n),  "\n")
+    cat("mean:", mean(n),  "\n")
+    cat("sd:", sd(n), "\n")
+    
+    curve(expr = dgamma(x = x, shape = gamma.params$shape, scale = gamma.params$scale), from = min(n), to = max(n), main = "Gamma distribution", ylab = y.lab, xlab = x.lab)
+    
+  } else if(distrib == "beta") {
+    
+    beta.params <- estBetaParams(mu, std)
+    print(beta.params)
+    n <- rbeta(10000, beta.params$alpha, beta.params$beta)
+
+    cat("min:", min(n), "\n")
+    cat("max:", max(n),  "\n")
+    cat("mean:", mean(n),  "\n")
+    cat("sd:", sd(n), "\n")
+    
+    curve(expr = dbeta(x = x, beta.params$alpha, beta.params$beta), from = 0, to = 1, main = "Beta distribution", ylab = y.lab, xlab = x.lab)
+  }
+}
+
+rescale_raster <- function(x, x.min = NULL, x.max = NULL, new.min = 0, new.max = 1) {
+  if(is.null(x.min)) x.min <- raster::cellStats(x, "min")
+  if(is.null(x.max)) x.max <- raster::cellStats(x, "max")
+  new.min + (x - x.min) * ((new.max - new.min) / (x.max - x.min))
+}
+
+
+save_objects <- function(obj = NULL, redo = FALSE){
+  if(is.null(obj)) obj <- c("regions", "world", "support_poly", "density_narw", "density_support", "density_weighted", "turbines", "dummy_prey", "dummy_noise", "dummy_vessel", "dummy_fishing", "daylight", "params")
+  # if(redo & length(obj) == 1) targets::tar_delete(obj); targets::tar_make(obj)
   suppressWarnings(targets::tar_load(obj))
-  usethis::use_data(regions, world, support_poly, density_narw, density_support, turbines, prey_maps, 
-                    internal = FALSE, overwrite = TRUE)
+  for(i in obj) {
+    file.name <- paste0("data/", i, ".rda")
+    if(file.exists(file.name)) file.remove(file.name)
+    do.call(save, c(lapply(i, as.name), file = paste0("data/", i, ".rda")))
+  }
 }
 
 format_table <- function(df, top = TRUE, bottom = TRUE, sign = "-"){
