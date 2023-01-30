@@ -7,6 +7,21 @@ data_targets = list(
   targets::tar_target(name = sightings, command = read.csv("data/sightings/narwc_sightings.csv")),
   
   # ........................................................................
+  # Import and process model parameter spreadsheet
+  # ........................................................................
+  
+  targets::tar_target(name = params, command = {
+    readr::read_csv("data/parameters/BOEM_140M0121C0008_ModelParameters.csv", na = c("-", "NA"), skip = 1, 
+                    col_types = readr::cols()) |> 
+      janitor::clean_names() |> 
+      dplyr::select(-row) |> 
+      dplyr::mutate(min = as.numeric(min), 
+                    max = as.numeric(max),
+                    mean_median = as.numeric(mean_median),
+                    sd_se = as.numeric(sd_se),
+                    sample_size = as.numeric(sample_size))}),
+  
+  # ........................................................................
   # Import shapefiles and other spatial data
   # ........................................................................
   
@@ -30,21 +45,26 @@ data_targets = list(
   # Compute spatial support and clip density rasters
   # ........................................................................
   
+  targets::tar_target(name = support_poly, command = support_as_polygon()),
   targets::tar_target(name = density_support, command = spatial_support()),
   targets::tar_target(name = density_narw, command = spatial_support()),
-  targets::tar_target(name = support_poly, command = support_as_polygon())
+  targets::tar_target(name = density_weighted, command = weighted_density()),
   
   # ........................................................................
-  # Calculate geodesic distances
+  # Dummy surfaces
   # ........................................................................
   
-  # targets::tar_target(name = geodesic, command = geodesic_dist(grid.res = 100))
+  targets::tar_target(name = dummy_prey, command = proxy_prey()),
+  targets::tar_target(name = dummy_noise, command = proxy_noise()),
+  targets::tar_target(name = dummy_vessels, command = proxy_vessels()),
+  targets::tar_target(name = dummy_fishing, command = proxy_fishing()),
+  targets::tar_target(name = daylight, command = get_daylight()),
   
   # ........................................................................
-  # Download AIS data
+  # Save data to package
   # ........................................................................
-  # targets::tar_target(AIS_download, get_ais()),
   
+  targets::tar_target(name = save_data, command = save_objects())
 
 
 )
