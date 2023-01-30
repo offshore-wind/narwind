@@ -14,12 +14,13 @@
 #' }
 
 summary.narwsim <- function(obj,
-                            do.plot = FALSE,
+                            # do.plot = FALSE,
+                            percent = TRUE,
                             show.legend = FALSE,
                             geodesic = FALSE){
   
   # obj = m
-  # do.plot = FALSE
+  # percent = TRUE
   # show.legend = FALSE
   # geodesic = FALSE
   
@@ -37,9 +38,9 @@ summary.narwsim <- function(obj,
   locations <- obj$locs
   n.ind <- dim(locations[[1]])[3]
   
-  cohorts <- obj$param$cohorts
   cohort.names <- obj$param$cohort.names
   cohort.ab <- unname(obj$param$cohort.ab)
+  init.month <- obj$param$init$month
   
   if(show.legend){
     cat("BOF: Bay of Fundy\n")
@@ -52,6 +53,15 @@ summary.narwsim <- function(obj,
     cat("SEUS: South-east United States\n")
     cat("SNE: Southern New England\n\n")
   }
+  
+  cat("=============================================================\n")
+  cat("SIMULATIONS\n")
+  cat("=============================================================\n\n")
+  
+  cat("N animals:", format(n.ind, big.mark = ","), "\n")
+  cat("Cohort(s):", cohort.names, "\n")
+  cat("Initialization:", month.name[init.month], "\n")
+  cat("\n")
   
   # Dynamic scoping to make sure geodesic calculations are fast
   environment(summary_geo) <- .GlobalEnv
@@ -145,29 +155,50 @@ summary.narwsim <- function(obj,
   # OUTPUTS
   # ............................................................
   
-  if(do.plot){
-    par(mfrow = c(1,2))
-    boxplot(unlist(dist.euclid), main = "Euclidean distances (daily, km)")
-    boxplot(unlist(dist.geo), main = "Approx. geodesic distances (daily, km)")
-    par(mfrow = c(1,1))
-  }
+  purrr::walk(.x = out, .f = ~hist(unlist(.x$dist$euclid), freq = FALSE,
+                                   main = "Histogram of observed step lengths", 
+                                   xlab = "Step length (km)", breaks = 20))
+  
+  # if(do.plot){
+  #   par(mfrow = c(1,2))
+  #   boxplot(unlist(dist.euclid), main = "Euclidean distances (daily, km)")
+  #   boxplot(unlist(dist.geo), main = "Approx. geodesic distances (daily, km)")
+  #   par(mfrow = c(1,1))
+  # }
   
   locs.by.region <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
     tibble::enframe(.x$n$locreg) |> 
       dplyr::mutate(value = unlist(value)) |> 
       dplyr::rename(region = name, n = value) |>
       dplyr::mutate(cohort = .y) |> 
-      dplyr::relocate(cohort, .after = region)
-  }) |> do.call(what = rbind) |> 
-    tidyr::pivot_wider(names_from = cohort, values_from = n) |> 
-    dplyr::arrange(region) |>
-    janitor::adorn_totals()
+      dplyr::relocate(cohort, .after = region) |> 
+      dplyr::mutate(percent = round(100 * n / sum(n), 1))
+  }) |> do.call(what = rbind)
+  
+  if(percent){
+
+    locs.by.region <- locs.by.region |> 
+      dplyr::select(-n) |> 
+      dplyr::arrange(region) |>
+      tidyr::pivot_wider(names_from = cohort, values_from = percent) |> 
+      janitor::adorn_totals() |>
+      dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), ~ paste(.x, "%")))
+    
+    } else {
+      
+      locs.by.region <- locs.by.region |> 
+        dplyr::select(-percent) |> 
+        tidyr::pivot_wider(names_from = cohort, values_from = n) |> 
+        dplyr::arrange(region) |>
+        janitor::adorn_totals()
+      
+    }
   
   locs.by.region <- format_table(locs.by.region)
   
   cat("=============================================================\n")
   cat("LOCATIONS\n")
-  cat("=============================================================\n")
+  cat("=============================================================")
   
   print(knitr::kable(locs.by.region, format = "simple"))
   
@@ -175,11 +206,24 @@ summary.narwsim <- function(obj,
     tibble::enframe(.x$n$locctry) |> 
       dplyr::mutate(value = unlist(value)) |> 
       dplyr::rename(country = name, n = value) |>
-      dplyr::mutate(cohort = .y)
-  }) |> do.call(what = rbind) |> 
-    tidyr::pivot_wider(names_from = cohort, values_from = n) |> 
-    dplyr::arrange(country) |>
-    janitor::adorn_totals()
+      dplyr::mutate(cohort = .y) |> 
+      dplyr::mutate(percent = round(100 * n / sum(n), 1))
+  }) |> do.call(what = rbind) 
+  
+  if(percent){
+    locs.by.country <- locs.by.country |> 
+      dplyr::select(-n) |> 
+      dplyr::arrange(country) |>
+      tidyr::pivot_wider(names_from = cohort, values_from = percent) |> 
+      janitor::adorn_totals() |>
+      dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), ~ paste(.x, "%")))
+  } else {
+    locs.by.country <- locs.by.country |> 
+      dplyr::select(-percent) |> 
+      tidyr::pivot_wider(names_from = cohort, values_from = n) |> 
+      dplyr::arrange(country) |>
+      janitor::adorn_totals()
+  }
   
   locs.by.country <- format_table(locs.by.country)
   
@@ -225,7 +269,9 @@ summary.narwsim <- function(obj,
   
   dist.df <- dist.df |> 
     dplyr::mutate(type = dist.type) |> 
-    dplyr::relocate(type, .before = cohort)
+    dplyr::relocate(type, .before = cohort) |> 
+    dplyr::mutate(distance = paste0(mean, " (± ", sd, ") [", min, " – ", max, "]")) |> 
+    dplyr::select(-min, -max, -mean, -sd)
   
   # ............................................................
   # Print outputs
@@ -236,7 +282,7 @@ summary.narwsim <- function(obj,
   
   cat("=============================================================\n")
   cat("MIGRATORY MOVEMENTS (km)\n")
-  cat("=============================================================\n")
+  cat("=============================================================")
   
   tot.df <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
     tibble::tibble(d = c(.x$totdist$euclid, .x$totdist$geo), 
@@ -247,7 +293,9 @@ summary.narwsim <- function(obj,
                        max = format(round(max(d),0), big.mark = ","), 
                        mean = format(round(mean(d),0), big.mark = ","),
                        sd = format(round(sd(d),0), big.mark = ","), .groups = 'drop')
-  }) |> do.call(what = rbind)
+  }) |> do.call(what = rbind) |> 
+    dplyr::mutate(distance = paste0(mean, " (± ", sd, ") [", min, " – ", max, "]")) |> 
+    dplyr::select(-min, -max, -mean, -sd)
   
   # ............................................................
   # Print outputs
@@ -267,14 +315,24 @@ summary.narwsim <- function(obj,
       dplyr::mutate(value = unlist(value)) |> 
       dplyr::rename(n = value, region = name) |> 
       dplyr::mutate(cohort = .y)
-  }) |> do.call(what = rbind) |> 
-    tidyr::pivot_wider(names_from = cohort, values_from = n) 
+  }) |> do.call(what = rbind)
+  
+  if(percent){
+    indreg.df <- indreg.df |> 
+    dplyr::mutate(perc = round(100 * n / n.ind)) |> 
+    dplyr::select(-n) |> 
+    tidyr::pivot_wider(names_from = cohort, values_from = perc) |> 
+    dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), ~ paste(.x, "%")))
+  } else {
+    indreg.df <- indreg.df |> 
+      tidyr::pivot_wider(names_from = cohort, values_from = n) 
+  }
   
   # Days spent in each region
   
   days.df <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
     
-    purrr::map(.x = .x$n$dayreg , .f = ~{
+    purrr::map(.x = .x$n$dayreg, .f = ~{
       if(all(.x == 0)) 0 else .x[.x >0]
     }) |> tibble::enframe() |> 
       dplyr::rename(region = name, days = value) |> 
@@ -285,52 +343,74 @@ summary.narwsim <- function(obj,
                        max = max(unlist(days)),
                        mean = round(mean(unlist(days)),1),
                        sd = round(sd(unlist(days)), 1), .groups = 'drop')
-  }) |> do.call(what = rbind)
+  }) |> do.call(what = rbind) |> 
+    dplyr::mutate(days = paste0(mean, " (± ", sd, ") [", min, " – ", max, "]")) |> 
+    dplyr::select(-min, -max, -mean, -sd) |> 
+    tidyr::pivot_wider(names_from = cohort, values_from = days) 
+
   
-  days.min <- days.df |> dplyr::select(region, cohort, min) |> 
-    tidyr::pivot_wider(names_from = cohort, values_from = min)
-  
-  days.max <- days.df |> dplyr::select(region, cohort, max) |> 
-    tidyr::pivot_wider(names_from = cohort, values_from = max) 
-  
-  days.mean <- days.df |> dplyr::select(region, cohort, mean) |> 
-    tidyr::pivot_wider(names_from = cohort, values_from = mean) 
-  
-  days.sd <- days.df |> dplyr::select(region, cohort, sd) |> 
-    tidyr::pivot_wider(names_from = cohort, values_from = sd) 
-  
+  # days.min <- days.df |> dplyr::select(region, cohort, min) |> 
+  #   tidyr::pivot_wider(names_from = cohort, values_from = min)
+  # 
+  # days.max <- days.df |> dplyr::select(region, cohort, max) |> 
+  #   tidyr::pivot_wider(names_from = cohort, values_from = max) 
+  # 
+  # days.mean <- days.df |> dplyr::select(region, cohort, mean) |> 
+  #   tidyr::pivot_wider(names_from = cohort, values_from = mean) 
+  # 
+  # days.sd <- days.df |> dplyr::select(region, cohort, sd) |> 
+  #   tidyr::pivot_wider(names_from = cohort, values_from = sd) 
+  # 
   # Number of regions per individual
   
   regind.df <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
-    fivenum(.x$n$regind)[c(1,3,5)] |> 
-      tibble::as_tibble(.name_repair = "minimal") |> 
-      dplyr::mutate(param = c("min", "mean", "max")) |> 
-      dplyr::rename(n = value) |> 
-      dplyr::mutate(cohort = .y)
-  }) |> do.call(what = rbind) |> 
-    tidyr::pivot_wider(names_from = param, values_from = n) 
+      tmp <- .x$n$regind |> 
+      janitor::tabyl() |> 
+        dplyr::mutate(percent = 100 * percent)
+      names(tmp)[1] <- "No.regions"
+      tmp |>  dplyr::mutate(cohort = .y)
+      }) |> do.call(what = rbind)
+  
+  if(percent){
+    regind.df <- regind.df |> 
+      dplyr::select(-n) |> 
+      tidyr::pivot_wider(names_from = cohort, values_from = percent) |> 
+      janitor::adorn_totals() |>
+      dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), ~ paste(.x, "%")))
+  } else {
+    regind.df <- regind.df |> 
+      dplyr::select(-percent) |> 
+      tidyr::pivot_wider(names_from = cohort, values_from = n) |> 
+      janitor::adorn_totals()
+  }
+  
+  regind.df <- format_table(regind.df)
+  
+  # 
+  #   fivenum(.x$n$regind)[c(1,3,5)] |> 
+  #     tibble::as_tibble(.name_repair = "minimal") |> 
+  #     dplyr::mutate(param = c("min", "median", "max")) |> 
+  #     dplyr::rename(n = value) |> 
+  #     dplyr::mutate(cohort = .y)
+  # }) |> do.call(what = rbind) |> 
+  #   tidyr::pivot_wider(names_from = param, values_from = n) |> 
+  #   dplyr::mutate(N = paste0(median, " [", min, " – ", max, "]")) |> 
+  #   dplyr::select(-min, -max, -median)
   
   
   # ............................................................
   # Print outputs
   # ............................................................
   
-  cat("** Number of animals visiting each region -------------------")
+  cat("** Number of animals visiting each region (N = ", n.ind, ") -------------------", sep = "")
   print(knitr::kable(indreg.df, format = "simple"))
   cat("\n")
   
   cat("** Days spent in each region -------------------")
-  cat("\n\n++ Minimum")
-  print(knitr::kable(days.min, format = "simple"))
-  cat("\n++ Maximum")
-  print(knitr::kable(days.max, format = "simple"))
-  cat("\n++ Mean")
-  print(knitr::kable(days.mean, format = "simple"))
-  cat("\n++ Standard deviation")
-  print(knitr::kable(days.sd, format = "simple"))
+  print(knitr::kable(days.df, format = "simple"))
   cat("\n")
   
-  cat("** Number of regions visited by each animal -------------------")
+  cat("** Total number of regions visited -------------------")
   print(knitr::kable(regind.df, format = "simple"))
   
 }
