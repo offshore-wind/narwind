@@ -69,6 +69,11 @@ public:
     double d, a, x0, y0, xn, yn;
     bool sampling = true;
     
+    // double dens;
+    
+    // std::cout << animal.cohortID << ", ";
+    // std::cout << environment.id << ", ";
+    
     while(sampling) {
       
       // runif run here in scalar mode - generates a single value
@@ -85,7 +90,7 @@ public:
       double *w = weights.data();
       
       for(std::size_t i=0; i<m; ++i) {
-
+        
         // Randomly sample a distance and angle
         d = std::sqrt(R::runif(0,stepsize_sq));
         a = R::runif(-M_PI,M_PI);
@@ -98,8 +103,12 @@ public:
         *(prop++) = xn;
         *(prop++) = yn;
         
+        // if(animal.cohortID == 5 && yn <= -12 && (environment.id <= 3 || environment.id >= 11)){
+        //   std::cout << "in SEUS" << std::endl;
+        // }
+        
         // Retrieve density value (weight) at new x,y
-        *(w++) = environment(xn, yn);
+        *(w++) = environment(xn, yn, 'D');
         
       }
       
@@ -175,6 +184,9 @@ public:
     // Environment defines latent animal toward which movement is attracted
     auto active_latent = animal.latent[environment.id];
     
+    // std::cout << animal.cohortID << ", ";
+    // std::cout << environment.id << ", ";
+    
     // If close enough, animal is coupled to the active latent animal
     double dist_to_latent = std::pow(animal.x - active_latent.x, 2) +
       std::pow(animal.y - active_latent.y, 2);
@@ -185,15 +197,18 @@ public:
       return;
     }
     
-    // Otherwise, select point within stepsize closest to latent animal
+    // Otherwise, select point within stepsize closest to latent animal, unless
+    // the simulated whale is a pregnant female migrating to the calving grounds
+    // Calving season is between Nov and March (Krzystan et al. 2018)
     double d, a, x0, y0, xn, yn, xnew, ynew;
     double dmin = std::numeric_limits<double>::infinity();
     bool sampling = true;
+    
     while(sampling) {
       
       d = std::sqrt(R::runif(0,stepsize_sq));
       a = R::runif(-M_PI,M_PI);
-  
+      
       // if(d < 25) animal.behavior = 1;
       // std::cout << animal.behavior << " ";
       
@@ -211,17 +226,27 @@ public:
         yn = y0 + d * std::sin(a);
         
         // Only consider proposals with non-zero mass
-        if(latent_envs[environment.id](xn, yn) > 0) {
-
-          dist_to_latent = std::pow(xn - active_latent.x, 2) +
-            std::pow(yn - active_latent.y, 2);
-
-          // Keep track of the point that gets closest to latent
-          if(dist_to_latent < dmin) {
-            xnew = xn;
-            ynew = yn;
-            dmin = dist_to_latent;
-          }
+        if(latent_envs[environment.id](xn, yn, 'D') > 0) {
+          
+          // if(animal.cohortID == 5 && (environment.id <= 3 || environment.id >= 11) && yn <= -12){
+          //   
+          //   // std::cout << "in SEUS" << std::endl;
+          //   xnew = xn;
+          //   ynew = yn;
+          //   
+          // } else {
+            
+            dist_to_latent = std::pow(xn - active_latent.x, 2) +
+              std::pow(yn - active_latent.y, 2);
+            
+            // Keep track of the point that gets closest to latent
+            if(dist_to_latent < dmin) {
+              xnew = xn;
+              ynew = yn;
+              dmin = dist_to_latent;
+            }
+          // }
+          
         }
       }
       
@@ -230,7 +255,7 @@ public:
     }
     animal.x = xnew;
     animal.y = ynew;
-
+    
   }
   
 };
