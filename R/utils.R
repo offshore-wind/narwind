@@ -490,7 +490,7 @@ transpose_array <- function(input, cohortID, dates) {
       outl[["locs"]] <- tp[["locs"]]
       outl[["attrib"]] <- list(adjuv = tp[["attrib"]], calves = tp[["attrib_calves"]])
       outl[["kj"]] <- list(adjuv = do.call(abind::abind, list(tp[["in.kj"]], tp[["out.kj"]], along = 2)),
-                           calves = do.call(abind::abind, list(tp[["in.kj_Calves"]], tp[["out.kj_calves"]], along = 2)))
+                           calves = do.call(abind::abind, list(tp[["in.kj_calves"]], tp[["out.kj_calves"]], along = 2)))
       
     } else {
       

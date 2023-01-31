@@ -18,14 +18,14 @@ print.narwsim <- function(obj, n.rows = 4) {
   
   for(k in seq_along(obj$param$cohort.id)){
     
-    if(!cohort.id[k] == 5) obj[["sim"]][[k]] <- list(obj[["sim"]][[k]])
+    if(!obj$param$cohort.id[k] == 5) obj[["sim"]][[k]] <- list(obj[["sim"]][[k]])
     
     cat("\n++++++++++++++++++++++++++++++++++", obj$param$cohort.names[k], "++++++++++++++++++++++++++++++++++\n\n")
     
     purrr::walk(
       .x = seq_along(obj[["sim"]][[k]]),
       .f = ~ {
-        if(cohort.id[k] == 5){
+        if(obj$param$cohort.id[k] == 5){
         cat("--------------------------\n")
         cat(c("Adults", "Calves")[.x], "\n")
         cat("--------------------------\n")
