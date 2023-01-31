@@ -243,46 +243,27 @@ run_model <- function(nsim = 1e3,
   run_time <- hms::round_hms(hms::as_hms(difftime(time1 = end.time, time2 = start.time, units = "auto")), 1)
   
   # Transpose the output array to have data for each day as rows
-
-  out.t <- transpose_array(out, "locs", date_seq) |> 
-    transpose_array("attrib", date_seq) |> 
-    transpose_array("kj", date_seq) 
+  
+  out.t <- transpose_array(input = out, cohortID = cohort.id, dates = date_seq) |> 
+    purrr::set_names(nm = cohort.ab)
     
   # Flip list elements
   outsim <- list()
   outsim[["locs"]] <- purrr::map(out.t, "locs") |> purrr::set_names(nm = cohort.ab)
-  if(cohort.id == 5){
-    outsim[["attrib"]] <- sapply(X = 1:2, FUN = function(x){
-      purrr::map(out.t, ~abind::abind(.x[["attrib"]][[x]], .x[["kj"]][["in"]][[x]], .x[["kj"]][["out"]][[x]], along = 2)) |> purrr::set_names(nm = c(cohort.ab, "calves")[x])
-    })
-  } else {
-    outsim[["attrib"]] <- purrr::map(out.t, ~abind::abind(.x[["attrib"]], .x[["kj"]][["in"]], .x[["kj"]][["out"]], along = 2)) |> purrr::set_names(nm = cohort.ab)
+  
+  for(k in seq_along(cohort.id)){
+    
+    if(cohort.id[k] == 5){
+      
+      outsim[["sim"]][[cohort.ab[k]]] <- purrr::map(.x = 1:2,
+          .f = ~{abind::abind(out.t[[k]][["attrib"]][[.x]], out.t[[k]][["kj"]][[.x]], along = 2) 
+      }) |> purrr::set_names(nm = c("adults", "calves")) 
+      
+    } else {
+      
+      outsim[["sim"]][[cohort.ab[k]]] <- abind::abind(out.t[[k]][["attrib"]], out.t[[k]][["kj"]], along = 2) 
+    }
   }
-
-
-  
-  
-                 
-                 
-                 # attrib = purrr::map2(.x = outsim[[1]][["kj"]]["in"], .y = outsim[[1]][["kj"]]["in"], .f = ~cbind(.x, .y))
-                 
-                   
-                 #   purrr::map(outsim, "attrib") |> purrr::set_names(nm = cohort.ab),
-                 # kj = list(`in` = purrr::map(outsim[[1]]["kj"], "in") |> purrr::set_names(nm = cohort.ab),
-                 #           `out` = purrr::map(outsim[[1]]["kj"], "out") |> purrr::set_names(nm = cohort.ab)))
-  
-  # Move nested elements up and rename them
-  # outsim$attrib <- lapply(rapply(outsim$attrib, enquote, how = "unlist"), eval)
-  # names(outsim$attrib) <- gsub(pattern = ".adjuv", replacement = "", x =  names(outsim$attrib))
-  # names(outsim$attrib)[which(grepl(pattern = "calv", x = names(outsim$attrib)))] <- "calves"
-  # 
-  # outsim$kj[["in"]] <- lapply(rapply(outsim$kj[["in"]], enquote, how = "unlist"), eval)
-  # names(outsim$kj[["in"]]) <- gsub(pattern = ".adjuv", replacement = "", x =  names(outsim$kj[["in"]]))
-  # names(outsim$kj[["in"]])[which(grepl(pattern = "calv", x = names(outsim$kj[["in"]])))] <- "calves"
-  # 
-  # outsim$kj[["out"]] <- lapply(rapply(outsim$kj[["out"]], enquote, how = "unlist"), eval)
-  # names(outsim$kj[["out"]]) <- gsub(pattern = ".adjuv", replacement = "", x =  names(outsim$kj[["out"]]))
-  # names(outsim$kj[["out"]])[which(grepl(pattern = "calv", x = names(outsim$kj[["out"]])))] <- "calves"
   
   # ............................................................
   # Add parameters to list output
@@ -303,6 +284,6 @@ run_model <- function(nsim = 1e3,
   class(outsim$init$xy) <- c("xyinits", class(outsim$init$xy))
   cat("\nDone!\n")
   cat(paste0("Time elapsed: ", run_time))
-  
+  gc()
   return(outsim)
 }

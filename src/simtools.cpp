@@ -182,7 +182,8 @@ template<typename AnimalType,
          int CoordSize = 2,
          int nparam_animal = 13,
          int nparam_feeding = 17,
-         int nparam_nursing = 15>
+         int nparam_nursing = 15,
+         int nparam_costs = 3>
 
 Rcpp::List movesim(
     int cohortID,
@@ -203,8 +204,7 @@ Rcpp::List movesim(
   std::size_t t = environments.size(); // 365 days
   
   // Initialize list in which results will be stored
-  Rcpp::List results = Rcpp::List::create(Rcpp::Named("locs"), Rcpp::Named("attrib"), Rcpp::Named("kj"));
-  Rcpp::List E = Rcpp::List::create(Rcpp::Named("in"), Rcpp::Named("out"));
+  Rcpp::List results;
   
   // Initialize and label array in which x,y coordinates will be stored
   Rcpp::NumericVector out(n*t*CoordSize);
@@ -239,20 +239,29 @@ Rcpp::List movesim(
   );
   
   // Create a separate array for variables associated with energy intake in adults/juveniles
-  // Rcpp::NumericVector attrib_nursing(n*t*nparam_nursing);
-  // attrib_nursing.attr("dim") = Rcpp::Dimension(nparam_nursing,n,t);
-  // attrib_nursing.attr("dimnames") = Rcpp::List::create(
-  //   Rcpp::CharacterVector::create("E_in", "sep", "t_sep", "assim", "provision", "mamm_M", "milk_rate", "Dmilk", "t_suckling",
-  //                                 "targetBC", "nursing", "milk_lip", "milk_pro", "ED_lip", "ED_pro"), 
-  //                                 R_NilValue, R_NilValue
-  // );
+  Rcpp::NumericVector attrib_nursing(n*t*nparam_nursing);
+  attrib_nursing.attr("dim") = Rcpp::Dimension(nparam_nursing,n,t);
+  attrib_nursing.attr("dimnames") = Rcpp::List::create(
+    Rcpp::CharacterVector::create("E_in", "sep", "t_sep", "assim", "provision", "mamm_M", "milk_rate", "Dmilk", "t_suckling",
+                                  "targetBC", "nursing", "milk_lip", "milk_pro", "ED_lip", "ED_pro"),
+                                  R_NilValue, R_NilValue
+  );
+  
+  // Create a separate array for variables associated with energy intake in adults/juveniles
+  Rcpp::NumericVector attrib_costs(n*t*nparam_costs);
+  attrib_costs.attr("dim") = Rcpp::Dimension(nparam_costs,n,t);
+  attrib_costs.attr("dimnames") = Rcpp::List::create(
+    Rcpp::CharacterVector::create("E_out", "p1", "p2"),
+                                  R_NilValue, R_NilValue
+  );
   
   // Loop over time points and environments: One environment per time point
   Rcpp::NumericVector::iterator data_out = out.begin();
   Rcpp::NumericVector::iterator attrib_out = attrib.begin();
   Rcpp::NumericVector::iterator attrib_calves_out = attrib_calves.begin();
   Rcpp::NumericVector::iterator attrib_feeding_out = attrib_feeding.begin();
-  // Rcpp::NumericVector::iterator attrib_nursing_out = attrib_nursing.begin();
+  Rcpp::NumericVector::iterator attrib_nursing_out = attrib_nursing.begin();
+  Rcpp::NumericVector::iterator attrib_costs_out = attrib_costs.begin();
   
   // std::advance(attrib_out, nparam); // Skip update of parameters at first time point as already initialized
   
@@ -354,7 +363,7 @@ Rcpp::List movesim(
       // (1) running the meta-analysis function on target relative blubber mass (see separate R script)
       // (2) drawing the resulting curve and recording the maximum value from the associated distribution
       // (3) using the optim_feeding function with bounds of c(0, max) to find the parameters of the logistic function
-      Rcpp::NumericVector feeding_nursing_effort; // feeding, nursing
+      Rcpp::NumericVector feeding_nursing_effort (2); // feeding, nursing
       Rcpp::NumericVector target_bc (2); // adjuv, calves
       
       // See meta_analysis file for calculations
@@ -418,84 +427,83 @@ Rcpp::List movesim(
       // Incidence of mother-calf separation -- (d.u.)
       // Reported to be between 10 and 40% of sightings as per Hamilton et al. (2022) - take mean = 25%
       bool mumcalf_separation = R::rbinom(1, 0.25);
-      std::cout << mumcalf_separation << std::endl;
       double separation_duration = 0;
-      
-      // // Separation duration -- (days)
-      // // Using half-normal with mean of 5.9 and max of 23, as per Hamilton et al. (2022)
-      // // Coded as truncated Normal centered on zero
-      // if(mumcalf_separation){
-      //   separation_duration = rtnorm(0, 7.44375, 0, 23);
-      // }
-      // 
-      // // Age at which milk consumption starts to decrease -- (days)
-      // // Fortune et al. (2020)
-      // double milk_decrease = 288;
-      // 
-      // // Non-linearity between milk assimilation and calf age -- (d.u.)
-      // // Hin et al. (2019)
-      // double eta_milk = 0.9;
-      // 
-      // // Duration of the lactation -- (days)
-      // int T_lac = 365;
-      // 
-      // // Milk assimilation -- (d.u.)
-      // // Varies with calf age
-      // double milk_assim = milk_assimilation(current_day, T_lac, milk_decrease, eta_milk);
-      // 
-      // // Starvation threshold expressed as relative blubber mass -- (d.u.)
-      // // As per Pirotta et al. (2018) - to test extreme conditions of leanness
-      // float starvation = 0.05;
-      // 
-      // // Non-linearity between milk supply and the body condition of the mother
-      // int zeta = -2;
-      // 
-      // // Milk provisioning -- (d.u.)
-      // // Varies with mother's body condition
-      // double milk_provisioning = milk_supply(starvation, target_bc[0], animal->mass, animal->fatmass, zeta);
-      // 
-      // // Mammary gland efficiency -- (%)
-      // // As per Brody 1968
-      // float mammary_efficiency = 0.9;
-      // 
-      // // Total mass of mammary glands -- (kg)
-      // double mammary_M = mammary_mass(animal->mass);
-      // 
-      // // Milk production rate by the mother -- (cubic m per kg per sec)
-      // double milk_production_rate = milk_production(mammary_M);
-      // 
-      // // Density of milk -- (kg/m3)
-      // // Meta: No temporal filter, all records
-      // double D_milk = R::rnorm(1.02, 0.01) * 1000; // L to cubic m
-      // 
-      // // Time spent nursing/suckling per day -- (hours to sec)
-      // // Meta:: No filter on time spent nursing, time spent suckling during nursing bouts filtered by species (value for E. australis)
-      // double t_suckling = rtnorm(0, 3.688672, 0, 24) *3600;
-      // 
-      // // Proportion of lipids in milk -- (%)
-      // // Meta: All records – as only value for closest relative (Eubalaena mysticetus) deemed low
-      // // Set maximum to 60% as reported in the literature (White 1953)
-      // double milk_lipids = rtnorm(0.365680, 0.11932, 0, 0.51);
-      // 
-      // // Proportion of protein in milk -- (%)
-      // double milk_protein = rtnorm(0.13650, 0.031562, 0, 1);
-      // 
-      // if((milk_lipids + milk_protein) > 1){
-      //   std::cout << "Inconsistent milk composition" << std::endl;
-      //   break;
-      // }
-      // 
-      // // Energy density of lipids -- (kJ / kg)
-      // double ED_lipids = 39300;
-      // 
-      // // Energy density of protein -- (kJ / kg)
-      // // mean(c(23600,18000))
-      // double ED_protein = 20800;
-      // 
-      // // ENERGY INTAKE (kj to MJ)
-      // // double E_in_calves = (1 - resp_noise) * (1 - mumcalf_separation) * milk_assim * milk_provisioning * mammary_efficiency *
-      // //   mammary_M * milk_production_rate * t_suckling * feeding_nursing_effort[1] * D_milk * 
-      // //   (milk_lipids * ED_lipids + milk_protein * ED_protein) / 1000;
+
+      // Separation duration -- (days)
+      // Using half-normal with mean of 5.9 and max of 23, as per Hamilton et al. (2022)
+      // Coded as truncated Normal centered on zero
+      if(mumcalf_separation){
+        separation_duration = rtnorm(0, 7.44375, 0, 23);
+      }
+
+      // Age at which milk consumption starts to decrease -- (days)
+      // Fortune et al. (2020)
+      double milk_decrease = 288;
+
+      // Non-linearity between milk assimilation and calf age -- (d.u.)
+      // Hin et al. (2019)
+      double eta_milk = 0.9;
+
+      // Duration of the lactation -- (days)
+      int T_lac = 365;
+
+      // Milk assimilation -- (d.u.)
+      // Varies with calf age
+      double milk_assim = milk_assimilation(current_day, T_lac, milk_decrease, eta_milk);
+
+      // Starvation threshold expressed as relative blubber mass -- (d.u.)
+      // As per Pirotta et al. (2018) - to test extreme conditions of leanness
+      float starvation = 0.05;
+
+      // Non-linearity between milk supply and the body condition of the mother
+      int zeta = -2;
+
+      // Milk provisioning -- (d.u.)
+      // Varies with mother's body condition
+      double milk_provisioning = milk_supply(starvation, target_bc[0], animal->mass, animal->fatmass, zeta);
+
+      // Mammary gland efficiency -- (%)
+      // As per Brody 1968
+      float mammary_efficiency = 0.9;
+
+      // Total mass of mammary glands -- (kg)
+      double mammary_M = mammary_mass(animal->mass);
+
+      // Milk production rate by the mother -- (cubic m per kg per sec)
+      double milk_production_rate = milk_production(mammary_M);
+
+      // Density of milk -- (kg/m3)
+      // Meta: No temporal filter, all records
+      double D_milk = R::rnorm(1.02, 0.01) * 1000; // L to cubic m
+
+      // Time spent nursing/suckling per day -- (hours to sec)
+      // Meta:: No filter on time spent nursing, time spent suckling during nursing bouts filtered by species (value for E. australis)
+      double t_suckling = rtnorm(0, 3.688672, 0, 24) *3600;
+
+      // Proportion of lipids in milk -- (%)
+      // Meta: All records – as only value for closest relative (Eubalaena mysticetus) deemed low
+      // Set maximum to 60% as reported in the literature (White 1953)
+      double milk_lipids = rtnorm(0.365680, 0.11932, 0, 0.51);
+
+      // Proportion of protein in milk -- (%)
+      double milk_protein = rtnorm(0.13650, 0.031562, 0, 1);
+
+      if((milk_lipids + milk_protein) > 1){
+        std::cout << "Inconsistent milk composition" << std::endl;
+        break;
+      }
+
+      // Energy density of lipids -- (kJ / kg)
+      double ED_lipids = 39300;
+
+      // Energy density of protein -- (kJ / kg)
+      // mean(c(23600,18000))
+      double ED_protein = 20800;
+
+      // ENERGY INTAKE (kj to MJ)
+      double E_in_calves = (1 - resp_noise) * (1 - mumcalf_separation) * milk_assim * milk_provisioning * mammary_efficiency *
+        mammary_M * milk_production_rate * t_suckling * feeding_nursing_effort[1] * D_milk *
+        (milk_lipids * ED_lipids + milk_protein * ED_protein) / 1000;
       
       // ------------------------------------------------------------
       // STORE VALUES in output matrices
@@ -555,22 +563,28 @@ Rcpp::List movesim(
         *(attrib_calves_out++) = vessel_strike;
         *(attrib_calves_out++) = resp_noise;
         
-        // *(attrib_nursing_out++) = E_in_calves;
-        // *(attrib_nursing_out++) = mumcalf_separation;
-        // *(attrib_nursing_out++) = separation_duration;
-        // *(attrib_nursing_out++) = milk_assim;
-        // *(attrib_nursing_out++) = milk_provisioning;
-        // *(attrib_nursing_out++) = mammary_M;
-        // *(attrib_nursing_out++) = milk_production_rate;
-        // *(attrib_nursing_out++) = D_milk;
-        // *(attrib_nursing_out++) = t_suckling;
-        // *(attrib_nursing_out++) = target_bc[1];
-        // *(attrib_nursing_out++) = feeding_nursing_effort[1];
-        // *(attrib_nursing_out++) = milk_lipids;
-        // *(attrib_nursing_out++) = milk_protein;
-        // *(attrib_nursing_out++) = ED_lipids;
-        // *(attrib_nursing_out++) = ED_protein;
+        *(attrib_nursing_out++) = E_in_calves;
+        *(attrib_nursing_out++) = mumcalf_separation;
+        *(attrib_nursing_out++) = separation_duration;
+        *(attrib_nursing_out++) = milk_assim;
+        *(attrib_nursing_out++) = milk_provisioning;
+        *(attrib_nursing_out++) = mammary_M;
+        *(attrib_nursing_out++) = milk_production_rate;
+        *(attrib_nursing_out++) = D_milk;
+        *(attrib_nursing_out++) = t_suckling;
+        *(attrib_nursing_out++) = target_bc[1];
+        *(attrib_nursing_out++) = feeding_nursing_effort[1];
+        *(attrib_nursing_out++) = milk_lipids;
+        *(attrib_nursing_out++) = milk_protein;
+        *(attrib_nursing_out++) = ED_lipids;
+        *(attrib_nursing_out++) = ED_protein;
       }
+      
+      // +++ Energy costs +++
+      
+      *(attrib_costs_out++) = 0;
+      *(attrib_costs_out++) = 0;
+      *(attrib_costs_out++) = 0;
       
       // // Save current coordinates (fills by column)
       // 
@@ -627,26 +641,12 @@ Rcpp::List movesim(
   }
   
   results["locs"] = out;
-  
-  if(cohortID == 5){
-    results["attrib"] = Rcpp::List::create(Rcpp::Named("adjuv") = attrib, Rcpp::Named("calves") = attrib_calves);
-    E["in"] = Rcpp::List::create(Rcpp::Named("adjuv") = attrib_feeding, Rcpp::Named("calves") = attrib_feeding);
-    E["out"] = Rcpp::List::create(Rcpp::Named("adjuv") = attrib_feeding, Rcpp::Named("calves") = attrib_feeding);
-  } else {
-    results["attrib"] = attrib;
-    E["in"] = attrib_feeding;
-    E["out"] = attrib_feeding;
-  }
-  
-  results["kj"] = E;
-  
-  // if(cohortID == 5){
-  //   all_attrib["adjuv"] = attrib;
-  //   all_attrib["calv"] = attrib_calves;
-  //   results["attrib"] = all_attrib;
-  // } else {
-  //   results["attrib"] = attrib;
-  // }
+  results["attrib"] = attrib;
+  results["attrib_calves"] = attrib_calves;
+  results["in.kj"] = attrib_feeding;
+  results["in.kj_calves"] = attrib_nursing;
+  results["out.kj"] = attrib_costs;
+  results["out.kj_calves"] = attrib_costs;
   
   return results;
 }

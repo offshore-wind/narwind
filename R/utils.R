@@ -473,62 +473,97 @@ init_xy <- function(maps, maps.weighted, coords, cohort.id, nsim, northSEUS = -1
 # 
 # }
 
-transpose_array <- function(input, array.name, dates){
-  purrr::map(.x = input, .f = ~{ # different cohorts
+transpose_array <- function(input, cohortID, dates) {
+  
+  out.array <- purrr::map2(.x = input, .y = cohortID, .f = ~ {
     
-    dat <- .x[[array.name]]
-    
-    if(array.name == "attrib" & is.list(dat)){
-      tmp <- purrr::map(.x = dat, .f = ~{
-        
-        tmp.nested <- aperm(.x, c(3,1,2))
-        dimnames(tmp.nested)[[1]] <- format(dates)
-        dimnames(tmp.nested)[[3]] <- paste0("whale.", seq_len(dim(tmp.nested)[3]))
-        tmp.nested
-        
-      })
-      
-    } else if(array.name == "kj" & is.list(dat)) {
-      
-      if(class(dat[["in"]]) == "array"){
-        
-        tmp.in <- aperm(dat[["in"]], c(3,1,2))
-        dimnames(tmp.in)[[1]] <- format(dates)
-        dimnames(tmp.in)[[3]] <- paste0("whale.", seq_len(dim(tmp.in)[3]))
-        
-        tmp.out <- aperm(dat[["out"]], c(3,1,2))
-        dimnames(tmp.out)[[1]] <- format(dates)
-        dimnames(tmp.out)[[3]] <- paste0("whale.", seq_len(dim(tmp.out)[3]))
-
-      } else {
-        
-        tmp.in <- purrr::map(.x = dat[["in"]], .f = ~{
-          tmp <- aperm(.x, c(3,1,2))
-          dimnames(tmp)[[1]] <- format(dates)
-          dimnames(tmp)[[3]] <- paste0("whale.", seq_len(dim(tmp)[3]))
-          tmp
-        })
-        
-        tmp.out <- purrr::map(.x = dat[["out"]], .f = ~{
-          tmp <- aperm(.x, c(3,1,2))
-          dimnames(tmp)[[1]] <- format(dates)
-          dimnames(tmp)[[3]] <- paste0("whale.", seq_len(dim(tmp)[3]))
-          tmp
-        })
-      }
-      
-      tmp <- list(`in` = tmp.in, out = tmp.out)
-     
-    } else {
-      tmp <- aperm(dat, c(3,1,2))
+    tp <- lapply(X = .x, FUN = function(l) {
+      tmp <- aperm(l, c(3, 1, 2))
       dimnames(tmp)[[1]] <- format(dates)
       dimnames(tmp)[[3]] <- paste0("whale.", seq_len(dim(tmp)[3]))
+      tmp
+    })
+    
+    if(.y == 5){
+      
+      outl <- list()
+      outl[["locs"]] <- tp[["locs"]]
+      outl[["attrib"]] <- list(adjuv = tp[["attrib"]], calves = tp[["attrib_calves"]])
+      outl[["kj"]] <- list(adjuv = do.call(abind::abind, list(tp[["in.kj"]], tp[["out.kj"]], along = 2)),
+                           calves = do.call(abind::abind, list(tp[["in.kj_Calves"]], tp[["out.kj_calves"]], along = 2)))
+      
+    } else {
+      
+      tp[grepl("calves", names(tp))] <- NULL  
+      outl <- list()
+      outl[["locs"]] <- tp[["locs"]]
+      outl[["attrib"]] <- tp[["attrib"]]
+      outl[["kj"]] <- do.call(abind::abind, list(tp[grepl("kj", names(tp))], along = 2))
     }
     
-    .x[[array.name]] <- tmp
-    .x
+    outl
+    
   })
+  
+  return(out.array)
 }
+
+# transpose_array2 <- function(input, array.name, dates){
+#   purrr::map(.x = input, .f = ~{ # different cohorts
+# 
+#     dat <- .x[[array.name]]
+# 
+#     if(array.name == "attrib" & is.list(dat)){
+#       tmp <- purrr::map(.x = dat, .f = ~{
+# 
+#         tmp.nested <- aperm(.x, c(3,1,2))
+#         dimnames(tmp.nested)[[1]] <- format(dates)
+#         dimnames(tmp.nested)[[3]] <- paste0("whale.", seq_len(dim(tmp.nested)[3]))
+#         tmp.nested
+# 
+#       })
+# 
+#     } else if(array.name == "kj" & is.list(dat)) {
+# 
+#       if(class(dat[["in"]]) == "array"){
+# 
+#         tmp.in <- aperm(dat[["in"]], c(3,1,2))
+#         dimnames(tmp.in)[[1]] <- format(dates)
+#         dimnames(tmp.in)[[3]] <- paste0("whale.", seq_len(dim(tmp.in)[3]))
+# 
+#         tmp.out <- aperm(dat[["out"]], c(3,1,2))
+#         dimnames(tmp.out)[[1]] <- format(dates)
+#         dimnames(tmp.out)[[3]] <- paste0("whale.", seq_len(dim(tmp.out)[3]))
+# 
+#       } else {
+# 
+#         tmp.in <- purrr::map(.x = dat[["in"]], .f = ~{
+#           tmp <- aperm(.x, c(3,1,2))
+#           dimnames(tmp)[[1]] <- format(dates)
+#           dimnames(tmp)[[3]] <- paste0("whale.", seq_len(dim(tmp)[3]))
+#           tmp
+#         })
+# 
+#         tmp.out <- purrr::map(.x = dat[["out"]], .f = ~{
+#           tmp <- aperm(.x, c(3,1,2))
+#           dimnames(tmp)[[1]] <- format(dates)
+#           dimnames(tmp)[[3]] <- paste0("whale.", seq_len(dim(tmp)[3]))
+#           tmp
+#         })
+#       }
+# 
+#       tmp <- list(`in` = tmp.in, out = tmp.out)
+# 
+#     } else {
+#       tmp <- aperm(dat, c(3,1,2))
+#       dimnames(tmp)[[1]] <- format(dates)
+#       dimnames(tmp)[[3]] <- paste0("whale.", seq_len(dim(tmp)[3]))
+#     }
+# 
+#     .x[[array.name]] <- tmp
+#     .x
+#   })
+# }
 
 optim_feeding <- function(bounds = list(c(0,0.2)), nm = NULL){
   

@@ -14,7 +14,6 @@
 #' }
 
 summary.narwsim <- function(obj,
-                            # do.plot = FALSE,
                             percent = TRUE,
                             show.legend = FALSE,
                             geodesic = FALSE){
@@ -363,13 +362,13 @@ summary.narwsim <- function(obj,
   # 
   # Number of regions per individual
   
-  regind.df <- purrr::map2(.x = out, .y = cohort.ab, .f = ~{
+  regind.df <- suppressWarnings(purrr::map2(.x = out, .y = cohort.ab, .f = ~{
       tmp <- .x$n$regind |> 
-      janitor::tabyl() |> 
-        dplyr::mutate(percent = 100 * percent)
+      janitor::tabyl() |> dplyr::mutate(percent = 100 * percent)
       names(tmp)[1] <- "No.regions"
       tmp |>  dplyr::mutate(cohort = .y)
-      }) |> do.call(what = rbind)
+      })
+      ) |> do.call(what = rbind)
   
   if(percent){
     regind.df <- regind.df |> 

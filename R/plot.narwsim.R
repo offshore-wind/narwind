@@ -44,7 +44,7 @@ plot.narwsim <- function(obj,
   cohort.names <- obj$param$cohort.names
   cohort.ab <- unname(obj$param$cohort.ab)
   cohort.id <- obj$param$cohort.id
-  if(cohort.id == 5) cohort.names <- paste0(cohort.names, " + calves")
+  if(any(cohort.id == 5)) cohort.names[which(cohort.id == 5)] <- paste0(cohort.names[which(cohort.id == 5)], " + calves")
 
   locations <- obj$locs
   
