@@ -277,6 +277,9 @@ Rcpp::List movesim(
   std::default_random_engine generator;
   std::uniform_int_distribution<int> binary_distribution(0,1);
   
+  // Length at birth -- (m)
+  double L_zero = age2length(0);
+  
   // 365 steps per animal
   for(auto env = environments.begin(); env != env_end; ++env) {
     
@@ -311,7 +314,7 @@ Rcpp::List movesim(
       // double strike_risk = layers[current_month](animal->x, animal->y, 'V');
 
       // ------------------------------------------------------------
-      // ENERGY INTAKE - FORAGING
+      // STRESSORS
       // ------------------------------------------------------------
       
       // Behavioral response to pile-driving noise exposure -- (d.u.)
@@ -321,6 +324,10 @@ Rcpp::List movesim(
       // Incidence of a vessel strike -- (d.u.)
       // TODO: Update this line with correct strike process -> leads to death
       int vessel_strike = binary_distribution(generator);
+      
+      // ------------------------------------------------------------
+      // PREY
+      // ------------------------------------------------------------
       
       // Minimum prey concentration (Calanus finmarchicus stage V) -- (copepods/cubic m)
       // Meta: From year 1987, by species
@@ -334,6 +341,46 @@ Rcpp::List movesim(
         is_feeding = feeding_threshold(min_calanus, D_cop);
       }
 
+      // ------------------------------------------------------------
+      // ACTIVITY BUDGET
+      // ------------------------------------------------------------
+
+      // Total time available for foraging activities --(hr converted to s)
+      double daylight_hours = layers[current_month](animal->x, animal->y, 'L') * 3600;
+      
+      // Time spent feeding per day -- (hr converted to s)
+      // Meta: No temporal filter, by age class, fill NAs with "adult"
+      double feeding_time = is_feeding * rtnorm(12.768, 2.9166, 0, daylight_hours) * 3600;
+      
+      // Time spent traveling per day -- (hr converted to s)
+      // Meta: By region, combine CCB and BOF
+      double travel_time = 0;
+      if(animal->y < -12){
+        travel_time = rtnorm(4.4540, 3.2965, 0, 24 - feeding_time) * 3600; // If in SEUS
+      } else {
+        travel_time = rtnorm(6.0482, 1.9209, 0, 24 - feeding_time) * 3600; // Elsewhere
+      }
+
+      // Time spent nursing per day -- (hr converted to s)
+      // Meta: No temporal filter, theoretic bounds of (0,24)
+      
+      double nursing_time = 0;
+      if(cohortID == 5) nursing_time = rtnorm(1.6342, 4.6767, 0, 24 - (feeding_time + travel_time)) * 3600;
+      
+      // Time spent resting per day -- (hr converted to s)
+      // Meta: By age class, combine  calves and mother/calf pairs
+      double resting_time = 0;
+      if(cohortID == 5){
+        resting_time = rtnorm(13.76, 0.76984, 0, 24 - (feeding_time + travel_time + nursing_time));
+      } else {
+        resting_time = rtnorm(5.4872, 0.84999, 0, 24 - (feeding_time + travel_time + nursing_time));
+      }
+      
+      
+      // ------------------------------------------------------------
+      // ENERGY INTAKE - FORAGING
+      // ------------------------------------------------------------
+      
       // Mouth gape area -- (m2)
       double mouth_gape = gape_size(animal->length, animal->mouth_width, animal->mouth_angle);
       
@@ -350,13 +397,6 @@ Rcpp::List movesim(
       // Meta: Parameter unknown
       double gape_reduction = 0.0;
       if(animal->gear == 1) gape_reduction = R::runif(0,0.5);
-      
-      // Total time available for foraging activities --(hr converted to s)
-      double daylight_hours = layers[current_month](animal->x, animal->y, 'L') * 3600;
-      
-      // Time spent feeding per day -- (hr converted to s)
-      // Meta: No temporal filter, by age class, fill NAs with "adult"
-      double feeding_time = rtnorm(12.768, 2.9166, 0, daylight_hours) * 3600;
       
       // Foraging/nursing response to body condition -- (d.u.)
       // Parameters are estimated by:
@@ -504,6 +544,102 @@ Rcpp::List movesim(
       double E_in_calves = (1 - resp_noise) * (1 - mumcalf_separation) * milk_assim * milk_provisioning * mammary_efficiency *
         mammary_M * milk_production_rate * t_suckling * feeding_nursing_effort[1] * D_milk *
         (milk_lipids * ED_lipids + milk_protein * ED_protein) / 1000;
+      
+      
+      // ------------------------------------------------------------
+      // ENERGY COSTS
+      // ------------------------------------------------------------
+      
+      // Metabolic scalar for RMR based on age class -- (d.u.)
+      double phi_rmr = 1;
+      if(cohortID == 0) phi_rmr = 1.4; // Calves
+      if(cohortID > 0 & cohortID <= 2) phi_rmr = 1.2; // Juveniles
+      
+      // Resting metabolic rate -- (kJ)
+      double resting_metab = RMR(animal->mass, phi_rmr); 
+      
+      // Stroke rate during routine swimming -- (d.u.)
+
+      // Stroke rate during maximum aerobic (performance) swimming -- (d.u.)
+      
+      // Proportion of the body volume comprised of muscle -- (d.u.)
+      double P_muscle = 0.2820;
+      
+      // Mass of muscles in fetus -- (kg)
+      double mass_muscle = fetal_tissue_mass(P_muscle, L_zero);
+      
+      // Proportion of the body volume comprised of viscera -- (%)
+      double P_viscera = 0.1020;
+      
+      // Mass of viscera in fetus -- (kg)
+      double mass_viscera = fetal_tissue_mass(P_viscera, L_zero);
+      
+      // Proportion of the body volume comprised of bones -- (%)
+      double P_bones = 0.1250;
+      
+      // Mass of bones in fetus -- (kg)
+      double mass_bones = fetal_tissue_mass(P_bones, L_zero);
+      
+
+      // Density of blubber -- (kg / m3) 
+      double blubber_density = 700;
+      
+      // Density of muscles -- (kg / m3) 
+      double muscle_density = 960;
+      
+      // Density of bones -- (kg / m3) 
+      double bone_density = 720;
+      
+      // Density of viscera -- (kg / m3) 
+      double visceral_density = 930;
+      
+      // Mass of blubber in fetus -- (kg)
+      double mass_blubber = fetal_blubber_mass(L_zero, mass_muscle, mass_viscera, 
+                              mass_bones, blubber_density, muscle_density, visceral_density, bone_density);
+        
+        
+      // Fetal length
+      // TODO
+      // Fetal mass -- (kg)
+      double mass_fetus = mass_muscle + mass_bones + mass_viscera + mass_blubber;
+        
+      // Proportion of lipids in muscle -- (d.u.)
+      double muscle_lipids = R::rnorm(0.114, 0.08); // From Christiansen et al. (2022)   
+      
+      // Proportion of protein in muscle -- (d.u.)
+      double muscle_protein = R::rnorm(0.221, 0.023); // From Christiansen et al. (2022)   
+      
+      // Proportion of lipids in viscera -- (d.u.)
+      double visceral_lipids = R::rnorm(0.758, 0.096); // From Christiansen et al. (2022)   
+      
+      // Proportion of protein in viscera -- (d.u.)
+      double visceral_protein = R::rnorm(0.037, 0.017); // From Christiansen et al. (2022)   
+      
+      // Proportion of lipids in bones -- (d.u.)
+      double bones_lipids = R::rnorm(0.758, 0.096); // From Christiansen et al. (2022)   
+      
+      // Proportion of protein in bones -- (d.u.)
+      double bones_protein = 0.248; // From Christiansen et al. (2022)  
+      
+      // Proportion of lipids in blubber -- (d.u.)
+      // Meta: No filters
+      double blubber_lipids = rtnorm(0.73056, 0.058482, 0, 1);
+      
+      // Proportion of protein in blubber -- (d.u.)
+      double blubber_protein = R::rnorm(0.1020, 0.039); // From Christiansen et al. (2022)  
+      
+      // Energetic cost of fetal growth during pregnancy -- (kJ)
+      double fetal_growth_cost = mass_muscle * (ED_lipids * muscle_lipids + ED_protein * muscle_protein) + 
+        mass_viscera * (ED_lipids * visceral_lipids + ED_protein * visceral_protein) +
+        mass_bones * (ED_lipids * bones_lipids + ED_protein * bones_protein) +
+        mass_blubber * (ED_lipids * blubber_lipids +  ED_protein * blubber_protein);
+        
+      // Energetic cost of placental maintenance during pregnancy -- (kJ)
+      double placental_cost = placental_maintenance(fetal_growth_cost);
+      
+      // Heat increment of gestation -- (kJ)
+      // double HIC = heat_gestation(length2mass(L_zero), ?);
+      
       
       // ------------------------------------------------------------
       // STORE VALUES in output matrices
