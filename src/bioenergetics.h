@@ -78,6 +78,17 @@ double rtnorm(double location,
    return r;
  }
 
+//' Initialize body condition
+ //' @description Performs a random draw from a beta distribution to initialize 
+ //' the body condition of simulated animals, taken as the ration of fat mass to total mass.
+ //' @param shape1 First shape parameter of the beta distribution
+ //' @param shape2 Second shape parameter of the beta distribution
+ // [[Rcpp::export]]
+ 
+ double start_percfat(int shape1 = 6, int shape2 = 20){
+   return R::rbeta(shape1, shape2);
+ }
+
 //' Age to length conversion
 //' @description Calculates body length from age according to the length-at-age relationship described
 //' in Fortune et al. (2021)
@@ -118,17 +129,7 @@ double rtnorm(double location,
    }
    return pow(10, a + b*log10(L*100)); // m to cm
  }
- 
-//' Initialize body condition
-//' @description Performs a random draw from a beta distribution to initialize 
-//' the body condition of simulated animals, taken as the ration of fat mass to total mass.
-//' @param shape1 First shape parameter of the beta distribution
-//' @param shape2 Second shape parameter of the beta distribution
-// [[Rcpp::export]]
- 
- double start_percfat(int shape1 = 6, int shape2 = 20){
-   return R::rbeta(shape1, shape2);
- }
+
  
 //' Incidence of foraging behavior
 //' @description Determines whether the prey concentration encountered by an animal
@@ -451,7 +452,6 @@ double rtnorm(double location,
  }  
 
 //' Fetal blubber mass
-//' @param bc_birth Body condition at birth
 //' @param L_birth Length at birth (m)
 //' @param M_muscle Mass of muscles in the fetus (kg)
 //' @param M_viscera Mass of viscera in the fetus (kg)
@@ -460,12 +460,16 @@ double rtnorm(double location,
 //' @param D_muscle Average muscle density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
 //' @param D_viscera Average density of viscera (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
 //' @param D_bones Average bone density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
+//' @note The original equation from Christiansen et al. (2022) (DOI: 10.3354/meps14009) includes an additional term
+//' designed to account for the calf's body condition at birth. However, Christiansen et al. rely on a metric of body condition (BC)
+//' that differs from, and is not readily comparable to, ours. Here, we assume that BC = 0, which corresponds to an animal of average
+//' body condition. 
 // [[Rcpp::export]]
  
- double fetal_blubber_mass(double bc_birth, double L_birth,
+ double fetal_blubber_mass(double L_birth,
                           double M_muscle, double M_viscera, double M_bones,
                           double D_blubber, double D_muscle, double D_viscera, double D_bones){ 
-   return D_blubber * ((1 + bc_birth) * std::exp(-4.115 + 3.016 * std::log10(L_birth)) - 
+   return D_blubber * (std::exp(-4.115 + 3.016 * std::log10(L_birth)) - 
                        (M_muscle/D_muscle) - (M_viscera/D_viscera) - (M_bones/D_bones));
  }  
 
