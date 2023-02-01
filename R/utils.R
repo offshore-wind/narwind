@@ -59,7 +59,7 @@ meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, c
     dplyr::mutate(reproductive_state = trimws(reproductive_state))
   
   cat("\n")
-  print(dat.f)
+  print(dat.f, n = 100)
   cat("\n")
   
   if(length(input) == 0){
@@ -128,8 +128,8 @@ meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, c
       varmin <- ifelse(all(is.na(.x$min)), NA, min(.x$min, na.rm = TRUE))
       varmax <- ifelse(all(is.na(.x$max)), NA, max(.x$max, na.rm = TRUE))
       
-      if(is.na(varmin) & !is.null(theoretic.bounds)) varmin <- theoretic.bounds[1]
-      if(is.na(varmax) & !is.null(theoretic.bounds)) varmax <- theoretic.bounds[2]
+      if(is.na(varmin) & !is.null(theoretic.bounds)) varmin <- theoretic.bounds[1] else varmin <- min(dat.f$min, na.rm = TRUE)
+      if(is.na(varmax) & !is.null(theoretic.bounds)) varmax <- theoretic.bounds[2] else varmax <- max(dat.f$max, na.rm = TRUE)
       
       if(length(myvars) == 1){
         
