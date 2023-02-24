@@ -1,8 +1,17 @@
 # MODEL ------------------------------------------------------
 
-meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, comb = NULL, input = list(), theoretic.bounds = NULL){
+meta <- function(seed = 215513, 
+                 fill.NA = FALSE,
+                 min.yr = NULL,
+                 max.yr = NULL,
+                 comb = NULL,
+                 input = list(),
+                 theoretic.bounds = NULL,
+                 remove.study = NULL,
+                 verbose = FALSE){
   
   set.seed(seed)
+  options(pillar.sigfig = 7)
   
   if(length(input) > 0){
     param.input <- input$param.input
@@ -34,15 +43,13 @@ meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, c
     param.input <- readline(prompt = "Select parameter: ")
   }
   
-  if(length(input) > 0){
-    isnumeric <- suppressWarnings(!is.na(as.numeric(param.input)))
-    if(isnumeric){
+  isnumeric <- suppressWarnings(!is.na(as.numeric(param.input)))
+  if(isnumeric){
       param <- allp[as.numeric(param.input)]
     } else {
       param <- param.input
     }
-  }
-  
+
   dat.f <- dat |> dplyr::filter(parameter == param)
   if(!is.null(min.yr)) dat.f <- dat.f |> dplyr::filter(year > min.yr)
   if(!is.null(max.yr)) dat.f <- dat.f |> dplyr::filter(year < max.yr)
@@ -59,7 +66,7 @@ meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, c
     dplyr::mutate(reproductive_state = trimws(reproductive_state))
   
   cat("\n")
-  print(dat.f, n = 100)
+  if(verbose) print(dat.f, n = 100)
   cat("\n")
   
   if(length(input) == 0){
@@ -133,7 +140,7 @@ meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, c
       
       if(length(myvars) == 1){
         
-        if(myvars == 3){       
+        if(myvars == 3){ # Only mean
           
           # If sample size > 1, estimate SD based on methods of Wan et al. (2014) - https://doi.org/10.1186/1471-2288-14-135
           # else: take weighted mean of other SD, weighted by sample size
@@ -141,7 +148,7 @@ meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, c
           if(.x[j,]$sample_size > 1){
 
           .x[j,]$sd_se <- (varmax-varmin)/(2*(qnorm((max(.x[j,]$sample_size, 1, na.rm = TRUE)-0.375)/(max(.x[j,]$sample_size, 1, na.rm = TRUE)+0.25),0,1)))
-          
+            
           } else {
 
           w <- .x[, c("sd_se", "sample_size")]
@@ -149,7 +156,7 @@ meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, c
           if(nrow(.x) > 1) .x[j,]$sd_se <- wm
           }
 
-        } else if(myvars == 1){ 
+        } else if(myvars == 1){ # Only min
           
           # Only min -- take mean/SD of random draws from Uniform bounded by min value and max across records
           
@@ -157,7 +164,7 @@ meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, c
           .x[j,]$mean_median <- mean(n)
           .x[j,]$sd_se <- sd(n)
           
-        } else if(myvars == 2){ 
+        } else if(myvars == 2){ # Only max
           
           # Only max -- take mean/SD of random draws from Uniform bounded by min across records and max value
           
@@ -169,15 +176,31 @@ meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, c
         
       } else {
         
-        if(sum(myvars) == 3){
+        if(sum(myvars) == 1){
           
-          # Only min and max
+          # Only min
           
-          n <- runif(10000, .x[j,]$min, .x[j,]$max)
+          n <- runif(10000, .x[j,]$min, varmax)
           .x[j,]$mean_median <- mean(n)
           .x[j,]$sd_se <- sd(n)
           
-        } else if(sum(myvars) == 4){ 
+        } else if(sum(myvars) == 2){
+          
+          # Only max
+          
+          n <- runif(10000, varmin, .x[j,]$max)
+          .x[j,]$mean_median <- mean(n)
+          .x[j,]$sd_se <- sd(n)
+          
+        } else if(sum(myvars) == 3){
+          
+          # Only min and max
+          
+          n <- runif(10000, varmin, varmax)
+          .x[j,]$mean_median <- mean(n)
+          .x[j,]$sd_se <- sd(n)
+          
+        } else if(sum(myvars) == 4 | sum(myvars) == 6){ 
           
           # Only min and mean
           
@@ -200,11 +223,14 @@ meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, c
     if(nrow(.x) > 1) {
       
       # Apply the inverse-variance method to calculate a weighted mean, using adjusted random-effects weights
-      # if(all(is.na(.x$sd_se)) | sum(!is.na(.x$sd_se) == 1)){
-      #   weights <- 1 / ((1/.x$sample_size^2) + sd(.x$mean_median)^2)
-      #   combined.mean <- sum(weights * .x$mean_median) / sum(weights)
-      #   combined.se <- sqrt (sum(weights ^ 2 * .x$sample_size ^ 2) / sum(weights ^ 2))
-      # } else {
+# 
+#       if(all(is.na(.x$sd_se)) | sum(!is.na(.x$sd_se)) == 1){
+#         
+#         combined.mean <- mean(.x$mean_median)
+#         combined.se <- NA
+#         
+#       } else {
+
       weights <- 1 / ((.x$sd_se^2) + sd(.x$mean_median)^2)
       combined.mean <- sum(weights * .x$mean_median) / sum(weights)
       combined.se <- sqrt (sum(weights ^ 2 * .x$sd_se ^ 2) / sum(weights ^ 2))
@@ -222,6 +248,7 @@ meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, c
     tidyr::unnest(cols = c(value)) |> 
     dplyr::arrange(name)
 
+  # return(list(dat.f, dat.out))
   return(dat.out)
 }
 
@@ -230,7 +257,7 @@ meta <- function(seed = 215513, fill.NA = FALSE, min.yr = NULL, max.yr = NULL, c
 #' @export
 load_model <- function(){
   Rcpp::sourceCpp("src/simtools.cpp")
-  Rcpp::sourceCpp("src/bioenergetics_functions.cpp")
+  # Rcpp::sourceCpp("src/bioenergetics_functions.cpp")
   source("R/run_model.R")
   assign("init.model", value = TRUE, envir = .GlobalEnv)
 }
@@ -484,19 +511,30 @@ transpose_array <- function(input, cohortID, dates) {
       tmp
     })
     
-    if(.y == 5){
+    outl <- list()
+    outl[["locs"]] <- tp[["locs"]]
+    outl[["stress"]] <- tp[["stressors"]]
+    outl[["activ"]] <- tp[["activity"]]
+    outl[["E"]] <- tp[["E"]]
+    
+    if(.y == 5){ # Lactating females / calves
       
-      outl <- list()
-      outl[["locs"]] <- tp[["locs"]]
+      tp[grepl("fetus", names(tp))] <- NULL  
       outl[["attrib"]] <- list(adjuv = tp[["attrib"]], calves = tp[["attrib_calves"]])
       outl[["kj"]] <- list(adjuv = do.call(abind::abind, list(tp[["in.kj"]], tp[["out.kj"]], along = 2)),
                            calves = do.call(abind::abind, list(tp[["in.kj_calves"]], tp[["out.kj_calves"]], along = 2)))
       
-    } else {
+    } else if(.y == 4){ # Pregnant females
       
       tp[grepl("calves", names(tp))] <- NULL  
-      outl <- list()
-      outl[["locs"]] <- tp[["locs"]]
+      outl[["attrib"]] <- list(adjuv = tp[["attrib"]], fetus = tp[["attrib_fetus"]])
+      outl[["kj"]] <- do.call(abind::abind, list(tp[grepl("kj", names(tp))], along = 2))
+      
+
+    } else {
+      
+      tp[grepl("fetus", names(tp))] <- NULL  
+      tp[grepl("calves", names(tp))] <- NULL  
       outl[["attrib"]] <- tp[["attrib"]]
       outl[["kj"]] <- do.call(abind::abind, list(tp[grepl("kj", names(tp))], along = 2))
     }
@@ -565,7 +603,7 @@ transpose_array <- function(input, cohortID, dates) {
 #   })
 # }
 
-optim_feeding <- function(bounds = list(c(0,0.2)), nm = NULL){
+optim_feeding <- function(bounds = list(c(0,0.2)), nm = NULL, linecol = "black", verbose = TRUE){
   
   # Assuming B > 0 And S > 0:
   # - A is the value of the horizontal asymptote when x tends to -Inf
@@ -590,6 +628,7 @@ optim_feeding <- function(bounds = list(c(0,0.2)), nm = NULL){
                out <- optim(par = c(15, 1, 0.1, 0.01), fn = opt.f, bounds = bounds[[.x]])
                
                # Print results
+               if(verbose){
                cat("\nEstimated parameter values:\n")
                cat("B",out$par[1],"\n")
                cat("C",out$par[2],"\n")
@@ -603,6 +642,7 @@ optim_feeding <- function(bounds = list(c(0,0.2)), nm = NULL){
                                   B = out$par[1],
                                   C = out$par[2],
                                   S = out$par[3]))))
+               }
                return(out)
              })
 
@@ -611,13 +651,42 @@ optim_feeding <- function(bounds = list(c(0,0.2)), nm = NULL){
   plot(x, f(x, B = res[[1]]$par[1], C = res[[1]]$par[2], S = res[[1]]$par[3]), 
        type = "n", ylab = "Feeding effort", xlab = "Body condition (relative blubber mass, %)")
   purrr::walk(.x = seq_along(bounds), .f = ~{
-    lines(x, f(x, B = res[[.x]]$par[1], C = res[[.x]]$par[2], S = res[[.x]]$par[3]), lty = .x)
+    lines(x, f(x, B = res[[.x]]$par[1], C = res[[.x]]$par[2], S = res[[.x]]$par[3]), lty = .x, col = linecol)
   })
-  if(!is.null(nm)) legend("topright", legend = nm, lty = seq_along(bounds))
+  if(!is.null(nm)) legend("topright", legend = nm, lty = seq_along(bounds), col = linecol)
   
 }
 
 # NOISE ------------------------------------------------------
+
+response_km <- function(n = 100, max.d = 200, SL = 200, logfac = 15, a = 1.175, main = ""){
+  
+  # max.d is the maximum distance from the source to be considered
+  # n gives the number of curves to extract and plot
+  
+  set.seed(23579)
+  
+  x <- seq(0, max.d, length.out = 1000) # Distances from source
+  db <- km2dB(x, SL = SL, logfac = logfac, a = a) # Received levels
+  db[db<85] <- 85 # So that splinefun returns 0 below lower bound
+  
+  # Dose-response function
+  dose.range <- seq(85, 200, length.out = 1000)
+  f <- splinefun(dose.range, doseresponse[,1])
+  
+  # Apply dose-response function to received levels
+  y <- f(db)
+  y[y > 1] <- 1 # In case SL is > 200
+  
+  plot(x, y, type = "l", col = "grey", ylab = "p(response)", xlab = "Distance from source (km)", main = main)
+  for(k in sample(x = 2:ncol(doseresponse), size = n, replace = FALSE)){
+    f <- splinefun(dose.range, doseresponse[,k])
+    y <- f(db)
+    y[y>1] <- 1
+    lines(x, y, col = "grey")
+  }
+}
+
 
 TL <- function(r, logfac = 15, a = 1.175){
   # r in km
@@ -628,15 +697,20 @@ TL <- function(r, logfac = 15, a = 1.175){
   return(loss)
 }
 
-dB2km <- function(target.dB, SL = 220, logfac = 15, a = 1.175){
+dB2km <- function(target.dB, SL = 200, logfac = 15, a = 1.175){
   opt.fun <- function(r, SL, target.L, logfac){
     return((SL-TL(r, logfac = logfac, a = a)-target.L)^2)}
   out <- optimize(f = opt.fun, interval = c(0,30000), SL = SL, target.L = target.dB, logfac = logfac)
   return(out$minimum)
 }
 
-km2dB <- function(r, SL = 220, logfac = 15, a = 1){
+km2dB <- function(r, SL = 200, logfac = 15, a = 1.175){
   return(SL-TL(r, logfac = logfac, a = a))
+}
+
+get_doseresponse <- function(input.ee){
+  data.table::fread("data/elicitation/EE_results.csv", select = 2:3) |> as.matrix()
+  # data.table::fread("data/elicitation/EE_results.csv", select = 4:5003) |> as.matrix()
 }
 
 proxy_noise <- function(ambient = 60, source.lvl = 220, mitigation = 10, x, y){
@@ -681,7 +755,7 @@ proxy_noise <- function(ambient = 60, source.lvl = 220, mitigation = 10, x, y){
   
   # plot(terra::rast(db.all), col = pals::viridis(100), main = "Noise levels (dB)", xlab = "Easting (km)")
   
-  db.all <- rescale_raster(db.all, new.max = source.lvl)
+  db.all <- rescale_raster(db.all, new.min = ambient, new.max = source.lvl)
   db.list <- purrr::map(.x = month.abb, .f = ~db.all)
   
   out <- purrr::map(.x = db.list, .f = ~as(.x, "SpatialGridDataFrame"))
@@ -691,6 +765,38 @@ proxy_noise <- function(ambient = 60, source.lvl = 220, mitigation = 10, x, y){
 }
 
 # FISHING GEAR ------------------------------------------------------
+
+get_entglD <- function(){
+  readr::read_csv("data/gear/duration_entanglements_BOEM.csv") |> 
+    janitor::clean_names()
+}
+
+entgl_durations <- function(){
+  
+  # Duration of entanglement events
+  entgl <- targets::tar_read(entgl_d)
+  severity <- unique(entgl$severity)
+  
+  # Negative binomial fit
+  fnb <- purrr::set_names(severity) |> 
+    purrr::map(.f = ~fitdistrplus::fitdist(entgl[entgl$severity == .x, ]$duration_days, "nbinom"))
+  
+  par(mfrow = c(3, 2))
+  purrr::walk(
+    .x = severity,
+    .f = ~ {
+      hist(entgl[entgl$severity == .x, ]$duration_days,
+           freq = FALSE,
+           main = .x,
+           xlab = "Entanglement duration (days)"
+      )
+      x <- seq(0, max(entgl[entgl$severity == .x, ]$duration_days), by = 1)
+      lines(x, dnbinom(x, size = fnb[[.x]]$estimate["size"], mu = fnb[[.x]]$estimate["mu"]), lwd = 1.5)
+      fitdistrplus::cdfcomp(fnb[[.x]])
+    }
+  )
+  print(fnb)
+}
 
 proxy_fishing <- function(){
   
@@ -737,7 +843,7 @@ proxy_fishing <- function(){
 
 # VESSEL TRAFFIC ------------------------------------------------------
 
-proxy_vessels <- function(){
+proxy_vessels <- function(pmax = 0.25){
   
   # Data from https://globalmaritimetraffic.org/ - monthly rasters between Jan and Dec 2022
   
@@ -772,7 +878,7 @@ proxy_vessels <- function(){
                            .f = ~{
                              out.r <- raster::merge(raster::raster(.x), raster::raster(.y))
                              out.r <- sqrt(out.r)
-                             out.r <- rescale_raster(out.r, new.max = 1)
+                             out.r <- rescale_raster(out.r, new.max = pmax)
                              out.r[is.na(out.r)] <- 0
                              raster::mask(out.r, mask = poly)})
   
@@ -1847,15 +1953,13 @@ get_regions <- function(eez = FALSE) {
   
   if(eez){
     
-    regions <- raster::shapefile(dir(path = "data/regions", pattern = "regions_eez.shp$", 
-                                     full.names = TRUE)) |> 
+    regions <- raster::shapefile(dir(path = "data/regions", pattern = "regions_eez.shp$", full.names = TRUE)) |> 
       sp::spTransform(CRSobj = narw_crs())
     
   } else {
   
   # Load shapefile of spatial regions (CCB, MIDA, SEUS, etc.)
-  regions <- raster::shapefile(dir(path = "data/regions", pattern = "regions.shp$", 
-                                   full.names = TRUE))
+  regions <- raster::shapefile(dir(path = "data/regions", pattern = "regions.shp$", full.names = TRUE))
   regions$Id <- NULL
 
   sp::spTransform(x = regions, CRSobj = narw_crs())
@@ -1958,6 +2062,7 @@ get_world <- function(sc = "medium"){
 
 plot_raster <- function(r, prob = FALSE, zero = FALSE){
   
+  if(class(r) == "SpatialGridDataFrame") r <- raster::raster(r)
   dat <- raster::as.data.frame(r, xy = TRUE)
   names(dat)[3] <- "Nhat"
   dat <- dat[complete.cases(dat),]
@@ -2033,6 +2138,15 @@ gape_size_R <- function(L, omega, alpha){
 
 # UTILITIES ------------------------------------------------------
 
+extract <- function(obj){
+  if(!"narwsim" %in% class(obj)) stop("Input object must be of class <narwsim>")
+  coh <- obj$param$cohort.ab
+  out <- lapply(X = coh, FUN = function(x){
+      abind::abind(obj[["locs"]][[x]], obj[["sim"]][[x]], along = 2)
+  }) |> purrr::set_names(nm = coh)
+  return(out)
+}
+
 get_daylight <- function(){
   
   out <- list()
@@ -2089,6 +2203,19 @@ estGammaParams <- function(mu, std) {
   return(params = list(shape = shape, scale = scale))
 }
 
+estRayleighParams <- function(target.mean, upper, e = 0.001){
+  
+  opt.f <- function(param, p, e){
+    set.seed(20230126)
+    n <- extraDistr::rrayleigh(n = 100000, sigma = param[1])
+    m <- (mean(n)-p[1])^2+ (max(n)-p[2])^2
+    return(m)
+  }
+  
+  out <- suppressWarnings(optim(par = 1, fn = opt.f, p = c(target.mean, upper), e = e))
+  return(out$par)
+}
+
 estTruncNorm <- function(target.mean, L, U){
   
   opt.f <- function(param, bounds, target.mean){
@@ -2101,7 +2228,8 @@ estTruncNorm <- function(target.mean, L, U){
   return(out$par)
 }
 
-draw <- function(distrib = "norm", mu, std = NULL, L = -Inf, U = Inf, seed = 215513, x.lab = "", y.lab = ""){
+draw <- function(distrib = "norm", mu, std = NULL, L = -Inf, U = Inf, seed = 215513, x.lab = "",
+                 y.lab = "", title = NULL, verbose = TRUE, linecol = "black"){
   
   set.seed(seed)
   
@@ -2110,63 +2238,78 @@ draw <- function(distrib = "norm", mu, std = NULL, L = -Inf, U = Inf, seed = 215
   if(distrib == "halfnorm"){
     
     truncN.param <- estTruncNorm(target.mean = mu, L = L, U = U)
-    print(truncN.param)
+    if(verbose) print(truncN.param)
     n <- truncnorm::rtruncnorm(10000, L, U, L, truncN.param)
     
+    if(verbose) {
     cat("min:", min(n), "\n")
     cat("max:", max(n),  "\n")
     cat("mean:", mean(n),  "\n")
     cat("sd:", sd(n), "\n")
+    }
     
-    curve(expr = truncnorm::dtruncnorm(x = x, L, U, L, truncN.param), from = min(n), to = max(n), main = "Half Normal distribution", ylab = y.lab, xlab = x.lab)
+    curve(expr = truncnorm::dtruncnorm(x = x, L, U, L, truncN.param), from = min(n), to = max(n), 
+          main = ifelse(is.null(title), "Half Normal distribution", title), ylab = y.lab, xlab = x.lab, lwd = 1.5, col = linecol)
     
   } else if(distrib == "tnorm"){
     
     n <- truncnorm::rtruncnorm(10000, L, U, mu, std)
 
+    if(verbose) {
     cat("min:", min(n), "\n")
     cat("max:", max(n),  "\n")
     cat("mean:", mean(n),  "\n")
     cat("sd:", sd(n), "\n")
+    }
     
-    curve(expr = truncnorm::dtruncnorm(x = x, a = L, b = U, mean = mu, sd = std), from = min(n), to = max(n), main = "Truncated Normal distribution", ylab = y.lab, xlab = x.lab)
+    curve(expr = truncnorm::dtruncnorm(x = x, a = L, b = U, mean = mu, sd = std), from = min(n), to = max(n),
+          main = ifelse(is.null(title), "Truncated Normal distribution", title), ylab = y.lab, xlab = x.lab, lwd = 1.5, col = linecol)
     
   } else if(distrib == "norm"){
     
     n <- rnorm(10000, mu, std)
     
+    if(verbose) {
     cat("min:", min(n), "\n")
     cat("max:", max(n),  "\n")
     cat("mean:", mean(n),  "\n")
     cat("sd:", sd(n), "\n")
+    }
     
-    curve(expr = dnorm(x = x, mu, std), from = min(n), to = max(n), main = "Normal distribution", ylab = "", xlab = "")
+    curve(expr = dnorm(x = x, mu, std), from = min(n), to = max(n),
+          main = ifelse(is.null(title), " Normal distribution", title), ylab = "", xlab = "", lwd = 1.5, col = linecol)
     
   } else if(distrib == "gamma") {
     
     gamma.params <- estGammaParams(mu, std)
-    print(gamma.params)
+    if(verbose) print(gamma.params)
     n <- rgamma(10000, shape = gamma.params$shape, scale = gamma.params$scale)
     
+    if(verbose) {
     cat("min:", min(n), "\n")
     cat("max:", max(n),  "\n")
     cat("mean:", mean(n),  "\n")
     cat("sd:", sd(n), "\n")
+    }
     
-    curve(expr = dgamma(x = x, shape = gamma.params$shape, scale = gamma.params$scale), from = min(n), to = max(n), main = "Gamma distribution", ylab = y.lab, xlab = x.lab)
+    curve(expr = dgamma(x = x, shape = gamma.params$shape, scale = gamma.params$scale), from = min(n), to = max(n), 
+          main = ifelse(is.null(title), "Gamma distribution", title), ylab = y.lab, xlab = x.lab, lwd = 1.5, col = linecol)
     
   } else if(distrib == "beta") {
     
     beta.params <- estBetaParams(mu, std)
-    print(beta.params)
+    if(verbose) print(beta.params)
     n <- rbeta(10000, beta.params$alpha, beta.params$beta)
 
+    if(verbose) {
     cat("min:", min(n), "\n")
     cat("max:", max(n),  "\n")
     cat("mean:", mean(n),  "\n")
     cat("sd:", sd(n), "\n")
+    }
     
-    curve(expr = dbeta(x = x, beta.params$alpha, beta.params$beta), from = 0, to = 1, main = "Beta distribution", ylab = y.lab, xlab = x.lab)
+    curve(expr = dbeta(x = x, beta.params$alpha, beta.params$beta), from = 0, to = 1, 
+          main = ifelse(is.null(title), "Beta distribution", title), ylab = y.lab, xlab = x.lab, lwd = 1.5, col = linecol)
   }
 }
 
@@ -2178,7 +2321,7 @@ rescale_raster <- function(x, x.min = NULL, x.max = NULL, new.min = 0, new.max =
 
 
 save_objects <- function(obj = NULL, redo = FALSE){
-  if(is.null(obj)) obj <- c("regions", "world", "support_poly", "density_narw", "density_support", "density_weighted", "turbines", "dummy_prey", "dummy_noise", "dummy_vessel", "dummy_fishing", "daylight", "params")
+  if(is.null(obj)) obj <- c("regions", "regions_m",  "world", "support_poly", "density_narw", "density_support", "density_weighted", "turbines", "dummy_prey", "dummy_noise", "dummy_vessel", "dummy_fishing", "daylight", "params")
   # if(redo & length(obj) == 1) targets::tar_delete(obj); targets::tar_make(obj)
   suppressWarnings(targets::tar_load(obj))
   for(i in obj) {
