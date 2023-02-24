@@ -100,6 +100,9 @@ private:
   
   // Daylight hours raster (in projected coordinates)
   const MatrixType &m_daylight;
+  
+  // Region IDs (in projected coordinates)
+  const MatrixType &m_regions;
 
 public:
 
@@ -121,6 +124,7 @@ public:
     const MatrixType & vessels,
     const MatrixType & noise,
     const MatrixType & daylight,
+    const MatrixType & regions,
     const Eigen::VectorXd & limits,
     const Eigen::VectorXd & resolution,
     const std::size_t & mapid
@@ -131,6 +135,7 @@ public:
     m_vessel(vessels),
     m_noise(noise),
     m_daylight(daylight),
+    m_regions(regions),
     m_limits(limits),
     m_resolution(resolution),
     id(mapid) { }
@@ -179,6 +184,10 @@ public:
     
     case 'L':
       d = m_daylight(i,j);
+      break;
+      
+    case 'R':
+      d = m_regions(i,j);
       break;
 
     }
