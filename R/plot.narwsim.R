@@ -23,7 +23,7 @@
 #' }
 
 plot.narwsim <- function(obj,
-                         id = NULL,
+                         whale.id = NULL,
                          animate = FALSE,
                          color.by = FALSE,
                          web = FALSE,
@@ -32,7 +32,7 @@ plot.narwsim <- function(obj,
 ){
   
   # obj = m
-  # id = NULL
+  # whale.id = NULL
   # animate = FALSE
   # color.by = FALSE
   # web = FALSE
@@ -58,8 +58,7 @@ plot.narwsim <- function(obj,
   # Load required objects
   # ....................................
   
-  support_grd <- targets::tar_read(support_poly) |> sf::st_as_sf()
-  wrld <- targets::tar_read(world)
+  support_grd <- support_poly |> sf::st_as_sf()
   
   # ....................................
   # Plotting options
@@ -72,6 +71,25 @@ plot.narwsim <- function(obj,
     ggplot2::theme(axis.text.y = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 0.5),
                    axis.text = ggplot2::element_text(colour = "black"),
                    panel.border = ggplot2::element_rect(colour = "black", fill = NA, linewidth = 0.5))
+  
+  
+  # ....................................
+  # Dead animals
+  # ....................................
+  
+  if(cohort.id %in% c(4,5)){
+    alive.dat <- purrr::map(.x = obj[["sim"]], .f = ~ .x[[1]][ , "alive", , drop = FALSE])
+  } else {
+    alive.dat <- purrr::map(.x = obj[["sim"]], .f = ~ .x[ , "alive", , drop = FALSE])
+  }
+
+  locs.dead <- purrr::map(.x = cohort.ab, .f = ~{
+    row.ind <- sapply(seq_len(n), function(u) which.min(unname(alive.dat[[.x]][,,u])))
+    lapply(X = seq_along(row.ind), FUN = function(a) obj[["locs"]][[.x]][row.ind[a],,a]) |>  do.call(what = rbind) |> 
+      tibble::as_tibble() |> dplyr::mutate(trackID = paste0("whale.", dplyr::row_number())) |> 
+      dplyr::slice(which(row.ind > 1))
+  }) |> purrr::set_names(nm = cohort.ab)
+
   
   # ....................................
   # Generate plots
@@ -89,25 +107,31 @@ plot.narwsim <- function(obj,
       do.call(what = rbind)
     
     # Select tracks
-    if(is.null(id)) animal_id <- 1:n else animal_id <- unique(locs$trackID)[id]
-    locs <- locs |> dplyr::filter(trackID %in% paste0("whale.", animal_id))
+    if(is.null(whale.id)) animal_id <- paste0("whale.", 1:n) else animal_id <- unique(locs$trackID)[whale.id]
+    locs <- locs |> dplyr::filter(trackID %in% animal_id)
+    locs.dead <- purrr::map(.x = locs.dead, .f = ~ .x |> dplyr::filter(trackID %in% animal_id))
     
     # ....................................
     # Plot base map (land)
     # ....................................
     
-    base_p <- gg.opts + ggplot2::geom_sf(data = sf::st_as_sf(wrld), fill = world.fill, color = "black", linewidth = 0.25)
+    base_p <- gg.opts + ggplot2::geom_sf(data = sf::st_as_sf(world), fill = world.fill, color = "black", linewidth = 0.25)
     
     # ....................................
     # Plot tracks
     # ....................................
     
     track_p <- base_p +
+      
       ggplot2::geom_path(
         data = locs,
         mapping = ggplot2::aes(x = easting, y = northing, colour = trackID), alpha = 0.7, linewidth = 0.2) +
+      
+      {if(nrow(locs.dead[[.x]]) > 0) ggplot2::geom_point(data = locs.dead[[.x]], aes(x = easting, y = northing), col = "firebrick")} +
+      
       {if(color.by) ggplot2::scale_color_manual(name = "Animal ID", values = pals::glasbey(length(animal_id)))} +
       {if(!color.by) ggplot2::scale_color_manual(name = "Animal ID", values = rep("black", length(animal_id)))} +
+      
       ggplot2::theme(legend.position = "none") + 
       ggplot2::coord_sf(expand = FALSE) +
       ggtitle(.y)
@@ -198,7 +222,7 @@ plot.narwsim <- function(obj,
       moveVis::add_progress(size = 2)
     
     # world_sf <- get_world() |> sf::st_as_sf()
-    # frames.gg <- moveVis::add_gg(frames, gg = ggplot2::expr(ggplot2::geom_sf(data = sf::st_as_sf(wrld), fill = "lightgrey", color = "black", size = 0.25)))
+    # frames.gg <- moveVis::add_gg(frames, gg = ggplot2::expr(ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", size = 0.25)))
     # moveVis::animate_frames(frames.gg, out_file = "animation2.gif", overwrite = TRUE, display = FALSE)
     
     stamp <- gsub(pattern = "-", replacement = "", x = Sys.time()) |> 
