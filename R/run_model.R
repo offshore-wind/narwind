@@ -27,7 +27,7 @@ run_model <- function(nsim = 1e3,
   # nsim = 1
   # init.month = 2
   # step.size = 120
-  # cohort.id = 5
+  # cohort.id = 4
   # n.cores = NULL
   # n.prop = 50
   # show.progress = TRUE
@@ -69,6 +69,18 @@ run_model <- function(nsim = 1e3,
   cohort.ab <- cohort.ab[cohort.id] 
   
   # ............................................................
+  # Dose-response
+  # ............................................................
+  
+  spline_dr <- splinefun(x = doseresponse[,2], y = doseresponse[,1])
+  median_doseresponse <- spline_dr(runif(10000)) # Using inverse transform sampling
+  
+  # Checking that we get the dose-response back
+  # y <- sapply(X = doseresponse[,1], FUN = function(x) sum(dose_n <= x) / 10000000)
+  # plot(doseresponse[,1], doseresponse[,2], type = 'l')
+  # lines(doseresponse[,1], y, col = "orange", lty = 2)
+  
+  # ............................................................
   # Load spatial support and regions
   # ............................................................
   
@@ -91,6 +103,7 @@ run_model <- function(nsim = 1e3,
   vesselmaps <- lapply(dummy_vessels, raster::as.matrix)
   noisemaps <- lapply(dummy_noise, raster::as.matrix)
   daylightmaps <- lapply(daylight, raster::as.matrix)
+  regionsmap <- raster::as.matrix(regions_m)
   
   # ............................................................
   # Check inputs
@@ -191,7 +204,9 @@ run_model <- function(nsim = 1e3,
                                 fishing = fishingmaps,
                                 vessels = vesselmaps,
                                 noise = noisemaps,
+                                doseresp = median_doseresponse,
                                 daylight = daylightmaps,
+                                regions = regionsmap,
                                 M = n.prop, # No.proposals in the importance sampler (Michelot, 2019)
                                 stepsize = step.size / 2, # Movement model involves two half-steps (Michelot, 2019, 2020)
                                 xinit = matrix(data = coords[init.inds[[i]], 'x'], nrow = nrow(init.inds[[i]])),
@@ -227,7 +242,9 @@ run_model <- function(nsim = 1e3,
       fishing = fishingmaps,
       vessels = vesselmaps,
       noise = noisemaps,
+      doseresp = median_doseresponse,
       daylight = daylightmaps,
+      regions = regionsmap,
       M = n.prop, # Number of proposals used in the importance sampler for movement (Michelot, 2019)
       stepsize = step.size / 2, # Movement framework involves two half-steps (Michelot 2019, 2020)
       xinit = matrix(data = coords[init.inds[[1]], 'x'], nrow = nrow(init.inds[[1]])),
@@ -253,15 +270,34 @@ run_model <- function(nsim = 1e3,
   
   for(k in seq_along(cohort.id)){
     
-    if(cohort.id[k] == 5){
+    if(cohort.id[k] == 5){ # Lactating females + calves
       
       outsim[["sim"]][[cohort.ab[k]]] <- purrr::map(.x = 1:2,
-          .f = ~{abind::abind(out.t[[k]][["attrib"]][[.x]], out.t[[k]][["kj"]][[.x]], along = 2) 
+          .f = ~{abind::abind(out.t[[k]][["attrib"]][[.x]],
+                              out.t[[k]][["stress"]], 
+                              out.t[[k]][["E"]], 
+                              out.t[[k]][["kj"]][[.x]], 
+                              out.t[[k]][["activ"]], along = 2) 
       }) |> purrr::set_names(nm = c("adults", "calves")) 
+      
+    } else if(cohort.id[k] == 4){ # Pregnant females
+      
+      outsim[["sim"]][[cohort.ab[k]]] <- purrr::map(.x = 1:2,
+         .f = ~{abind::abind(out.t[[k]][["attrib"]][[.x]], 
+                             out.t[[k]][["stress"]], 
+                             out.t[[k]][["E"]], 
+                             out.t[[k]][["kj"]], 
+                             out.t[[k]][["activ"]], along = 2) 
+      }) |> purrr::set_names(nm = c("adults", "fetus")) 
       
     } else {
       
-      outsim[["sim"]][[cohort.ab[k]]] <- abind::abind(out.t[[k]][["attrib"]], out.t[[k]][["kj"]], along = 2) 
+      outsim[["sim"]][[cohort.ab[k]]] <- 
+        abind::abind(out.t[[k]][["attrib"]], 
+                     out.t[[k]][["stress"]], 
+                     out.t[[k]][["E"]], 
+                     out.t[[k]][["kj"]],
+                     out.t[[k]][["activ"]], along = 2) 
     }
   }
   
