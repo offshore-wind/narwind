@@ -3,22 +3,43 @@
 
 #include <RcppEigen.h>
 #include "geodesic.h"
+#include "bioenergetics.h"
+
 
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(cpp11)]]
+
+
+// [[Rcpp::export]]
+double sigma_move(int r){
+  
+  double sigma_travel = 19.28;
+  double sigma_feed = 3.5;
+  double sigma_nurse = 3.05;
+  
+  // Travel
+  if(r == 3 | r == 7 | r == 8){
+    return sigma_travel;
+  } else if(r == 9){
+    return sigma_feed;
+  } else {
+    return sigma_nurse;
+  }
+}
+
 
 /**
  * Fixed-rate uniform random walk in R^2
  * @tparam AnimalType
  * @tparam EnvironmentType
  */
-template<typename AnimalType, typename EnvironmentType>
-struct RandomMovement {
-  void update(AnimalType & a, EnvironmentType & e) {
-    a.x += R::runif(-M_PI,M_PI);
-    a.y += R::runif(-M_PI,M_PI);
-  }
-};
+// template<typename AnimalType, typename EnvironmentType>
+// struct RandomMovement {
+//   void update(AnimalType & a, EnvironmentType & e) {
+//     a.x += R::runif(-M_PI,M_PI);
+//     a.y += R::runif(-M_PI,M_PI);
+//   }
+// };
 
 /**
  * Locally Gibbs movement, following Michelot et al. (2019)
@@ -65,25 +86,41 @@ public:
     weights.resize(m);
   }
   
-  void update(AnimalType & animal, EnvironmentType & environment) {
-    double d, a, x0, y0, xn, yn;
+  void update(AnimalType & animal, EnvironmentType & environment, bool norm, int region) {
+    double d, d_0, a, x0, y0, xn, yn;
     bool sampling = true;
-    
-    // double dens;
+    // Rcpp::NumericVector out (3);
     
     // std::cout << animal.cohortID << ", ";
     // std::cout << environment.id << ", ";
     
     while(sampling) {
       
-      // runif run here in scalar mode - generates a single value
-      d = std::sqrt(R::runif(0,stepsize_sq));
-      a = R::runif(-M_PI,M_PI);
-      
-      // Disc center
-      x0 = animal.x + d * std::cos(a);
-      y0 = animal.y + d * std::sin(a);
-      
+      if(norm){
+
+        x0 = animal.x + R::rnorm(0, sigma_move(region));
+        y0 = animal.y + R::rnorm(0, sigma_move(region));
+        
+      } else {  
+        
+        // Availability radius model of Michelot et al. (2019)
+        // runif run here in scalar mode - generates a single value
+        // The square root is needed to sample points uniformly within a circle using inverse transform sampling
+        // This is because the desired probability density function for point generation grows linearly with the
+        // circle's radius, i.e., PDF(x) = 2x for a unit circle.
+        // The corresponding CDF is the integral of this function, i.e., x2
+        // The inverse CDF is therefore sqrt()
+        // https://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly
+        
+        d_0 = std::sqrt(R::runif(0,stepsize_sq)); 
+        a = R::runif(-M_PI,M_PI);
+        
+        // Disc center
+        x0 = animal.x + d_0 * std::cos(a);
+        y0 = animal.y + d_0 * std::sin(a);
+        
+      }
+
       // Sample m points in the circle, and compute their weights
       // Use asterisks to create pointers
       double *prop = proposals.data();
@@ -92,20 +129,26 @@ public:
       for(std::size_t i=0; i<m; ++i) {
         
         // Randomly sample a distance and angle
-        d = std::sqrt(R::runif(0,stepsize_sq));
-        a = R::runif(-M_PI,M_PI);
-        
-        // Calculate new x,y
-        xn = x0 + d * std::cos(a);
-        yn = y0 + d * std::sin(a);
+
+        if(norm){
+          
+          xn = x0 + R::rnorm(0, sigma_move(region));
+          yn = y0 + R::rnorm(0, sigma_move(region));
+          
+        } else {
+          
+          d = std::sqrt(R::runif(0,stepsize_sq));
+          a = R::runif(-M_PI,M_PI);
+          
+          // Calculate new x,y
+          xn = x0 + d * std::cos(a);
+          yn = y0 + d * std::sin(a);
+          
+        }
         
         // Store x,y proposal
         *(prop++) = xn;
         *(prop++) = yn;
-        
-        // if(animal.cohortID == 5 && yn <= -12 && (environment.id <= 3 || environment.id >= 11)){
-        //   std::cout << "in SEUS" << std::endl;
-        // }
         
         // Retrieve density value (weight) at new x,y
         *(w++) = environment(xn, yn, 'D');
@@ -122,14 +165,19 @@ public:
         weights /= totalWeight;
         std::size_t k = sampleInd();
         
+        // out[0] = proposals(0,k);
+        // out[1] = proposals(1,k);
+        // out[2] = std::sqrt(std::pow(proposals(0,k)-x0,2) + std::pow(proposals(1,k)-y0,2));
+        
         animal.x = proposals(0,k);
         animal.y = proposals(1,k);
         
         sampling = false;
         
-      }
-    }
-  }
+      } // End if(totalWeight)
+    } // End while(sampling)
+
+  } // End update
 };
 
 /**
@@ -171,14 +219,21 @@ public:
   ) : stepsize_sq(r*r), m(n_proposals), latent_mvmt(base_mvmt),
   latent_envs(base_environments) { }
   
-  void update(AnimalType & animal, EnvironmentType & environment) {
+  void update(AnimalType & animal, EnvironmentType & environment, bool norm, int region) {
+    
+    // Rcpp::NumericVector out (3);
+    // Rcpp::NumericVector latent_coords (3);
     
     // Update latent animals
     auto latent_env = latent_envs.begin();
     auto latent_animal = animal.latent.begin();
     auto latent_end = animal.latent.end();
+    
     while(latent_animal != latent_end) {
-      latent_mvmt.update(*(latent_animal++), *(latent_env++));
+      latent_mvmt.update(*(latent_animal++), *(latent_env++), TRUE, region);
+      // latent_coords = latent_mvmt.update(*(latent_animal++), *(latent_env++), TRUE, region);
+      // animal.latent[latent_animal - animal.latent.begin()].x = latent_coords[0];
+      // animal.latent[latent_animal - animal.latent.begin()].y = latent_coords[1];
     }
     
     // Environment defines latent animal toward which movement is attracted
@@ -192,38 +247,58 @@ public:
       std::pow(animal.y - active_latent.y, 2);
     
     if(dist_to_latent < stepsize_sq) {
+      
+      // out[0] = active_latent.x;
+      // out[1] = active_latent.y;
+      // out[2] = std::sqrt(dist_to_latent);
+      
       animal.x = active_latent.x;
       animal.y = active_latent.y;
-      return;
+      // return out;
     }
     
     // Otherwise, select point within stepsize closest to latent animal, unless
     // the simulated whale is a pregnant female migrating to the calving grounds
     // Calving season is between Nov and March (Krzystan et al. 2018)
-    double d, a, x0, y0, xn, yn, xnew, ynew;
+    double d_0, d, a, x0, y0, xn, yn, xnew, ynew;
     double dmin = std::numeric_limits<double>::infinity();
     bool sampling = true;
     
     while(sampling) {
       
-      d = std::sqrt(R::runif(0,stepsize_sq));
-      a = R::runif(-M_PI,M_PI);
-      
-      // if(d < 25) animal.behavior = 1;
-      // std::cout << animal.behavior << " ";
-      
-      // Disc center
-      x0 = animal.x + d * std::cos(a);
-      y0 = animal.y + d * std::sin(a);
+      if(norm){
+        
+        x0 = animal.x + R::rnorm(0, sigma_move(region));
+        y0 = animal.y + R::rnorm(0, sigma_move(region)); 
+        
+      } else {
+        
+        d_0 = std::sqrt(R::runif(0,stepsize_sq));
+        a = R::runif(-M_PI,M_PI);
+        
+        // Disc center
+        x0 = animal.x + d_0 * std::cos(a);
+        y0 = animal.y + d_0 * std::sin(a);
+        
+      }
       
       // Sample m points in the circle, keep closest valid point
       for(std::size_t i=0; i<m; ++i) {
         
-        d = std::sqrt(R::runif(0,stepsize_sq));
-        a = R::runif(-M_PI,M_PI);
+        if(norm){
+          
+          xn = x0 + R::rnorm(0, sigma_move(region));
+          yn = y0 + R::rnorm(0, sigma_move(region));
+          
+        } else {
+          
+          d = std::sqrt(R::runif(0,stepsize_sq));
+          a = R::runif(-M_PI,M_PI);
+          
+          xn = x0 + d * std::cos(a);
+          yn = y0 + d * std::sin(a);
+        }
         
-        xn = x0 + d * std::cos(a);
-        yn = y0 + d * std::sin(a);
         
         // Only consider proposals with non-zero mass
         if(latent_envs[environment.id](xn, yn, 'D') > 0) {
@@ -253,10 +328,17 @@ public:
       Rcpp::checkUserInterrupt();
       sampling = !std::isfinite(dmin);
     }
+    
+    // out[0] = xnew;
+    // out[1] = ynew;
+    // out[2] = std::sqrt(std::pow(xnew-x0,2) + std::pow(ynew-y0,2));
+    
     animal.x = xnew;
     animal.y = ynew;
     
-  }
+    // return(out);
+    
+  } // End update
   
 };
 
