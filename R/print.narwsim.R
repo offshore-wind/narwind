@@ -66,14 +66,18 @@ print.narwsim <- function(obj, rows = NULL, whale.id = 1, n.rows = 4) {
         if(.x == 1){
         
         m_attrib <- m_all[, c("cohort", "alive", "age", "bc", "length", "length_a", "length_b", "length_c", 
-                              "mass", "fatmass", "mass_a", "mass_b", "mouth_r", "mouth_a", 
+                              "mass", "leanmass", "fatmass", "mass_a", "mass_b", "mouth_r", "mouth_a", 
                               "mouth_w")]
         
         m_stress <- m_all[, c("is_entgl", "entgl_head", "severity", "entgl_d", "entgl_start", "entgl_end", "strike", "noise", "dB_thresh")]
         
-        m_energy <- m_all[, c("E_tot", "E_in", "E_out", "E_tot_calves", "E_in_calves", "E_out_calves")]
+        if(obj$param$cohort.id[k] == 5){
+          m_energy <- m_all[, c("E_tot_calves", "E_in_calves", "E_out_calves", "delta_fat_calves", "DE_lip", "ED_lip", "lip_anab", "lip_catab")]
+        } else {
+          m_energy <- m_all[, c("E_tot", "E_in", "E_out", "delta_fat", "DE_lip", "ED_lip", "lip_anab", "lip_catab")]
+        }
         
-        m_intake <- m_all[, c("feed", "preyconc", "minprey", "gape", "speed", "captEff", "impedance", "daylight",
+        m_intake <- m_all[, c("feed", "preyconc", "minprey", "gape", "feedspeed", "captEff", "impedance", "daylight",
                               "feed_effort", "targetBC", "cop_mass", "cop_kJ", "digestEff", "metabEff", "E_cop")]
 
         }
@@ -89,10 +93,13 @@ print.narwsim <- function(obj, rows = NULL, whale.id = 1, n.rows = 4) {
         if(obj$param$cohort.id[k] == 4 & .x == 2){
           m_gest <-  m_all[, c("fetus_l", "fetus_m", "birth_l", "birth_m", "muscle_m", "viscera_m", "bones_m", "blubber_m",
                                "muscle_lip", "muscle_pro", "visc_lip", "visc_pro", "bone_lip", "blubber_lip", "blubber_pro")]
+          m_costs <- m_all[, c("rmr", "LC", "stroke", "E_growth", "E_gest", "fgrowth", "placenta", "hic", "E_lac", "delta_m")]
+        } else {
+          m_costs <- m_all[, c("rmr", "LC", "stroke", "E_growth")]
         }
         
-        m_costs <- m_all[, c("rmr", "LC", "stroke", "E_growth", "E_gest", "fgrowth", "placenta", "hic", "E_lac", "delta_m")]
-        m_activ <- m_all[, c("d_travel", "speed", "t_travel", "t_feed", "t_nurse", "t_rest", "n_zero", "t_sum", "t_remain")]
+       
+        m_activ <- m_all[, c("d_travel", "swimspeed", "t_travel", "t_feed", "t_nurse", "t_rest", "n_zero", "t_sum", "t_remain")]
         
         if(.x == 1){
         cat("+++ Locations +++\n\n")
