@@ -3,10 +3,9 @@
 #' Make plots
 #'
 #' @param obj Object returned by run_model
-#' @param n Number of animals to plot.
+#' @param n.ind Number of animals to plot.
 #' @param id ID of animals to plot
 #' @param animate Logical. If TRUE, creates a .gif animation of the tracks.
-#' @param color.by Whether to color tracks by animal ID.
 #' @param web If TRUE, returns a plotly graph
 #' @import ggplot2
 #' @import patchwork
@@ -44,15 +43,27 @@ plot.narwsim <- function(obj,
   cohort.names <- obj$param$cohort.names
   cohort.ab <- unname(obj$param$cohort.ab)
   cohort.id <- obj$param$cohort.id
+  
   if(any(cohort.id == 5)) cohort.names[which(cohort.id == 5)] <- paste0(cohort.names[which(cohort.id == 5)], " + calves")
 
   locations <- obj$locs
+  n.ind <- dim(locations[[1]])[3]
   
-  n <- dim(locations[[1]])[3]
-  if(n > nmax) {warning("Plotting only the first ", nmax, " tracks"); n <- nmax}
+  if(n.ind > nmax) {warning("Plotting only the first ", nmax, " tracks"); n.ind <- nmax}
   
   # Provide id (integer) to pick an animal
   # Set id = -1 for a random animal
+  
+  # Compile all data
+  sim <- purrr::pmap(
+    list(x = obj$sim, y = obj$locs, z = cohort.names),
+    function(x,y,z) {
+      a <- cbind(array2dt(y), array2dt(x))
+      a$region <- sort(regions$region)[a$region]
+      a$cohort_name <- z
+      add_whale(a, n.ind = n.ind)
+    }
+  )
   
   # ....................................
   # Load required objects
@@ -64,7 +75,7 @@ plot.narwsim <- function(obj,
   # Plotting options
   # ....................................
   
-  gg.opts <- ggplot() + 
+  gg.opts <- ggplot2::ggplot() + 
     ggplot2::geom_sf(data = support_grd, fill = "orange", linewidth = 0, na.rm = TRUE, alpha = 0.5) +
     ggplot2::xlab("") +
     ggplot2::ylab("") +
@@ -77,18 +88,21 @@ plot.narwsim <- function(obj,
   # Dead animals
   # ....................................
   
-  if(cohort.id %in% c(4,5)){
-    alive.dat <- purrr::map(.x = obj[["sim"]], .f = ~ .x[[1]][ , "alive", , drop = FALSE])
-  } else {
-    alive.dat <- purrr::map(.x = obj[["sim"]], .f = ~ .x[ , "alive", , drop = FALSE])
-  }
-
-  locs.dead <- purrr::map(.x = cohort.ab, .f = ~{
-    row.ind <- sapply(seq_len(n), function(u) which.min(unname(alive.dat[[.x]][,,u])))
-    lapply(X = seq_along(row.ind), FUN = function(a) obj[["locs"]][[.x]][row.ind[a],,a]) |>  do.call(what = rbind) |> 
-      tibble::as_tibble() |> dplyr::mutate(trackID = paste0("whale.", dplyr::row_number())) |> 
-      dplyr::slice(which(row.ind > 1))
-  }) |> purrr::set_names(nm = cohort.ab)
+  locs.dead <- purrr::set_names(cohort.ab) |>
+    purrr::map(.f = ~ sim[[.x]][, .SD[ifelse(which.min(alive)==1,0,which.min(alive))], .SDcols = c("easting", "northing", "region", "bc", "strike"), whale])
+  # 
+  # if(cohort.id %in% c(4,5)){
+  #   alive.dat <- purrr::map(.x = obj[["sim"]], .f = ~ .x[[1]][ , "alive", , drop = FALSE])
+  # } else {
+  #   alive.dat <- purrr::map(.x = obj[["sim"]], .f = ~ .x[ , "alive", , drop = FALSE])
+  # }
+  # 
+  # locs.dead <- purrr::map(.x = cohort.ab, .f = ~{
+  #   row.ind <- sapply(seq_len(n.ind), function(u) which.min(unname(alive.dat[[.x]][,,u])))
+  #   lapply(X = seq_along(row.ind), FUN = function(a) obj[["locs"]][[.x]][row.ind[a],,a]) |>  do.call(what = rbind) |> 
+  #     tibble::as_tibble() |> dplyr::mutate(trackID = paste0("whale.", dplyr::row_number())) |> 
+  #     dplyr::slice(which(row.ind > 1))
+  # }) |> purrr::set_names(nm = cohort.ab)
 
   
   # ....................................
@@ -98,7 +112,7 @@ plot.narwsim <- function(obj,
   plot.list <- purrr::set_names(cohort.ab) |> 
     purrr::map2(.y = cohort.names, .f = ~{
     
-    tracks <- lapply(seq_len(n), function(x) dplyr::mutate(data.frame(locations[[.x]][,,x]), trackID = dimnames(locations[[.x]])[[3]][x]))
+    tracks <- lapply(seq_len(n.ind), function(x) dplyr::mutate(data.frame(locations[[.x]][,,x]), whale = dimnames(locations[[.x]])[[3]][x]))
     
     # Add date as column
     locs <- purrr::map(.x = tracks, .f = ~{
@@ -107,9 +121,12 @@ plot.narwsim <- function(obj,
       do.call(what = rbind)
     
     # Select tracks
-    if(is.null(whale.id)) animal_id <- paste0("whale.", 1:n) else animal_id <- unique(locs$trackID)[whale.id]
-    locs <- locs |> dplyr::filter(trackID %in% animal_id)
-    locs.dead <- purrr::map(.x = locs.dead, .f = ~ .x |> dplyr::filter(trackID %in% animal_id))
+    if(is.null(whale.id)) animal_id <- paste0("whale.", 1:n.ind) else animal_id <- unique(locs$whale)[whale.id]
+    locs <- locs |> dplyr::filter(whale %in% animal_id)
+    locs.dead <- purrr::map(.x = locs.dead, .f = ~ .x |> 
+                              dplyr::mutate(whale = glue::glue("whale.{whale}")) |> 
+                              dplyr::filter(whale %in% animal_id) |> 
+                              dplyr::mutate(cause_death = ifelse(strike == 1 & bc > 0.05, "strike", "starve")))
     
     # ....................................
     # Plot base map (land)
@@ -125,14 +142,16 @@ plot.narwsim <- function(obj,
       
       ggplot2::geom_path(
         data = locs,
-        mapping = ggplot2::aes(x = easting, y = northing, colour = trackID), alpha = 0.7, linewidth = 0.2) +
+        mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = 0.2) +
       
-      {if(nrow(locs.dead[[.x]]) > 0) ggplot2::geom_point(data = locs.dead[[.x]], aes(x = easting, y = northing), col = "firebrick")} +
+      {if(nrow(locs.dead[[.x]]) > 0) 
+        ggplot2::geom_point(data = locs.dead[[.x]], aes(x = easting, y = northing, colour = factor(cause_death)))} +
       
-      {if(color.by) ggplot2::scale_color_manual(name = "Animal ID", values = pals::glasbey(length(animal_id)))} +
-      {if(!color.by) ggplot2::scale_color_manual(name = "Animal ID", values = rep("black", length(animal_id)))} +
-      
-      ggplot2::theme(legend.position = "none") + 
+      ggplot2::scale_color_manual(values = c("firebrick", "royalblue4")) +
+      ggplot2::theme(legend.position = "bottom",
+                     legend.text = element_text(size = 10),
+                     legend.key = element_rect(fill = "transparent")) +
+      labs(color = NULL) +
       ggplot2::coord_sf(expand = FALSE) +
       ggtitle(.y)
     

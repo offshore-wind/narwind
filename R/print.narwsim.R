@@ -14,7 +14,10 @@
 #' plot(animals)
 #' }
 
-print.narwsim <- function(obj, rows = NULL, whale.id = 1, n.rows = 4) {
+print.narwsim <- function(obj, 
+                          rows = NULL, 
+                          whale.id = 1, 
+                          n.rows = 4) {
   
   # obj = m
   # rows = NULL
