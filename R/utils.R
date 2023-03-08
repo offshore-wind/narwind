@@ -263,7 +263,7 @@ meta <- function(seed = 215513,
 #' Initialize model
 #'
 #' @export
-load_model <- function(){
+load <- function(){
   Rcpp::sourceCpp("src/simtools.cpp")
   # Rcpp::sourceCpp("src/bioenergetics_functions.cpp")
   source("R/run_model.R")
@@ -809,6 +809,9 @@ entgl_durations <- function(){
     }
   )
   print(fnb)
+  
+  cat("Truncation at 365 days:\n\n")
+  purrr::map(.x = fnb, .f = ~1-pnbinom(365, size = .x$estimate["size"], mu = .x$estimate["mu"]))
 }
 
 proxy_fishing <- function(){
@@ -856,7 +859,7 @@ proxy_fishing <- function(){
 
 # VESSEL TRAFFIC ------------------------------------------------------
 
-proxy_vessels <- function(pmax = 0.25){
+proxy_vessels <- function(pmax = 0.05){
   
   # Data from https://globalmaritimetraffic.org/ - monthly rasters between Jan and Dec 2022
   
@@ -2087,7 +2090,8 @@ plot_raster <- function(r, prob = FALSE, zero = FALSE){
     if(!prob){
       colour.breaks <- colour_breaks(dat)
     } else {
-      colour.breaks <- c(seq(0, 0.01, length.out = 5), seq(0.02, 0.1, length.out = 5), 0.2, 0.5, 0.8, 1)
+      colour.breaks <- c(0, rgeoda::natural_breaks(10, dat[, "Nhat", drop = FALSE]), max(dat$Nhat))
+      # colour.breaks <- c(seq(0, 0.01, length.out = 5), seq(0.02, 0.1, length.out = 5), 0.2, 0.5, 0.8, 1)
     }
   }
   
@@ -2161,8 +2165,9 @@ array2dt <- function(a){
 
 add_whale <- function(y, n.ind){
   y$row_id <- 1:nrow(y)
+  y$day <- rep(1:365, times = n.ind)
   y$whale <- rep(1:n.ind, each = 365)
-  data.table::setcolorder(y, c(ncol(y), 1:(ncol(y)-1)))
+  data.table::setcolorder(y, c((ncol(y)-2):ncol(y), 1:(ncol(y)-3)))
   return(y)
 }
 
