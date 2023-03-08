@@ -198,7 +198,7 @@ struct CouplingAnimal : public Animal {
 template<typename AnimalType, 
          typename EnvironmentContainer,
          typename MovementRule, 
-         int CoordSize = 4,
+         int CoordSize = 3,
          int nparam_E = 8,
          int nparam_animal = 16,
          int nparam_fetus = 15,
@@ -222,6 +222,8 @@ Rcpp::List movesim(
     Eigen::VectorXd limits, 
     Eigen::VectorXd resolution,
     double stepsize,
+    bool stressors,
+    bool growth,
     bool progress) {
   
   // Eigen::MatrixXd a(1,3);
@@ -238,7 +240,7 @@ Rcpp::List movesim(
   Rcpp::NumericVector out(n*t*CoordSize);
   out.attr("dim") = Rcpp::Dimension(CoordSize,n,t);
   out.attr("dimnames") = Rcpp::List::create(
-    Rcpp::CharacterVector::create("easting", "northing", "region", "d"), R_NilValue, R_NilValue
+    Rcpp::CharacterVector::create("easting", "northing", "region"), R_NilValue, R_NilValue
   );
   
   // Initialize and label array in which energy budget will be stored
@@ -255,7 +257,7 @@ Rcpp::List movesim(
   attrib_E_calves.attr("dimnames") = Rcpp::List::create(
     Rcpp::CharacterVector::create("E_tot_calves", "E_in_calves", "E_out_calves", "delta_fat_calves",
                                   "DE_lip", "ED_lip", "lip_anab", "lip_catab"),
-    R_NilValue, R_NilValue
+                                  R_NilValue, R_NilValue
   );
   
   // Initialize and label array in which bioenergetic parameters will be stored
@@ -264,7 +266,7 @@ Rcpp::List movesim(
   attrib.attr("dimnames") = Rcpp::List::create(
     Rcpp::CharacterVector::create("cohort", "alive", "age", "bc", "length", "length_a", "length_b", "length_c", 
                                   "mass", "leanmass", "fatmass", "mass_a", "mass_b", "mouth_r", "mouth_a", "mouth_w"),
-    R_NilValue, R_NilValue
+                                  R_NilValue, R_NilValue
   );
   
   // Create a separate array for dependent calves
@@ -273,7 +275,7 @@ Rcpp::List movesim(
   attrib_calves.attr("dimnames") = Rcpp::List::create(
     Rcpp::CharacterVector::create("cohort", "alive", "age", "bc", "length", "length_a", "length_b", "length_c", 
                                   "mass", "leanmass", "fatmass", "mass_a", "mass_b", "mouth_r", "mouth_a", "mouth_w"), 
-    R_NilValue, R_NilValue
+                                  R_NilValue, R_NilValue
   );
   
   // Create a separate array for fetuses
@@ -291,7 +293,7 @@ Rcpp::List movesim(
   attrib_stressors.attr("dimnames") = Rcpp::List::create(
     Rcpp::CharacterVector::create("is_entgl", "entgl_head", "severity", "entgl_d",
                                   "entgl_start", "entgl_end", "strike", "noise", "dB_thresh"),
-    R_NilValue, R_NilValue
+                                  R_NilValue, R_NilValue
   );
   
   // Initialize and label array in which activity budgets will be stored
@@ -326,7 +328,7 @@ Rcpp::List movesim(
   attrib_costs.attr("dimnames") = Rcpp::List::create(
     Rcpp::CharacterVector::create("rmr", "LC", "stroke", "E_growth", "E_gest", "fgrowth",
                                   "placenta", "hic", "E_lac", "delta_m"),
-    R_NilValue, R_NilValue
+                                  R_NilValue, R_NilValue
   );
   
   // Create a separate array for variables associated with energy costs in calves
@@ -334,7 +336,7 @@ Rcpp::List movesim(
   attrib_costs_calves.attr("dim") = Rcpp::Dimension(nparam_costs_calves,n,t);
   attrib_costs_calves.attr("dimnames") = Rcpp::List::create(
     Rcpp::CharacterVector::create("rmr", "LC", "stroke", "E_growth", "delta_m"),
-                                  R_NilValue, R_NilValue
+    R_NilValue, R_NilValue
   );
   
   // "fetal_mass", "fm_muscle", "fm_viscera", "fm_bones", "fm_blubber",
@@ -401,7 +403,7 @@ Rcpp::List movesim(
   double t_sum;
   double t_remain = 0;
   double tmax;
- 
+  
   // Foraging +++
   
   double D_cop;
@@ -418,7 +420,7 @@ Rcpp::List movesim(
   double metabolizing_efficiency;
   double E_calanus;
   double E_in;
-
+  
   // Nursing +++
   
   double milk_assim = 0; 
@@ -467,7 +469,7 @@ Rcpp::List movesim(
       birth_mass(i) = length2mass(birth_length(i), birth_mL.row(i), false);
     }
   }
-
+  
   double mass_muscle = 0;
   double mass_viscera = 0;
   double mass_bones = 0;
@@ -497,7 +499,7 @@ Rcpp::List movesim(
   // Percent of protein synthesis during anabolism / breakdown during catabolism
   Rcpp::NumericVector lipid_anacat(2);
   lipid_anacat[0] = 0.8; // Lipid anabolism -- (d.u.)
-
+  
   double delta_blubber, delta_blubber_calves;
   
   // ------------------------------------------------------------
@@ -600,7 +602,7 @@ Rcpp::List movesim(
   // ------------------------------------------------------------
   // START SIMULATION
   // ------------------------------------------------------------
-
+  
   // 365 steps per animal
   for(auto env = environments.begin(); env != env_end; ++env) {
     
@@ -635,20 +637,24 @@ Rcpp::List movesim(
       // VESSEL STRIKES
       // ------------------------------------------------------------
       
-      if(animal->alive){
-      
-      // Vessel strikes +++
-      strike_risk = layers[current_month](current_x, current_y, 'V');
-      
-      // Incidence of a vessel strike -- (d.u.)
-      vessel_strike = R::rbinom(1, strike_risk);
-      // vessel_strike = 0; // For model development only
-      }
-      
-      if(vessel_strike | animal->bc < starvation){
-        animal->alive = 0;
-      }
-      
+      if(stressors){
+        
+        if(animal->alive){
+          
+          // Vessel strikes +++
+          strike_risk = layers[current_month](current_x, current_y, 'V');
+          
+          // Incidence of a vessel strike -- (d.u.)
+          vessel_strike = R::rbinom(1, strike_risk);
+          // vessel_strike = 0; // For model development only
+        }
+        
+      } // End if stressors
+        
+        if(vessel_strike | animal->bc < starvation){
+          animal->alive = 0;
+        }
+        
       if(animal->alive){
         
         // ------------------------------------------------------------
@@ -711,49 +717,53 @@ Rcpp::List movesim(
         // NOISE
         // ------------------------------------------------------------
         
-        resp_noise = 0; // Reset daily
-        
-        // Pile-driving noise +++
-        dB = layers[current_month](current_x, current_y, 'N');
-        
-        // Response threshold (dB)
-        response_dB = response_threshold(doseresp);
-        
-        // Behavioral response to pile-driving noise exposure -- (d.u.)
-        if(dB > response_dB) resp_noise = 1;
-
-        // if(dB <= dose_lwr){
-        //   p_response = 0;
-        // } else if(dB >= dose_uppr){
-        //   p_response = 1;
-        // } else {
-        //   p_response = prob_response(dose, doseresp, animal->doseID, dB);
-        // }
-        // resp_noise = R::rbinom(1, p_response);
-        
-        // ------------------------------------------------------------
-        // FISHING GEAR
-        // ------------------------------------------------------------
-        
-        // An animal can only become entangled if not carrying gear already 
-        if(animal->entangled(0) == 0){
-          gear_risk = layers[current_month](current_x, current_y, 'F');
-          animal->entangled = entanglement_event(gear_risk);
-          if(animal->entangled(0) == 1){
-            start_entanglement = current_day;
-            end_entanglement = current_day + animal->entangled(3);
-          } else {
-            start_entanglement = 0;
-            end_entanglement = 0;
+        if(stressors){
+          
+          resp_noise = 0; // Reset daily
+          
+          // Pile-driving noise +++
+          dB = layers[current_month](current_x, current_y, 'N');
+          
+          // Response threshold (dB)
+          response_dB = response_threshold(doseresp);
+          
+          // Behavioral response to pile-driving noise exposure -- (d.u.)
+          if(dB > response_dB) resp_noise = 1;
+          
+          // if(dB <= dose_lwr){
+          //   p_response = 0;
+          // } else if(dB >= dose_uppr){
+          //   p_response = 1;
+          // } else {
+          //   p_response = prob_response(dose, doseresp, animal->doseID, dB);
+          // }
+          // resp_noise = R::rbinom(1, p_response);
+          
+          // ------------------------------------------------------------
+          // FISHING GEAR
+          // ------------------------------------------------------------
+          
+          // An animal can only become entangled if not carrying gear already 
+          if(animal->entangled(0) == 0){
+            gear_risk = layers[current_month](current_x, current_y, 'F');
+            animal->entangled = entanglement_event(gear_risk);
+            if(animal->entangled(0) == 1){
+              start_entanglement = current_day;
+              end_entanglement = current_day + animal->entangled(3);
+            } else {
+              start_entanglement = 0;
+              end_entanglement = 0;
+            }
           }
-        }
-
-        // Terminate entanglement event
-        if(current_day == end_entanglement){
-          animal->entangled = entanglement_event(0);
-          end_entanglement = 0;
-          start_entanglement = 0;
-        }
+          
+          // Terminate entanglement event
+          if(current_day == end_entanglement){
+            animal->entangled = entanglement_event(0);
+            end_entanglement = 0;
+            start_entanglement = 0;
+          }
+          
+        } // End if stressors
         
         // ------------------------------------------------------------
         // PREY
@@ -821,37 +831,37 @@ Rcpp::List movesim(
             travel_time = travel_dist * 1000 / swim_speed;
             
           }
-            
-            tmax = std::min(24 - travel_time, daylight_hours);
-            
-            feeding_time = is_feeding * rtnorm(12.768, 2.9166, 0, tmax);
-            resting_time = rtnorm(5.487199, 0.8499895, 0, 24 - (feeding_time + travel_time));
-            
-            if(cohortID == 5){ 
-              nursing_time = 24 - (feeding_time + travel_time + resting_time);
-            } else {
-              nursing_time = 0;
-            }
+          
+          tmax = std::min(24 - travel_time, daylight_hours);
+          
+          feeding_time = is_feeding * rtnorm(12.768, 2.9166, 0, tmax);
+          resting_time = rtnorm(5.487199, 0.8499895, 0, 24 - (feeding_time + travel_time));
+          
+          if(cohortID == 5){ 
+            nursing_time = 24 - (feeding_time + travel_time + resting_time);
+          } else {
+            nursing_time = 0;
+          }
         }
-
-          // if(cohortID == 5){ 
-          //   resting_time = rtnorm(13.76, 0.76984, 0, 24 - travel_time);
-          // } else { 
-          //   resting_time = rtnorm(0.6449982, 0.1963043, 0, 24 - travel_time);
-          //   }
-          // 
-          // tmax = std::min(24 - (travel_time + resting_time), daylight_hours);
-          // feeding_time = is_feeding * rtnorm(12.768, 2.9166, 0, tmax);
-          // 
-          // if(cohortID == 5){ 
-          //   nursing_time = rtnorm(1.6342, 4.6767, 0, 24 - (feeding_time + resting_time + travel_time)); 
-          // } else { 
-          //   nursing_time = 0;
-          //   }
-          
-          // resting_time = 24 - (travel_time + nursing_time);
-          
-          
+        
+        // if(cohortID == 5){ 
+        //   resting_time = rtnorm(13.76, 0.76984, 0, 24 - travel_time);
+        // } else { 
+        //   resting_time = rtnorm(0.6449982, 0.1963043, 0, 24 - travel_time);
+        //   }
+        // 
+        // tmax = std::min(24 - (travel_time + resting_time), daylight_hours);
+        // feeding_time = is_feeding * rtnorm(12.768, 2.9166, 0, tmax);
+        // 
+        // if(cohortID == 5){ 
+        //   nursing_time = rtnorm(1.6342, 4.6767, 0, 24 - (feeding_time + resting_time + travel_time)); 
+        // } else { 
+        //   nursing_time = 0;
+        //   }
+        
+        // resting_time = 24 - (travel_time + nursing_time);
+        
+        
         // } else { // Feeding grounds and elsewhere
         //   
         //  
@@ -867,7 +877,7 @@ Rcpp::List movesim(
         //     nursing_time = 0;
         //   }
         // }
-
+        
         t_sum = travel_time + resting_time + nursing_time + feeding_time;
         std::vector<double> t = {travel_time, resting_time, nursing_time, feeding_time};
         n_zeroes = std::count(t.begin(), t.end(), 0);
@@ -972,79 +982,79 @@ Rcpp::List movesim(
         // std::cout << current_x << ";" << current_y << " - " << current_month << " - " << D_cop << " - " << min_calanus << " " << is_feeding << " " << E_in<< std::endl;
         
         if(cohortID == 5){
-        
-        // ------------------------------------------------------------
-        // ENERGY INTAKE - SUCKLING
-        // ------------------------------------------------------------
-        
-        // // Incidence of mother-calf separation outside of SEUS -- (d.u.)
-        // // Reported to be between 10 and 40% of sightings as per Hamilton et al. (2022) - take mean = 25%
-        // bool is_separated = 0;
-        // int separation_days = 0;
-        // bool previously_separated = 0;
-        // 
-        // if(!previously_separated & animal->y > -12){
-        //   is_separated = R::rbinom(1, 0.25);
-        // }
-        // 
-        // // Separation duration -- (days)
-        // // Using half-normal with mean of 5.9 and max of 23, as per Hamilton et al. (2022)
-        // // Coded as truncated Normal centered on zero
-        // if(is_separated){
-        //   separation_days = separation_duration();
-        //   end_separation = current_day + separation_days;
-        //   previously_separated = 1;
-        // }
-        // 
-        // // Terminate separation event if needed
-        // if(current_day <= end_separation){
-        //   is_separated = 0;
-        // }
-        
-        // if(!is_separated){
-        
-        // Milk assimilation -- (d.u.)
-        // Varies with calf age
-        milk_assim = milk_assimilation(current_day, T_lac, milk_decrease, eta_milk);
-        
-        // Milk provisioning -- (d.u.)
-        // Varies with mother's body condition
-        milk_provisioning = milk_supply(starvation, target_bc[0], animal->tot_mass, animal->fat_mass, zeta);
-        
-        // Total mass of mammary glands -- (kg)
-        mammary_M = mammary_mass(animal->tot_mass);
-        
-        // Milk production rate by the mother -- (cubic m per kg per sec)
-        milk_production_rate = milk_production(mammary_M);
-        
-        // Density of milk -- (kg/m3)
-        // Meta: No temporal filter, all records
-        D_milk = R::rnorm(1.02, 0.01) * 1000; // L to cubic m
-        
-        // Time spent nursing/suckling per day -- (hours to sec)
-        // Meta:: No filter on time spent nursing, time spent suckling during nursing bouts filtered by species (value for E. australis)
-        t_suckling = rtnorm(0, 3.688672, 0, 24) *3600;
-        
-        // Proportion of lipids in milk -- (%)
-        // Meta: All records – as only value for closest relative (Eubalaena mysticetus) deemed low
-        // Set maximum to 60% as reported in the literature (White 1953)
-        milk_lipids = rtnorm(0.365680, 0.11932, 0, 0.51);
-        
-        // Proportion of protein in milk -- (%)
-        milk_protein = rtnorm(0.13650, 0.031562, 0, 1);
-        
-        if((milk_lipids + milk_protein) > 1){
-          std::cout << "Inconsistent milk composition" << std::endl;
-          break;
-        }
-        
-        // ENERGY INTAKE (MJ)
-        E_in_calves = (1 - resp_noise) * milk_assim * milk_provisioning * mammary_efficiency *
-          mammary_M * milk_production_rate * t_suckling * feeding_nursing_effort[1] * D_milk *
-          (milk_lipids * ED_lipids + milk_protein * ED_protein);
-        
-        // } # Separation conditional
-        
+          
+          // ------------------------------------------------------------
+          // ENERGY INTAKE - SUCKLING
+          // ------------------------------------------------------------
+          
+          // // Incidence of mother-calf separation outside of SEUS -- (d.u.)
+          // // Reported to be between 10 and 40% of sightings as per Hamilton et al. (2022) - take mean = 25%
+          // bool is_separated = 0;
+          // int separation_days = 0;
+          // bool previously_separated = 0;
+          // 
+          // if(!previously_separated & animal->y > -12){
+          //   is_separated = R::rbinom(1, 0.25);
+          // }
+          // 
+          // // Separation duration -- (days)
+          // // Using half-normal with mean of 5.9 and max of 23, as per Hamilton et al. (2022)
+          // // Coded as truncated Normal centered on zero
+          // if(is_separated){
+          //   separation_days = separation_duration();
+          //   end_separation = current_day + separation_days;
+          //   previously_separated = 1;
+          // }
+          // 
+          // // Terminate separation event if needed
+          // if(current_day <= end_separation){
+          //   is_separated = 0;
+          // }
+          
+          // if(!is_separated){
+          
+          // Milk assimilation -- (d.u.)
+          // Varies with calf age
+          milk_assim = milk_assimilation(current_day, T_lac, milk_decrease, eta_milk);
+          
+          // Milk provisioning -- (d.u.)
+          // Varies with mother's body condition
+          milk_provisioning = milk_supply(starvation, target_bc[0], animal->tot_mass, animal->fat_mass, zeta);
+          
+          // Total mass of mammary glands -- (kg)
+          mammary_M = mammary_mass(animal->tot_mass);
+          
+          // Milk production rate by the mother -- (cubic m per kg per sec)
+          milk_production_rate = milk_production(mammary_M);
+          
+          // Density of milk -- (kg/m3)
+          // Meta: No temporal filter, all records
+          D_milk = R::rnorm(1.02, 0.01) * 1000; // L to cubic m
+          
+          // Time spent nursing/suckling per day -- (hours to sec)
+          // Meta:: No filter on time spent nursing, time spent suckling during nursing bouts filtered by species (value for E. australis)
+          t_suckling = rtnorm(0, 3.688672, 0, 24) *3600;
+          
+          // Proportion of lipids in milk -- (%)
+          // Meta: All records – as only value for closest relative (Eubalaena mysticetus) deemed low
+          // Set maximum to 60% as reported in the literature (White 1953)
+          milk_lipids = rtnorm(0.365680, 0.11932, 0, 0.51);
+          
+          // Proportion of protein in milk -- (%)
+          milk_protein = rtnorm(0.13650, 0.031562, 0, 1);
+          
+          if((milk_lipids + milk_protein) > 1){
+            std::cout << "Inconsistent milk composition" << std::endl;
+            break;
+          }
+          
+          // ENERGY INTAKE (MJ)
+          E_in_calves = (1 - resp_noise) * milk_assim * milk_provisioning * mammary_efficiency *
+            mammary_M * milk_production_rate * t_suckling * feeding_nursing_effort[1] * D_milk *
+            (milk_lipids * ED_lipids + milk_protein * ED_protein);
+          
+          // } # Separation conditional
+          
         }
         
         // ------------------------------------------------------------
@@ -1073,42 +1083,42 @@ Rcpp::List movesim(
         // FETAL DEVELOPMENT
         
         if(cohortID == 4){
-        
-        // Mass of muscles in fetus -- (kg)
-        mass_muscle = fetal_tissue_mass(P_muscle, fetus_l[current_animal]);
-
-        // Mass of viscera in fetus -- (kg)
-        mass_viscera = fetal_tissue_mass(P_viscera, fetus_l[current_animal]);
-        
-        // Mass of bones in fetus -- (kg)
-        mass_bones = fetal_tissue_mass(P_bones, fetus_l[current_animal]);
-
-        // Mass of blubber in fetus -- (kg)
-        mass_blubber = fetal_blubber_mass(fetus_l[current_animal], 
-                                          mass_muscle, mass_viscera, 
-                                          mass_bones, blubber_density, 
-                                          muscle_density, 
-                                          visceral_density, bone_density);
-        
-        // Energetic cost of fetal growth during pregnancy -- (MJ) [G]
-        fetal_growth_cost = mass_muscle * (ED_lipids * muscle_lipids[current_animal] + ED_protein * muscle_protein[current_animal]) + 
-          mass_viscera * (ED_lipids * visceral_lipids[current_animal] + ED_protein * visceral_protein[current_animal]) +
-          mass_bones * (ED_lipids * bones_lipids[current_animal] + ED_protein * bones_protein) +
-          mass_blubber * (ED_lipids * blubber_lipids[current_animal] +  ED_protein * blubber_protein[current_animal]);
-        
-        // Energetic cost of placental maintenance during pregnancy -- (kJ converted to MJ) [P]
-        placental_cost = placental_maintenance(fetal_growth_cost)/1000;
-        
-        // Daily growth rate of the fetus (kg)
-        fetus_m_next = fetal_mass(current_day - 365, animal->length, 0, 805.07);
-        fetus_growth =  fetus_m_next - fetus_m[current_animal];
-        
-        // Heat increment of gestation -- (kJ converted to MJ) [Q]
-        HIC = heat_gestation(birth_mass[current_animal], fetus_growth)/1000;
-        
-        // Total cost of gestation -- (kJ)
-        E_gest = fetal_growth_cost + placental_cost + HIC;
-        
+          
+          // Mass of muscles in fetus -- (kg)
+          mass_muscle = fetal_tissue_mass(P_muscle, fetus_l[current_animal]);
+          
+          // Mass of viscera in fetus -- (kg)
+          mass_viscera = fetal_tissue_mass(P_viscera, fetus_l[current_animal]);
+          
+          // Mass of bones in fetus -- (kg)
+          mass_bones = fetal_tissue_mass(P_bones, fetus_l[current_animal]);
+          
+          // Mass of blubber in fetus -- (kg)
+          mass_blubber = fetal_blubber_mass(fetus_l[current_animal], 
+                                            mass_muscle, mass_viscera, 
+                                            mass_bones, blubber_density, 
+                                            muscle_density, 
+                                            visceral_density, bone_density);
+          
+          // Energetic cost of fetal growth during pregnancy -- (MJ) [G]
+          fetal_growth_cost = mass_muscle * (ED_lipids * muscle_lipids[current_animal] + ED_protein * muscle_protein[current_animal]) + 
+            mass_viscera * (ED_lipids * visceral_lipids[current_animal] + ED_protein * visceral_protein[current_animal]) +
+            mass_bones * (ED_lipids * bones_lipids[current_animal] + ED_protein * bones_protein) +
+            mass_blubber * (ED_lipids * blubber_lipids[current_animal] +  ED_protein * blubber_protein[current_animal]);
+          
+          // Energetic cost of placental maintenance during pregnancy -- (kJ converted to MJ) [P]
+          placental_cost = placental_maintenance(fetal_growth_cost)/1000;
+          
+          // Daily growth rate of the fetus (kg)
+          fetus_m_next = fetal_mass(current_day - 365, animal->length, 0, 805.07);
+          fetus_growth =  fetus_m_next - fetus_m[current_animal];
+          
+          // Heat increment of gestation -- (kJ converted to MJ) [Q]
+          HIC = heat_gestation(birth_mass[current_animal], fetus_growth)/1000;
+          
+          // Total cost of gestation -- (kJ)
+          E_gest = fetal_growth_cost + placental_cost + HIC;
+          
         } // End if cohortID == 4
         
         // Cost of growth (adults and juveniles) -- (MJ)
@@ -1122,19 +1132,19 @@ Rcpp::List movesim(
         // std::cout << animal->length << " - " << animal->lean_mass << " - "  << " - " << length_nextday << " - " <<
         //   lean_mass_nextday << " - " << mass_increment << " - " << animal->bc << " - " << lean_water << " - " << blubber_lipids[current_animal] << " - " <<
         //       ED_lipids << " - " << ED_protein << " - " << deposition_lipids << " - " << deposition_protein << std::endl;
-
+        
         // Cost of growth (calves) -- (MJ)
         
         if(cohortID == 5){
-        length_nextday_calves = age2length(calves[current_animal].age + 1.0L/365.0L, calves[current_animal].lengthatage);
-        lean_mass_nextday_calves = length2mass(length_nextday_calves, calves[current_animal].massatlength, true);
-        mass_increment_calves = (lean_mass_nextday_calves - calves[current_animal].lean_mass) / 365.0L;
-
-        E_growth_calves = growth_cost(mass_increment_calves, calves[current_animal].bc, lean_water, blubber_lipids[current_animal],
-                               ED_lipids, ED_protein, deposition_lipids, deposition_protein);
-        
-        // Cost of lactation - estimated from the energy requirements of the calf
-        E_lac = LC_tot_calves + E_growth_calves;
+          length_nextday_calves = age2length(calves[current_animal].age + 1.0L/365.0L, calves[current_animal].lengthatage);
+          lean_mass_nextday_calves = length2mass(length_nextday_calves, calves[current_animal].massatlength, true);
+          mass_increment_calves = (lean_mass_nextday_calves - calves[current_animal].lean_mass) / 365.0L;
+          
+          E_growth_calves = growth_cost(mass_increment_calves, calves[current_animal].bc, lean_water, blubber_lipids[current_animal],
+                                        ED_lipids, ED_protein, deposition_lipids, deposition_protein);
+          
+          // Cost of lactation - estimated from the energy requirements of the calf
+          E_lac = LC_tot_calves + E_growth_calves;
         }
         
         // ENERGY EXPENDITURE (Adults and juveniles -- MJ)
@@ -1143,63 +1153,65 @@ Rcpp::List movesim(
         
         // ENERGY EXPENDITURE (Adults and juveniles -- MJ)
         if(cohortID == 5){
-        E_out_calves = (resting_metab_calves + LC_tot_calves + E_growth_calves);
-        if(animal->entangled(0) == 1) E_out_calves = E_out_calves + entanglement_cost;
+          E_out_calves = (resting_metab_calves + LC_tot_calves + E_growth_calves);
+          if(animal->entangled(0) == 1) E_out_calves = E_out_calves + entanglement_cost;
         }
         
         // ------------------------------------------------------------
         // ENERGY ALLOCATION
         // ------------------------------------------------------------
-
-        E_balance = E_in < E_out;
-
-        // Percent lipid breakdown during catabolism
-        lipid_anacat[1] = R::runif(0.53, 0.6);
-
-        // Percent protein breakdown during catabolism
-        // protein_breakdown = R::runif(0.40, 0.47);
-
-        // Age (+ 1 day) -- Long double precision required here
-        animal->age = animal->age + 1.0L/365.0L;
-
-        // Body length
-        animal->length = age2length(animal->age, animal->lengthatage);
-
-        // Lean mass
-        animal->lean_mass = lean_mass_nextday;
-
-        // Lipid growth or breakdown
-        delta_blubber = lipid_anacat[E_balance] * deposition_lipids * (E_in - E_out) / ED_lipids; // Anabolism
-
-        // Blubber mass / body condition
-        animal->fat_mass = animal->fat_mass + delta_blubber;
-        animal->tot_mass = animal->fat_mass + animal->lean_mass;
-        animal->bc = animal->fat_mass / animal->tot_mass;
-
-        // Same for calves
-        if(cohortID == 5){
-
-          E_balance_calves = E_in_calves < E_out_calves;
-
-          calves[current_animal].age = calves[current_animal].age + 1.0L/365.0L;
-          calves[current_animal].length = age2length(calves[current_animal].age, calves[current_animal].lengthatage);
-          calves[current_animal].lean_mass = length2mass(calves[current_animal].length, calves[current_animal].massatlength, true);
-          delta_blubber_calves = lipid_anacat[E_balance] * deposition_lipids * (E_in_calves - E_out_calves) / ED_lipids; // Anabolism
-
-          calves[current_animal].fat_mass = calves[current_animal].fat_mass + delta_blubber_calves;
-          calves[current_animal].tot_mass = calves[current_animal].fat_mass + calves[current_animal].lean_mass;
-          calves[current_animal].bc = calves[current_animal].fat_mass / calves[current_animal].tot_mass;
-
+        
+        if(growth){
+          
+          E_balance = E_in < E_out;
+          
+          // Percent lipid breakdown during catabolism
+          lipid_anacat[1] = R::runif(0.53, 0.6);
+          
+          // Percent protein breakdown during catabolism
+          // protein_breakdown = R::runif(0.40, 0.47);
+          
+          // Age (+ 1 day) -- Long double precision required here
+          animal->age = animal->age + 1.0L/365.0L;
+          
+          // Body length
+          animal->length = age2length(animal->age, animal->lengthatage);
+          
+          // Lean mass
+          animal->lean_mass = lean_mass_nextday;
+          
+          // Lipid growth or breakdown
+          delta_blubber = lipid_anacat[E_balance] * deposition_lipids * (E_in - E_out) / ED_lipids; // Anabolism
+          
+          // Blubber mass / body condition
+          animal->fat_mass = animal->fat_mass + delta_blubber;
+          animal->tot_mass = animal->fat_mass + animal->lean_mass;
+          animal->bc = animal->fat_mass / animal->tot_mass;
+          
+          // Same for calves
+          if(cohortID == 5){
+            
+            E_balance_calves = E_in_calves < E_out_calves;
+            
+            calves[current_animal].age = calves[current_animal].age + 1.0L/365.0L;
+            calves[current_animal].length = age2length(calves[current_animal].age, calves[current_animal].lengthatage);
+            calves[current_animal].lean_mass = length2mass(calves[current_animal].length, calves[current_animal].massatlength, true);
+            delta_blubber_calves = lipid_anacat[E_balance] * deposition_lipids * (E_in_calves - E_out_calves) / ED_lipids; // Anabolism
+            
+            calves[current_animal].fat_mass = calves[current_animal].fat_mass + delta_blubber_calves;
+            calves[current_animal].tot_mass = calves[current_animal].fat_mass + calves[current_animal].lean_mass;
+            calves[current_animal].bc = calves[current_animal].fat_mass / calves[current_animal].tot_mass;
+            
+          }
         }
         
-
       } else { 
         
         travel_dist = 0;
         
       } // End is_alive
       
-      *(data_out++) = travel_dist;
+      // *(data_out++) = travel_dist;
       
       // ------------------------------------------------------------
       // STORE VALUES in output matrices
@@ -1315,7 +1327,7 @@ Rcpp::List movesim(
         *(attrib_fetus_out++) = bones_lipids[current_animal];
         *(attrib_fetus_out++) = blubber_lipids[current_animal];
         *(attrib_fetus_out++) = blubber_protein[current_animal];
-
+        
       }
       
       // +++ Calf traits +++
@@ -1338,7 +1350,7 @@ Rcpp::List movesim(
         *(attrib_calves_out++) = calves[current_animal].mouth_ratio;
         *(attrib_calves_out++) = calves[current_animal].mouth_angle;
         *(attrib_calves_out++) = calves[current_animal].mouth_width;
-
+        
         *(attrib_nursing_out++) = milk_assim;
         *(attrib_nursing_out++) = milk_provisioning;
         *(attrib_nursing_out++) = mammary_M;
@@ -1356,7 +1368,7 @@ Rcpp::List movesim(
         *(attrib_costs_calves_out++) = LC_tot_calves;                  // Locomotory costs
         *(attrib_costs_calves_out++) = E_growth_calves;                // Energetic cost associated with growth
         *(attrib_costs_calves_out++) = mass_increment_calves;          // Daily change in mass
-
+        
         *(attrib_E_calves_out++) = E_in_calves - E_out_calves;    // Net energy (calves)
         *(attrib_E_calves_out++) = E_in_calves;                   // Energy gain (calves)
         *(attrib_E_calves_out++) = E_out_calves;                  // Energy expenditure (calves)
@@ -1457,6 +1469,8 @@ Rcpp::List movesim(
      double stepsize, 
      Eigen::MatrixXd xinit, 
      Eigen::MatrixXd yinit,
+     bool stressors,
+     bool growth,
      bool progress
  ) {
    
@@ -1526,10 +1540,10 @@ Rcpp::List movesim(
      calves.push_back(CouplingAnimal());
    }
    
-
-     
-  // std::cout<< animals[0].age << " - " << animals[0].length << " - " << animals[0].tot_mass<< std::endl;
-  //  std::cout<< animals[0].massatlength(0,0) << " - " << animals[0].massatlength(0,1) << std::endl;
+   
+   
+   // std::cout<< animals[0].age << " - " << animals[0].length << " - " << animals[0].tot_mass<< std::endl;
+   //  std::cout<< animals[0].massatlength(0,0) << " - " << animals[0].massatlength(0,1) << std::endl;
    
    
    // ------------------------------------------------------------------------
@@ -1551,7 +1565,7 @@ Rcpp::List movesim(
    
    return movesim(cohortID, animals, calves, environments, 
                   latent_environments, doseresp, densitySeq, crm, support, 
-                  limits, resolution, stepsize, progress);
+                  limits, resolution, stepsize, stressors, growth, progress);
    
  }
 
