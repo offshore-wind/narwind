@@ -263,7 +263,7 @@ run_model <- function(nsim = 1e3,
   
   out.t <- transpose_array(input = out, cohortID = cohort.id, dates = date_seq) |> 
     purrr::set_names(nm = cohort.ab)
-    
+  
   # Flip list elements
   outsim <- list()
   outsim[["locs"]] <- purrr::map(out.t, "locs") |> purrr::set_names(nm = cohort.ab)
@@ -275,7 +275,7 @@ run_model <- function(nsim = 1e3,
       outsim[["sim"]][[cohort.ab[k]]] <- purrr::map(.x = 1:2,
           .f = ~{abind::abind(out.t[[k]][["attrib"]][[.x]],
                               out.t[[k]][["stress"]], 
-                              out.t[[k]][["E"]], 
+                              out.t[[k]][["E"]][[.x]], 
                               out.t[[k]][["kj"]][[.x]], 
                               out.t[[k]][["activ"]], along = 2) 
       }) |> purrr::set_names(nm = c("adults", "calves")) 
