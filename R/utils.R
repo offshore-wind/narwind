@@ -231,11 +231,19 @@ meta <- function(seed = 215513,
 #         
 #       } else {
 
+      if(all(is.na(.x$sd_se))){
+        
+        combined.mean <- mean(.x$mean_median)
+        combined.se <- NA
+        
+      } else {
+      
       weights <- 1 / ((.x$sd_se^2) + sd(.x$mean_median)^2)
       combined.mean <- sum(weights * .x$mean_median) / sum(weights)
       combined.se <- sqrt (sum(weights ^ 2 * .x$sd_se ^ 2) / sum(weights ^ 2))
       # }
 
+      }
       tibble::tibble(mean = combined.mean, se = combined.se)
 
     } else if (nrow(.x) <= 1){
@@ -515,9 +523,10 @@ transpose_array <- function(input, cohortID, dates) {
     outl[["locs"]] <- tp[["locs"]]
     outl[["stress"]] <- tp[["stressors"]]
     outl[["activ"]] <- tp[["activity"]]
-    outl[["E"]] <- tp[["E"]]
     
     if(.y == 5){ # Lactating females / calves
+      
+      outl[["E"]] <- list(adjuv = tp[["E"]], calves = tp[["E_calves"]])
       
       tp[grepl("fetus", names(tp))] <- NULL  
       outl[["attrib"]] <- list(adjuv = tp[["attrib"]], calves = tp[["attrib_calves"]])
@@ -526,12 +535,16 @@ transpose_array <- function(input, cohortID, dates) {
       
     } else if(.y == 4){ # Pregnant females
       
+      outl[["E"]] <- tp[["E"]]
+      
       tp[grepl("calves", names(tp))] <- NULL  
       outl[["attrib"]] <- list(adjuv = tp[["attrib"]], fetus = tp[["attrib_fetus"]])
       outl[["kj"]] <- do.call(abind::abind, list(tp[grepl("kj", names(tp))], along = 2))
       
 
     } else {
+      
+      outl[["E"]] <- tp[["E"]]
       
       tp[grepl("fetus", names(tp))] <- NULL  
       tp[grepl("calves", names(tp))] <- NULL  
@@ -1392,7 +1405,7 @@ clip_density <- function(){
 regions_matrix <- function(){
   regions <- targets::tar_read(regions)
   support <- targets::tar_read(density_support)
-  regions.m <- raster::rasterize(regions, raster::raster(support)) |> as("SpatialGridDataFrame")
+  regions.m <- raster::rasterize(regions[, "region"], raster::raster(support)) |> as("SpatialGridDataFrame")
   regions.m$regionID <- as.numeric(factor(regions.m$region))
   regions.m$region <- NULL
   regions.m
@@ -2137,6 +2150,21 @@ gape_size_R <- function(L, omega, alpha){
 
 
 # UTILITIES ------------------------------------------------------
+
+array2dt <- function(a){
+  y <- aperm(a, c(1, 3, 2))
+  dim(y) <- c(prod(dim(a)[-2]), dim(a)[2])
+  y <- data.table::data.table(y)
+  names(y) <- colnames(a)
+  return(y)
+}
+
+add_whale <- function(y, n.ind){
+  y$row_id <- 1:nrow(y)
+  y$whale <- rep(1:n.ind, each = 365)
+  data.table::setcolorder(y, c(ncol(y), 1:(ncol(y)-1)))
+  return(y)
+}
 
 extract <- function(obj){
   if(!"narwsim" %in% class(obj)) stop("Input object must be of class <narwsim>")
