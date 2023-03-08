@@ -20,9 +20,11 @@ run_model <- function(nsim = 1e3,
                       init.month = 2,
                       step.size = 120,
                       cohort.id = 1:6,
+                      stressors = TRUE,
+                      growth = TRUE,
                       n.cores = NULL,
                       n.prop = 50, # In line with sample sizes used in case studies from Michelot (2020)
-                      show.progress = TRUE){
+                      progress = TRUE){
 
   # nsim = 1
   # init.month = 2
@@ -214,6 +216,8 @@ run_model <- function(nsim = 1e3,
                                 support = geomap,
                                 limits = map_limits,
                                 resolution = map_resolution,
+                                stressors = stressors,
+                                growth = growth,
                                 progress = FALSE)} # End foreach loop
     
     names(out) <- cohort.ab
@@ -252,7 +256,9 @@ run_model <- function(nsim = 1e3,
       support = geomap,
       limits = map_limits,
       resolution = map_resolution,
-      progress = ifelse(show.progress, TRUE, FALSE)))
+      stressors = stressors,
+      growth = growth,
+      progress = ifelse(progress, TRUE, FALSE)))
     
   }
   
