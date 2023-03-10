@@ -29,10 +29,12 @@ run_model <- function(nsim = 1e3,
   # nsim = 1
   # init.month = 2
   # step.size = 120
-  # cohort.id = 4
+  # cohort.id = 5
   # n.cores = NULL
   # n.prop = 50
-  # show.progress = TRUE
+  # stressors = FALSE
+  # growth = FALSE
+  # progress = TRUE
 
   if(!init.month %in% 1:12) stop("<init.month> must be an integer between 1 and 12")
   if(!"init.model" %in% ls(envir = .GlobalEnv)) stop("The model must first be initialized using <load_model>")
@@ -196,6 +198,7 @@ run_model <- function(nsim = 1e3,
                               Rcpp::sourceCpp("src/simtools.cpp")
 
                               if(cohort.id[i] == 5) d <- maps.weighted else d <- maps
+                              if(cohort.id[i] >0) d <- maps.weighted else d <- maps
                               
                               MovementSimulator(
                                 cohortID = cohort.id[i],
@@ -229,6 +232,7 @@ run_model <- function(nsim = 1e3,
     cat("Running simulations ...\n")
 
     if(cohort.id == 5) d <- maps.weighted else d <- maps
+    if(cohort.id >0) d <- maps.weighted else d <- maps
     
     # Simulated animals begin at the position of their corresponding latent animal for the starting month
     # This can be checked by running the below code
@@ -269,43 +273,63 @@ run_model <- function(nsim = 1e3,
   
   out.t <- transpose_array(input = out, cohortID = cohort.id, dates = date_seq) |> 
     purrr::set_names(nm = cohort.ab)
-  
-  # Flip list elements
-  outsim <- list()
-  outsim[["locs"]] <- purrr::map(out.t, "locs") |> purrr::set_names(nm = cohort.ab)
-  
-  for(k in seq_along(cohort.id)){
-    
-    if(cohort.id[k] == 5){ # Lactating females + calves
-      
-      outsim[["sim"]][[cohort.ab[k]]] <- purrr::map(.x = 1:2,
-          .f = ~{abind::abind(out.t[[k]][["attrib"]][[.x]],
-                              out.t[[k]][["stress"]], 
-                              out.t[[k]][["E"]][[.x]], 
-                              out.t[[k]][["kj"]][[.x]], 
-                              out.t[[k]][["activ"]], along = 2) 
-      }) |> purrr::set_names(nm = c("adults", "calves")) 
-      
-    } else if(cohort.id[k] == 4){ # Pregnant females
-      
-      outsim[["sim"]][[cohort.ab[k]]] <- purrr::map(.x = 1:2,
-         .f = ~{abind::abind(out.t[[k]][["attrib"]][[.x]], 
-                             out.t[[k]][["stress"]], 
-                             out.t[[k]][["E"]], 
-                             out.t[[k]][["kj"]], 
-                             out.t[[k]][["activ"]], along = 2) 
-      }) |> purrr::set_names(nm = c("adults", "fetus")) 
-      
-    } else {
-      
-      outsim[["sim"]][[cohort.ab[k]]] <- 
-        abind::abind(out.t[[k]][["attrib"]], 
-                     out.t[[k]][["stress"]], 
-                     out.t[[k]][["E"]], 
-                     out.t[[k]][["kj"]],
-                     out.t[[k]][["activ"]], along = 2) 
-    }
+
+  for (k in seq_along(cohort.id)) {
+    if (cohort.id[k] %in% 4:5) out.t[[k]][["attrib"]] <- abind::abind(out.t[[k]][["attrib"]][[1]], out.t[[k]][["attrib"]][[2]], along = 2)
+    if (cohort.id[k] == 5){
+      out.t[[k]][["E"]] <- abind::abind(out.t[[k]][["E"]][[1]], out.t[[k]][["E"]][[2]], along = 2)
+      out.t[[k]][["kj"]] <- abind::abind(out.t[[k]][["kj"]][[1]], out.t[[k]][["kj"]][[2]], along = 2)
+    } 
   }
+  
+
+ out.dt <- purrr::map(.x = out.t,
+                      .f = ~abind::abind(
+   .x[["locs"]],
+   .x[["attrib"]],
+   .x[["stress"]],
+   .x[["E"]],
+   .x[["kj"]],
+   .x[["activ"]],
+   along = 2))
+ 
+ # for (k in seq_along(cohort.id)) {
+ #   outsim[["sim"]][[cohort.ab[k]]] <-
+ #     abind::abind(
+ #       out.t[[k]][["locs"]],
+ #       out.t[[k]][["attrib"]],
+ #       out.t[[k]][["stress"]],
+ #       out.t[[k]][["E"]],
+ #       out.t[[k]][["kj"]],
+ #       out.t[[k]][["activ"]],
+ #       along = 2)
+ # }
+
+  outsim <- list()  
+  outsim[["sim"]] <- purrr::map2(.x = out.dt,
+                                 .y = cohort.names, 
+                                 .f = ~{
+      dt <- data.table::data.table(day = rep(1:365, times = nsim), 
+                                   date = rep(date_seq, times = nsim),
+                                   whale = rep(1:nsim, each = 365))
+        a <- cbind(array2dt(.x), dt)
+        a$region <- sort(regions$region)[a$region]
+        a$cohort_name <- .y
+        data.table::setcolorder(a, c((ncol(a)-3):(ncol(a)-1), 1:(ncol(a)-4))) 
+      
+    }
+  )
+  
+  # ............................................................
+  # Fit GAM models
+  # ............................................................
+  
+  pop.dt <- purrr::map(.x = outsim[["sim"]], .f = ~{
+    dplyr::left_join(x = .x[day == 1, list(cohort = unique(cohort), cohort_name = unique(cohort_name), start = bc), whale],
+                     y = .x[day == 365, list(end = bc, alive), whale], by = "whale")
+    }) |> do.call(what = rbind)
+  
+  
   
   # ............................................................
   # Add parameters to list output
@@ -316,10 +340,7 @@ run_model <- function(nsim = 1e3,
                        cohort.names = cohort.names,
                        cohort.ab = cohort.ab)
   
-  outsim$init <- list(month = init.month,
-                      xy = init.inds,
-                      attrib = purrr::map(outsim$attrib, ~.x[1,,] |> t()))
-  
+  outsim$init <- list(month = init.month, xy = init.inds)
   outsim$run <- run_time
   
   class(outsim) <- c("narwsim", class(outsim))
