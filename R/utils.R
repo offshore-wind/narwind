@@ -421,6 +421,7 @@ weighted_density <- function(){
 init_xy <- function(maps, maps.weighted, coords, cohort.id, nsim, northSEUS = -12, southGSL = 1400){
   
   if(cohort.id == 5) m <- maps.weighted else m <- maps
+  if(cohort.id > 0) m <- maps.weighted else m <- maps
   
   out <- do.call(rbind, lapply(seq_along(m), function(mo) {
     
@@ -2155,6 +2156,12 @@ gape_size_R <- function(L, omega, alpha){
 
 # UTILITIES ------------------------------------------------------
 
+format_dt <- function(dt, direction = "col"){
+  dt |>  janitor::adorn_percentages(denominator = direction) |>
+    janitor::adorn_pct_formatting() |> 
+    janitor::adorn_ns()
+}
+
 array2dt <- function(a){
   y <- aperm(a, c(1, 3, 2))
   dim(y) <- c(prod(dim(a)[-2]), dim(a)[2])
@@ -2167,7 +2174,6 @@ add_whale <- function(y, n.ind){
   y$row_id <- 1:nrow(y)
   y$day <- rep(1:365, times = n.ind)
   y$whale <- rep(1:n.ind, each = 365)
-  data.table::setcolorder(y, c((ncol(y)-2):ncol(y), 1:(ncol(y)-3)))
   return(y)
 }
 
