@@ -39,31 +39,21 @@ plot.narwsim <- function(obj,
   # nmax = 100
   
   if(!"narwsim" %in% class(obj)) stop("Input must be an object of class <narwsim>")
-
+  
   cohort.names <- obj$param$cohort.names
   cohort.ab <- unname(obj$param$cohort.ab)
   cohort.id <- obj$param$cohort.id
+  n.ind <- obj$param$nsim
+  if(n.ind > nmax) {warning("Plotting only the first ", nmax, " tracks"); n.ind <- nmax}
+  if(is.null(whale.id)) whale.id <- seq_len(n.ind)
   
   if(any(cohort.id == 5)) cohort.names[which(cohort.id == 5)] <- paste0(cohort.names[which(cohort.id == 5)], " + calves")
 
-  locations <- obj$locs
-  n.ind <- dim(locations[[1]])[3]
-  
-  if(n.ind > nmax) {warning("Plotting only the first ", nmax, " tracks"); n.ind <- nmax}
-  
-  # Provide id (integer) to pick an animal
-  # Set id = -1 for a random animal
-  
-  # Compile all data
-  sim <- purrr::pmap(
-    list(x = obj$sim, y = obj$locs, z = cohort.names),
-    function(x,y,z) {
-      a <- cbind(array2dt(y), array2dt(x))
-      a$region <- sort(regions$region)[a$region]
-      a$cohort_name <- z
-      add_whale(a, n.ind = n.ind)
-    }
-  )
+  sim <- obj$sim
+  locations <- purrr::set_names(x = cohort.ab) |>
+    purrr::map(.f = ~sim[[.x]][, list(date, whale, easting, northing, region, cohort_name)])
+
+
   
   # ....................................
   # Load required objects
@@ -81,29 +71,21 @@ plot.narwsim <- function(obj,
     ggplot2::ylab("") +
     ggplot2::theme(axis.text.y = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 0.5),
                    axis.text = ggplot2::element_text(colour = "black"),
-                   panel.border = ggplot2::element_rect(colour = "black", fill = NA, linewidth = 0.5))
-  
+                   panel.border = ggplot2::element_rect(colour = "black", fill = NA, linewidth = 0.5),
+                   axis.text.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+                   axis.title = element_text(size = 12),
+                   axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+                   axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
+                   strip.background = element_rect(fill = "grey20"),
+                   strip.text = element_text(colour = 'white', size = 12))
   
   # ....................................
   # Dead animals
   # ....................................
   
   locs.dead <- purrr::set_names(cohort.ab) |>
-    purrr::map(.f = ~ sim[[.x]][, .SD[ifelse(which.min(alive)==1,0,which.min(alive))], .SDcols = c("easting", "northing", "region", "bc", "strike"), whale])
-  # 
-  # if(cohort.id %in% c(4,5)){
-  #   alive.dat <- purrr::map(.x = obj[["sim"]], .f = ~ .x[[1]][ , "alive", , drop = FALSE])
-  # } else {
-  #   alive.dat <- purrr::map(.x = obj[["sim"]], .f = ~ .x[ , "alive", , drop = FALSE])
-  # }
-  # 
-  # locs.dead <- purrr::map(.x = cohort.ab, .f = ~{
-  #   row.ind <- sapply(seq_len(n.ind), function(u) which.min(unname(alive.dat[[.x]][,,u])))
-  #   lapply(X = seq_along(row.ind), FUN = function(a) obj[["locs"]][[.x]][row.ind[a],,a]) |>  do.call(what = rbind) |> 
-  #     tibble::as_tibble() |> dplyr::mutate(trackID = paste0("whale.", dplyr::row_number())) |> 
-  #     dplyr::slice(which(row.ind > 1))
-  # }) |> purrr::set_names(nm = cohort.ab)
-
+    purrr::map(.f = ~ sim[[.x]][, .SD[ifelse(which.min(alive)==1,0,which.min(alive))],
+                                .SDcols = c("easting", "northing", "region", "bc", "strike"), whale])
   
   # ....................................
   # Generate plots
@@ -112,20 +94,12 @@ plot.narwsim <- function(obj,
   plot.list <- purrr::set_names(cohort.ab) |> 
     purrr::map2(.y = cohort.names, .f = ~{
     
-    tracks <- lapply(seq_len(n.ind), function(x) dplyr::mutate(data.frame(locations[[.x]][,,x]), whale = dimnames(locations[[.x]])[[3]][x]))
+    tracks <- lapply(seq_len(n.ind), function(x) data.frame(locations[[.x]][whale == x,])) |>
+      do.call(what = rbind) |> 
+      dplyr::filter(whale %in% whale.id)
     
-    # Add date as column
-    locs <- purrr::map(.x = tracks, .f = ~{
-      tibble::rownames_to_column(.x, var = "date") |> 
-        dplyr::mutate(date = lubridate::as_date(date))}) |> 
-      do.call(what = rbind)
-    
-    # Select tracks
-    if(is.null(whale.id)) animal_id <- paste0("whale.", 1:n.ind) else animal_id <- unique(locs$whale)[whale.id]
-    locs <- locs |> dplyr::filter(whale %in% animal_id)
     locs.dead <- purrr::map(.x = locs.dead, .f = ~ .x |> 
-                              dplyr::mutate(whale = glue::glue("whale.{whale}")) |> 
-                              dplyr::filter(whale %in% animal_id) |> 
+                              dplyr::filter(whale %in% whale.id) |> 
                               dplyr::mutate(cause_death = ifelse(strike == 1 & bc > 0.05, "strike", "starve")))
     
     # ....................................
@@ -141,7 +115,7 @@ plot.narwsim <- function(obj,
     track_p <- base_p +
       
       ggplot2::geom_path(
-        data = locs,
+        data = tracks,
         mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = 0.2) +
       
       {if(nrow(locs.dead[[.x]]) > 0) 
@@ -153,7 +127,9 @@ plot.narwsim <- function(obj,
                      legend.key = element_rect(fill = "transparent")) +
       labs(color = NULL) +
       ggplot2::coord_sf(expand = FALSE) +
-      ggtitle(.y)
+      # ggtitle(.y) +
+      ggplot2::facet_wrap(~cohort_name)
+
     
     track_p
     
