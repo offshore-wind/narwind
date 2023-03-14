@@ -7,8 +7,12 @@
     "Package developed under funding from the U.S. Bureau of Ocean Energy Management\n",
     "(BOEM Contract No. 140M0121C0008)\n",
     "\n",
-    "For more information, see the package vignette at: URL "
+    "For more information, see the package website at:\n",
+    "https://pjbouchet.github.io/narwind/index.html "
                         )
  options(tibble.width = Inf)
  options(pillar.sigfig = 5)
+ Rcpp::sourceCpp("src/simtools.cpp")
+ source("R/narw.R")
+ assign("init.model", value = TRUE, envir = .GlobalEnv)
 }
