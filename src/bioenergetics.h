@@ -61,13 +61,13 @@ double response_threshold(Rcpp::NumericVector db){
 // }
 
 //' Random deviate from a truncated Normal distribution
- //' @param location Location parameter
- //' @param scale Scale parameter
- //' @param L Lower bound
- //' @param U Upper bound
- // [[Rcpp::export]]
- 
- double rtnorm(double location,
+//' 
+//' @param location Location parameter
+//' @param scale Scale parameter
+//' @param L Lower bound
+//' @param U Upper bound
+// [[Rcpp::export]]
+double rtnorm(double location,
                double scale,
                double L,
                double U) {
@@ -75,9 +75,10 @@ double response_threshold(Rcpp::NumericVector db){
    double tot = R::pnorm(L, location, scale, TRUE, FALSE) + R::runif(0,1) * (R::pnorm(U, location, scale, TRUE, FALSE) - R::pnorm(L, location, scale, TRUE, FALSE));
    double out = location + scale * R::qnorm(tot, 0, 1, TRUE, FALSE);
    return out;
- }
+}
 
 //' Initialize age
+//' @name start_age
  //' @description Performs a random draw from a uniform distribution to initialize the age of simulated animals
  //' @param cohort Integer indicating which cohort the animal belongs to
  // [[Rcpp::export]]
@@ -116,6 +117,7 @@ int multinomial(Rcpp::NumericVector probs) {
 }
 
 //' Entanglement event
+//' @name entanglement_event
  //' @param p_anterior Probability that the entanglement involves the anterior region of the body (mouth, head, rostrum)
  // [[Rcpp::export]]
  
@@ -156,6 +158,7 @@ int multinomial(Rcpp::NumericVector probs) {
  }
 
 //' Mouth-width-to-length ratio
+//' @name start_mouth
  //' @description Returns the ratio between the width of the animal's mouth (defined as body width measured at 10% of the body length from the snout) and its body length, as per Miller et al. (2012)
  //' @param cohort Population cohort to which the animal belongs
  //' @param age Age of the animal (years)
@@ -182,6 +185,7 @@ int multinomial(Rcpp::NumericVector probs) {
  }
 
 //' Initialize body condition
+//' @name start_percfat
  //' @description Performs a random draw from a beta distribution to initialize 
  //' the body condition of simulated animals, taken as the ration of fat mass to total mass.
  //' @param age Age in years
@@ -189,17 +193,18 @@ int multinomial(Rcpp::NumericVector probs) {
  //' @param shape2 Second shape parameter of the beta distribution
  // [[Rcpp::export]]
  
- double start_percfat(double age, int shape1 = 6, int shape2 = 20){
-   double bc;
-   if(age <= 1){
-     bc = 0.06;
+ long double start_percfat(double cohort, int shape1 = 6, int shape2 = 20){
+   long double bc;
+   if(cohort == 0){
+     bc = 0.060L;
    } else {
-     bc =  R::rbeta(shape1, shape2);
+     bc = R::rbeta(shape1, shape2);
    }
    return bc;
  }
 
 //' Age to length conversion
+//' @name age2length
  //' @description Calculates body length from age according to the length-at-age relationship described
  //' in Fortune et al. (2021)
  //' @param age Age of the animal (years)
@@ -224,11 +229,11 @@ Eigen::MatrixXd create_mat(){
 // ' @return Estimated mass (kg)
 // [[Rcpp::export]]
 double length2mass(double L,
-                   Eigen::VectorXd param,
+                   Eigen::MatrixXd param,
                    bool lean){
   
-  double a = param(0);
-  double b = param(1);
+  double a = param(0,0);
+  double b = param(0,1);
   double L_cm = L * 100;
   double perc = 1;
   if(lean) perc = 0.73;
@@ -292,7 +297,7 @@ double length2mass(double L,
 // ' Parameters of the length-at-age relationship
 // ' @description Generates vectors of coefficients from the Gompertz growth
 //  curve describing the change in length as a function of age relationship, as described in Fortune et al. (2021)
-// ' @return Vector of coefficients
+// ' @return Matrix of coefficients
 // [[Rcpp::export]]
 Eigen::MatrixXd agL(double age, int n = 1){
   
@@ -358,6 +363,7 @@ Eigen::MatrixXd mL(int n = 1){
 // } 
 
 //' Incidence of foraging behavior
+//' @name feeding_threshold
  //' @description Determines whether the prey concentration encountered by an animal
  //' is sufficient to support foraging
  //' @param min_prey Minimum prey density threshold that triggers foraging (\ifelse{html}{\out{copepods/m<sup>3</sup>}}{\eqn{copepods/m^3})
@@ -399,6 +405,7 @@ Eigen::MatrixXd mL(int n = 1){
 //  }
 
 //' Variation in feeding/suckling effort with body condition
+//'  @name scale_effort
  //' @description Calculates feeding/suckling effort given an animal's body condition
  //' @param A Horizontal asymptote when x tends to -Inf
  //' @param D Horizontal asymptote when x tends to Inf
@@ -420,7 +427,7 @@ Eigen::MatrixXd mL(int n = 1){
  }
 
 //' Convert degrees to radians
- //'
+ //' @name deg2radians
  //' @param angle Input angle in degrees
  //' @return Equivalent angle in radians
  // [[Rcpp::export]]
@@ -430,6 +437,7 @@ Eigen::MatrixXd mL(int n = 1){
  }
 
 //' Area of the gape
+//' @name gape_size
  //' @description Provides an estimate of the area of the mouth gape
  //' @param L Total body length (m)
  //' @param omega Width of the mouth (m)
@@ -459,6 +467,7 @@ Eigen::MatrixXd mL(int n = 1){
 //  }
 
 //' Energy content of the prey
+//' @name Econtent_cop
  //' @description Calculates the amount of energy that a whale can obtain from an average individual prey
  //' @param m Average mass of the prey (g/cop)
  //' @param rho Energy density of the prey (J/g) 
@@ -471,6 +480,7 @@ Eigen::MatrixXd mL(int n = 1){
  }
 
 //' Filtration rate
+//' @name filtration_rate
  //' @description Calculates the volume of water filtered per unit time
  //' @param A Area of the mouth gape (\ifelse{html}{\out{m<sup>2</sup>}}{\eqn{m^2})
  //' @param lambda_gape Percent reduction in the gape during an entanglement event (\%)
@@ -486,6 +496,7 @@ Eigen::MatrixXd mL(int n = 1){
 
 
 //' Milk ingestion rate
+//' @name milk_ingestion
  //' @description Calculates the maximum volume of milk that a calf can ingest per unit time
  //' @param E_milk Milk transfer/assimilation efficiency (\%)
  //' @param M Scalar on milk provisioning by the mother (d.u.)
@@ -500,6 +511,7 @@ Eigen::MatrixXd mL(int n = 1){
  }
 
 //' Milk assimilation efficiency
+//' @name milk_assimilation
  //' @description Calculates the efficiency with which maternal milk is transferred from mother to calf
  //' @param t Time (d)
  //' @param T_lac Duration of the lactation period (i.e., age at weaning) (d)
@@ -520,6 +532,7 @@ Eigen::MatrixXd mL(int n = 1){
  }
 
 //' Milk provisioning
+//' @name milk_supply
  //' @description Defines how milk provisioning varies in response to the female's body condition
  //' @param kappa Starvation threshold (d.u.)
  //' @param target_condition Target body condition (d.u.)
@@ -549,6 +562,7 @@ Eigen::MatrixXd mL(int n = 1){
  } 
 
 //' Total mass of mammary glands
+//' @name mammary_mass
  //' @description Predicts mammary mass from total mass in females
  //' @param M Total body mass (kg)
  // [[Rcpp::export]]
@@ -558,16 +572,19 @@ Eigen::MatrixXd mL(int n = 1){
  }  
 
 //' Milk production rate
+//' @name milk_production
  //' @description Predicts the amount of milk produced by unit time from mammary mass
  //' @param m Mass of mammary glands (kg)
- //' @return Milk production rate (\ifelse{html}{\out{m<sup>3</sup>/kg/s)}}{\eqn{m^3/kg/s})
+ //' @return Milk yield/production rate (kg/s)
  // [[Rcpp::export]]
  
  double milk_production(double m){ 
-   return 0.0835 * std::pow(m, 1.965);
+   // return 0.0835 * std::pow(m, 1.965);
+   return (1.67 * std::pow(m, 0.95))/86400;
  } 
 
 //' Resting metabolic rate
+//' @name RMR
  //' @description Predicts the resting metabolic rate of an animal from its mass 
  //' using the allometric relationship proposed proposed by Williams & Maresh (2015)
  //' @param M Total body mass (kg)
@@ -597,6 +614,7 @@ Eigen::MatrixXd mL(int n = 1){
  } 
 
 //' Costs of locomotion
+//' @name locomotor_costs
  //' @description Predicts total locomotor costs from the mass-specific, stroke-based allometric
  //' relationships proposed by Williams et al. (2017).
  //' @param M Total body mass (kg)
@@ -664,6 +682,7 @@ Eigen::MatrixXd mL(int n = 1){
 //  }  
 
 //' Energetic cost of placental maintenance during pregnancy
+//' @name placental_maintenance
  //' @param G Energetic cost of fetal growth (kJ)
  // [[Rcpp::export]]
  
@@ -672,6 +691,7 @@ Eigen::MatrixXd mL(int n = 1){
  }  
 
 //' Heat increment of gestation
+//' @name heat_gestation
  //' @param birth_mass Birth mass of the fetus (kg)
  //' @param delta_m Daily growth rate of the fetus (kg/day)
  // [[Rcpp::export]]
@@ -681,6 +701,7 @@ Eigen::MatrixXd mL(int n = 1){
  }  
 
 //' Fetal tissue mass
+//' @name fetal_tissue_mass
  //' @param P_b Proportion of the body volume comprised of tissue b
  //' @param L Length of the fetus (m)
  //' @note This relationship only applies to muscles, bones, and viscera
@@ -691,6 +712,7 @@ Eigen::MatrixXd mL(int n = 1){
  }  
 
 //' Fetal blubber mass
+//' @name fetal_blubber_mass
  //' @param L Length of the fetus (m)
  //' @param M_muscle Mass of muscles in the fetus (kg)
  //' @param M_viscera Mass of viscera in the fetus (kg)
@@ -713,6 +735,7 @@ Eigen::MatrixXd mL(int n = 1){
  }  
 
 //' Fetal mass 
+//' @name fetal_mass
  //' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
  //' @param mother_length Body length of the mother (m)
  //' @param bbc Body condition, as defined by Christiansen et al. (2022). Defaults to 0 for an individual of average condition.
@@ -725,6 +748,7 @@ Eigen::MatrixXd mL(int n = 1){
  }
 
 //' Fetal length 
+//' @name fetal_length
  //' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
  //' @param mother_length Body length of the mother (m)
  //' @note In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
@@ -735,6 +759,7 @@ Eigen::MatrixXd mL(int n = 1){
  }
 
 //' Energetic cost of growth
+//' @name growth_cost
  //' @param delta_m Body mass growth increment (kg/day)
  //' @param prop_blubber Proportion of the body that is blubber (\%)
  //' @param prop_water Proportion of lean body mass that is water (\%)
@@ -752,47 +777,47 @@ Eigen::MatrixXd mL(int n = 1){
                      ((1 - prop_blubber) * (1 - prop_water) * rho_protein * D_protein));
  }
 
-//' Tissue deposition
- //' @description Returns the mass obtained after deposition of any surplus energy as lipid and lean tissue
- //' @param M Start mass (kg)
- //' @param E_net Net energy balance (kJ)
- //' @param add_protein Percent of protein synthesis during anabolism (\%)
- //' @param add_lipid Percent of lipid synthesis during anabolism (\%)
- //' @param D_lipid Efficiency of deposition of lipids during anabolism (\%)
- //' @param D_protein Efficiency of deposition of proteins during anabolism (\%)
- //' @param break_lipid Percent of lipid breakdown during catabolism (\%)
- //' @param break_protein Percent of protein breakdown during catabolism (\%)
- //' @param C_lipid Efficiency of breakdown of lipids during catabolism (\%)
- //' @param C_protein Efficiency of breakdown of protein during catabiolism (\%)
- //' @param rho_lipid Energy density of lipids (kJ/kg)
- //' @param rho_protein Energy density of proteins (kJ/kg)
- // [[Rcpp::export]]
- 
- double new_mass(double M, double E_net,
-                 double add_protein, double add_lipid,
-                 double D_lipid, double D_protein,
-                 double break_lipid, double break_protein,
-                 double C_lipid, double C_protein,
-                 double rho_lipid, double rho_protein){
-   
-   double fat_growth = E_net/rho_lipid;
-   double lean_growth = E_net/rho_protein;
-   
-   // Fat growth
-   if(E_net > 0){
-     fat_growth *= add_lipid * D_lipid;
-   } else if(E_net < 0){
-     fat_growth *= break_lipid * C_lipid;
-   }
-   
-   // Lean tissue growth
-   if(E_net > 0){
-     lean_growth *= add_protein * D_protein;
-   } else if(E_net < 0){
-     lean_growth *= break_protein * C_protein;
-   }
-   
-   return M + fat_growth + lean_growth;
- }
+// //' Tissue deposition
+//  //' @description Returns the mass obtained after deposition of any surplus energy as lipid and lean tissue
+//  //' @param M Start mass (kg)
+//  //' @param E_net Net energy balance (kJ)
+//  //' @param add_protein Percent of protein synthesis during anabolism (\%)
+//  //' @param add_lipid Percent of lipid synthesis during anabolism (\%)
+//  //' @param D_lipid Efficiency of deposition of lipids during anabolism (\%)
+//  //' @param D_protein Efficiency of deposition of proteins during anabolism (\%)
+//  //' @param break_lipid Percent of lipid breakdown during catabolism (\%)
+//  //' @param break_protein Percent of protein breakdown during catabolism (\%)
+//  //' @param C_lipid Efficiency of breakdown of lipids during catabolism (\%)
+//  //' @param C_protein Efficiency of breakdown of protein during catabiolism (\%)
+//  //' @param rho_lipid Energy density of lipids (kJ/kg)
+//  //' @param rho_protein Energy density of proteins (kJ/kg)
+//  // [[Rcpp::export]]
+//  
+//  double new_mass(double M, double E_net,
+//                  double add_protein, double add_lipid,
+//                  double D_lipid, double D_protein,
+//                  double break_lipid, double break_protein,
+//                  double C_lipid, double C_protein,
+//                  double rho_lipid, double rho_protein){
+//    
+//    double fat_growth = E_net/rho_lipid;
+//    double lean_growth = E_net/rho_protein;
+//    
+//    // Fat growth
+//    if(E_net > 0){
+//      fat_growth *= add_lipid * D_lipid;
+//    } else if(E_net < 0){
+//      fat_growth *= break_lipid * C_lipid;
+//    }
+//    
+//    // Lean tissue growth
+//    if(E_net > 0){
+//      lean_growth *= add_protein * D_protein;
+//    } else if(E_net < 0){
+//      lean_growth *= break_protein * C_protein;
+//    }
+//    
+//    return M + fat_growth + lean_growth;
+//  }
 
 #endif

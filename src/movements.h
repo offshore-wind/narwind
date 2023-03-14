@@ -9,8 +9,7 @@
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(cpp11)]]
 
-
-// [[Rcpp::export]]
+// Standard deviations of the Normal half-step function
 double sigma_move(int r){
   
   double sigma_travel = 19.28;
@@ -18,12 +17,12 @@ double sigma_move(int r){
   double sigma_nurse = 3.05;
   
   // Travel
-  if(r == 3 | r == 7 | r == 8){
+  if(r == 7 | r == 8){ // MIDA and SCOS
     return sigma_travel;
-  } else if(r == 9){
-    return sigma_feed;
-  } else {
+  } else if(r == 9){ // SEUS
     return sigma_nurse;
+  } else { // BOF, CABOT, CCB, GOM, GSL, SNE
+    return sigma_feed;
   }
 }
 
@@ -86,7 +85,10 @@ public:
     weights.resize(m);
   }
   
-  void update(AnimalType & animal, EnvironmentType & environment, bool norm, int region) {
+  void update(AnimalType & animal, EnvironmentType & environment, bool norm, int region,
+              Eigen::MatrixXd support,
+              Eigen::VectorXd limits, 
+              Eigen::VectorXd resolution) {
     double d, d_0, a, x0, y0, xn, yn;
     bool sampling = true;
     // Rcpp::NumericVector out (3);
@@ -219,7 +221,10 @@ public:
   ) : stepsize_sq(r*r), m(n_proposals), latent_mvmt(base_mvmt),
   latent_envs(base_environments) { }
   
-  void update(AnimalType & animal, EnvironmentType & environment, bool norm, int region) {
+  void update(AnimalType & animal, EnvironmentType & environment, bool norm, int region, 
+              Eigen::MatrixXd support,
+              Eigen::VectorXd limits, 
+              Eigen::VectorXd resolution) {
     
     // Rcpp::NumericVector out (3);
     // Rcpp::NumericVector latent_coords (3);
@@ -230,7 +235,7 @@ public:
     auto latent_end = animal.latent.end();
     
     while(latent_animal != latent_end) {
-      latent_mvmt.update(*(latent_animal++), *(latent_env++), TRUE, region);
+      latent_mvmt.update(*(latent_animal++), *(latent_env++), TRUE, region, support, limits, resolution);
       // latent_coords = latent_mvmt.update(*(latent_animal++), *(latent_env++), TRUE, region);
       // animal.latent[latent_animal - animal.latent.begin()].x = latent_coords[0];
       // animal.latent[latent_animal - animal.latent.begin()].y = latent_coords[1];
@@ -257,9 +262,7 @@ public:
       // return out;
     }
     
-    // Otherwise, select point within stepsize closest to latent animal, unless
-    // the simulated whale is a pregnant female migrating to the calving grounds
-    // Calving season is between Nov and March (Krzystan et al. 2018)
+    // Otherwise, select point within step size closest to latent animal
     double d_0, d, a, x0, y0, xn, yn, xnew, ynew;
     double dmin = std::numeric_limits<double>::infinity();
     bool sampling = true;
@@ -299,9 +302,12 @@ public:
           yn = y0 + d * std::sin(a);
         }
         
+
         
         // Only consider proposals with non-zero mass
         if(latent_envs[environment.id](xn, yn, 'D') > 0) {
+          
+          bool calc_geo = false;
           
           // if(animal.cohortID == 5 && (environment.id <= 3 || environment.id >= 11) && yn <= -12){
           //   
@@ -311,8 +317,15 @@ public:
           //   
           // } else {
             
-            dist_to_latent = std::pow(xn - active_latent.x, 2) +
-              std::pow(yn - active_latent.y, 2);
+            if((x0 >= 685 & x0 <= 1420 & y0 >= 1070 & y0 <= 1865) ||
+               (x0 >= 520 & x0 <= 730 & y0 >= 825 & y0 <= 960)) calc_geo = true;
+            
+            if(calc_geo){
+              dist_to_latent = geoD(support, xn, yn, active_latent.x, active_latent.y, limits, resolution);
+            } else {
+              dist_to_latent = std::pow(xn - active_latent.x, 2) +
+                std::pow(yn - active_latent.y, 2);
+            }
             
             // Keep track of the point that gets closest to latent
             if(dist_to_latent < dmin) {
