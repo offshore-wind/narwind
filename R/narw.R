@@ -1,10 +1,10 @@
 #' Run the bioenergetic model
 #'
-#' Prepare data required for model runs. 
+#' Simulate right whale movements and behavior across a calendar year.
 #' @export
 #' @param nsim Number of simulated animals
 #' @param n.prop Number of proposals used in the importance sampler (Michelot, 2019)
-#'
+#' @import data.table
 #' @importFrom foreach `%dopar%`
 #' @importFrom doParallel registerDoParallel
 #' @author Phil J. Bouchet
@@ -13,32 +13,34 @@
 #' \dontrun{
 #' library(narwind)
 #' 
-#' run_model()
+#' narw(10)
 #' }
 
-run_model <- function(nsim = 1e3,
-                      init.month = 2,
-                      step.size = 120,
-                      cohort.id = 1:6,
-                      stressors = TRUE,
-                      growth = TRUE,
-                      n.cores = NULL,
-                      n.prop = 50, # In line with sample sizes used in case studies from Michelot (2020)
-                      progress = TRUE){
-
-  # nsim = 1
+narw <- function(nsim = 1e3,
+                 cohort = 1:6,
+                 scenario = NULL,
+                 init.month = 2,
+                 step.size = 120,
+                 stressors = TRUE,
+                 growth = TRUE,
+                 n.cores = NULL,
+                 n.prop = 50, # In line with sample sizes used in case studies from Michelot (2020)
+                 progress = TRUE){
+  
+  # nsim = 10
+  # cohort = 2
+  # scenario = NULL
   # init.month = 2
   # step.size = 120
-  # cohort.id = 5
+  # stressors = FALSE
+  # growth = TRUE
   # n.cores = NULL
   # n.prop = 50
-  # stressors = FALSE
-  # growth = FALSE
   # progress = TRUE
 
   if(!init.month %in% 1:12) stop("<init.month> must be an integer between 1 and 12")
   if(!"init.model" %in% ls(envir = .GlobalEnv)) stop("The model must first be initialized using <load_model>")
-  if(any(!cohort.id %in% 1:6)) stop("Unrecognized cohort")
+  if(any(!cohort %in% 1:6)) stop("Unrecognized cohort")
   
   cat("-------------------------------------------------------------\n")
   cat("-------------------------------------------------------------\n")
@@ -69,8 +71,8 @@ run_model <- function(nsim = 1e3,
   # age.minmax <- matrix(data = c(rep(c(1,9), 2), rep(c(9,69), 4)), nrow = 6, ncol = 2, byrow = TRUE)
   # row.names(age.minmax) <- cohort.ab
   
-  cohort.names <- cohort.names[cohort.id]
-  cohort.ab <- cohort.ab[cohort.id] 
+  cohort.names <- cohort.names[cohort]
+  cohort.ab <- cohort.ab[cohort] 
   
   # ............................................................
   # Dose-response
@@ -136,7 +138,7 @@ run_model <- function(nsim = 1e3,
   
   # Simulate initial locations for latent animals
   # Return cell ID for each animal (columns) x month (rows)
-  init.inds <- purrr::map(.x = cohort.id, 
+  init.inds <- purrr::map(.x = cohort, 
     .f = ~init_xy(maps = maps, maps.weighted = maps.weighted, coords = coords, cohort.id = .x, nsim = nsim)) |> 
     purrr::set_names(nm = cohort.ab)
   
@@ -146,7 +148,7 @@ run_model <- function(nsim = 1e3,
   
   # TODO: estimate spatial step size
   
-  if(length(cohort.id) > 1){
+  if(length(cohort) > 1){
     
     Ncores <- parallel::detectCores(all.tests = FALSE, logical = TRUE)-1
     
@@ -167,11 +169,12 @@ run_model <- function(nsim = 1e3,
     cl <- snow::makeSOCKcluster(n.cores)
     doSNOW::registerDoSNOW(cl)
     on.exit(snow::stopCluster(cl))
+    
     sink(tempfile())
     pb <- utils::txtProgressBar(max = length(cohort.names), style = 3)
     sink()
-    progress <- function(n) utils::setTxtProgressBar(pb, n)
-    opts <- list(progress = progress)
+    pbar <- function(n) utils::setTxtProgressBar(pb, n)
+    opts <- list(progress = pbar)
     
     # # Create a parallel cluster and register the backend
     # cl <- suppressMessages(parallel::makeCluster(n.cores))
@@ -182,26 +185,27 @@ run_model <- function(nsim = 1e3,
     # # Register parallel backend
     # doParallel::registerDoParallel(cl)   # Modify with any do*::registerDo*()
     
-    cat("Running simulations ...\n")
+    cat("Running simulations ...")
+    if(progress){cat("\n")}
     
     start.time <- Sys.time()
     
     # # Compute estimates
-    out <- foreach::foreach(i = seq_along(cohort.id), 
+    out <- foreach::foreach(i = seq_along(cohort), 
                             .options.snow = opts,
                             .packages = c("Rcpp"), 
-                            .noexport = c("MovementSimulator")) %dopar% {
+                            .noexport = c("NARW_simulator")) %dopar% {
                               
                               # Set environments
                               .GlobalEnv$coords <- coords
 
                               Rcpp::sourceCpp("src/simtools.cpp")
 
-                              if(cohort.id[i] == 5) d <- maps.weighted else d <- maps
-                              if(cohort.id[i] >0) d <- maps.weighted else d <- maps
+                              if(cohort[i] == 5) d <- maps.weighted else d <- maps
+                              if(cohort[i] >0) d <- maps.weighted else d <- maps
                               
-                              MovementSimulator(
-                                cohortID = cohort.id[i],
+                              NARW_simulator(
+                                cohortID = cohort[i],
                                 densities = d,
                                 densitySeq = map_seq,
                                 latentDensitySeq = 1:12,
@@ -231,8 +235,8 @@ run_model <- function(nsim = 1e3,
     
     cat("Running simulations ...\n")
 
-    if(cohort.id == 5) d <- maps.weighted else d <- maps
-    if(cohort.id >0) d <- maps.weighted else d <- maps
+    if(cohort == 5) d <- maps.weighted else d <- maps
+    if(cohort >0) d <- maps.weighted else d <- maps
     
     # Simulated animals begin at the position of their corresponding latent animal for the starting month
     # This can be checked by running the below code
@@ -241,8 +245,8 @@ run_model <- function(nsim = 1e3,
     
     start.time <- Sys.time()
     
-    out <- list(MovementSimulator(
-      cohortID = cohort.id,
+    out <- list(NARW_simulator(
+      cohortID = cohort,
       densities = d,
       densitySeq = map_seq,
       latentDensitySeq = seq_along(density_narw),
@@ -271,12 +275,12 @@ run_model <- function(nsim = 1e3,
   
   # Transpose the output array to have data for each day as rows
   
-  out.t <- transpose_array(input = out, cohortID = cohort.id, dates = date_seq) |> 
+  out.t <- transpose_array(input = out, cohortID = cohort, dates = date_seq) |> 
     purrr::set_names(nm = cohort.ab)
 
-  for (k in seq_along(cohort.id)) {
-    if (cohort.id[k] %in% 4:5) out.t[[k]][["attrib"]] <- abind::abind(out.t[[k]][["attrib"]][[1]], out.t[[k]][["attrib"]][[2]], along = 2)
-    if (cohort.id[k] == 5){
+  for (k in seq_along(cohort)) {
+    if (cohort[k] %in% 4:5) out.t[[k]][["attrib"]] <- abind::abind(out.t[[k]][["attrib"]][[1]], out.t[[k]][["attrib"]][[2]], along = 2)
+    if (cohort[k] == 5){
       out.t[[k]][["E"]] <- abind::abind(out.t[[k]][["E"]][[1]], out.t[[k]][["E"]][[2]], along = 2)
       out.t[[k]][["kj"]] <- abind::abind(out.t[[k]][["kj"]][[1]], out.t[[k]][["kj"]][[2]], along = 2)
     } 
@@ -321,22 +325,56 @@ run_model <- function(nsim = 1e3,
   )
   
   # ............................................................
+  # Mortality
+  # ............................................................
+  
+  # if(cohort == 5){
+  #   dead.dt <- purrr::map(.x = outsim[["sim"]], .f = ~{
+  #     
+  #   }) |> tibble::enframe() |>
+  #     tidyr::unnest(cols = c(value)) |>
+  #     dplyr::rename(cohort = name)
+  #   
+  #   
+  # } else {
+  dead.dt <- purrr::imap(
+    .x = cohort.ab,
+    .f = ~ {
+      if (.x == 5) {
+        outsim[["sim"]][[.y]][, list(row = which.min(alive), row_calf = which.min(alive_calf)), whale] |>
+          dplyr::mutate(dead = as.numeric(row > 1), dead_calf = as.numeric(row_calf > 1), cohort = .x)
+      } else {
+        outsim[["sim"]][[.y]][, list(row = which.min(alive)), whale] |>
+          dplyr::mutate(dead = as.numeric(row > 1), cohort = .x)
+      }}) |>
+    tibble::enframe() |>
+    tidyr::unnest(cols = c(value)) |>
+    dplyr::select(-name) |> 
+    data.table::as.data.table()
+  
+  locs.dead <- purrr::set_names(cohort.ab) |>
+    purrr::map(.f = ~  outsim[["sim"]][[.x]][, .SD[ifelse(which.min(alive)==1, 0, which.min(alive))], 
+                                .SDcols = c("date", "day", "easting", "northing", "region", "bc", "strike"), whale])
+  
+  outsim[["mrt"]] <- list(locs = locs.dead, dt = dead.dt)
+  
+  # ............................................................
   # Fit GAM models
   # ............................................................
   
-  pop.dt <- purrr::map(.x = outsim[["sim"]], .f = ~{
-    dplyr::left_join(x = .x[day == 1, list(cohort = unique(cohort), cohort_name = unique(cohort_name), start = bc), whale],
-                     y = .x[day == 365, list(end = bc, alive), whale], by = "whale")
+  terminal.dt <- purrr::map(.x = outsim[["sim"]], .f = ~{
+    dplyr::left_join(x = .x[day == 1, list(cohort = unique(cohort), cohort_name = unique(cohort_name), start_bc = bc), whale],
+                     y = .x[day == 365, list(end_bc = bc, alive), whale], by = "whale")
     }) |> do.call(what = rbind)
   
-  
+  # outsim[["mod"]] <- mgcv::gam(formula = alive ~ s(start_bc, by = cohort_name), family = "binomial", data = pop.dt)
   
   # ............................................................
   # Add parameters to list output
   # ............................................................
   
   outsim$param <- list(nsim = nsim, 
-                       cohort.id = cohort.id,
+                       cohort.id = cohort,
                        cohort.names = cohort.names,
                        cohort.ab = cohort.ab)
   
