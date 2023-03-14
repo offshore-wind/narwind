@@ -4,6 +4,12 @@
     <loc>/404.html</loc>
   </url>
   <url>
+    <loc>/articles/index.html</loc>
+  </url>
+  <url>
+    <loc>/articles/narwind.html</loc>
+  </url>
+  <url>
     <loc>/authors.html</loc>
   </url>
   <url>
@@ -70,6 +76,9 @@
     <loc>/reference/length2mass.html</loc>
   </url>
   <url>
+    <loc>/reference/load.html</loc>
+  </url>
+  <url>
     <loc>/reference/load_model.html</loc>
   </url>
   <url>
@@ -107,6 +116,9 @@
   </url>
   <url>
     <loc>/reference/plot_raster.html</loc>
+  </url>
+  <url>
+    <loc>/reference/predict.narwsim.html</loc>
   </url>
   <url>
     <loc>/reference/print.narwsim.html</loc>
