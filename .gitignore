@@ -51,3 +51,4 @@ src/*.so
 src/*.dll
 
 Rplot*
+inst/doc
