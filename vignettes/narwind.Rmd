@@ -1,0 +1,179 @@
+---
+title: "Getting started"
+author:
+  affiliation: Centre for Research into Ecological & Environmental Modelling, University of St Andrews
+  name: Phil Bouchet, Enrico Pirotta, Len Thomas, Catriona Harris
+date: "`r Sys.Date()`"
+css: pkgdown/extra.css
+csl: narwind.csl
+link-citations: yes
+rmarkdown::html_vignette:
+  fig_caption: yes
+  toc: yes
+  toc_depth: 4
+bibliography: narwind.bib
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+## Preamble
+
+This vignette illustrates the use of the `narwind` R package, which provides methods to forecast the abundance of critically endangered North Atlantic right whales (NARW, *Eubalaena glacialis*) under user-specified offshore wind development scenarios. The package offers an implementation of the spatially-explicit bioenergetic model described in [**placeholder reference**], whereby the movements of different NARW cohorts (juveniles, adult males, pregnant females, resting females, lactating females) are simulated across an entire calendar year. The package operates at a daily scale and accounts for the effects of multiple anthropogenic stressors affecting NARW health, reproduction, and survival, namely: (1) direct mortality from vessel strikes, (2) behavioral responses to noise exposure leading to cessation of foraging/nursing activities, and (3) increased energetic costs associated with entanglement in fishing gear.
+
+```{r setup, include = FALSE}
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>")
+```
+
+## Package installation
+
+The latest development version of `narwind` can be installed from GitHub. This requires either the [remotes](https://cran.r-project.org/web/packages/remotes/index.html) or the [devtools](https://cran.r-project.org/web/packages/devtools/index.html) package to be pre-installed.
+
+```{r download, eval=FALSE, include=TRUE}
+# install.packages("remotes")
+remotes::install_github("pjbouchet/narwind") # OR
+
+# install.packages("devtools")
+devtools::install_github("pjbouchet/narwind")
+```
+
+## Overview
+
+This vignette covers all the steps required to run the bioenergetic model and make predictions of right whale abundance over a future time span of interest. This includes:
+
+-   Loading the package and compiling the necessary model code
+-   Running simulations using the `narw` function.
+-   Inspecting outputs using the `print` method.
+-   Generating summary statistics, simulation diagnostics, and maps using the `summary` and `plot` methods.
+-   Forecasting population size using the `predict` method.
+
+`narwind` relies on multiple data inputs, including:
+
+The package contains proxy surfaces for all of these, allowing analyses to be carried out out of the box.
+
+## Example analysis
+
+> **Note:** In R, the `help()` function and `?` help operator provide access to the documentation pages for package functions, datasets, or other objects. To access documentation for the standard `lm` (linear model) function, for instance, enter the command `help(lm)` or `help("lm")`, or `?lm` or `?"lm"` (i.e., the quotes are optional).
+
+### Loading the package
+
+The first step is to load the package. This is done using the `library` command, which prints a welcome message with basic information in the R console:
+
+```{r load}
+devtools::load_all()
+```
+
+> **Note:** `narwind` is largely written in C++, i.e., a high-level, general-purpose programming language often used in high-performance applications. C++ is a compiled language, meaning that any source code must first be converted into machine-readable code before execution. This compilation process results in an executable file, which can be translated as R functions. This step is automatically performed in the background as part of the `library` call above.
+
+### Running the model
+
+The bioenergetic model is run by calling the `narw()` function. The number of simulated animals per cohort, `nsim`, is the only mandatory argument; all others are optional and set to default values.
+
+```{r run_model}
+# Simulate 20 juvenile females and store the outputs in an object called 'm'
+# This is the same as m <- narw(20,2)
+m <- narw(nsim = 20, cohort = 2)
+```
+
+The arguments that can be passed to `narw()` are listed below.
+
++----------------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Argument       | Default value | Description                                                                                                                                                                                                               |
++================+===============+===========================================================================================================================================================================================================================+
+| `nsim`         | `1000`        | Positive integer. Number of simulated animals.                                                                                                                                                                            |
++----------------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `scenario`     | `NULL`        | An optional object of class `narw.scenario`, as returned by `scenario()` function.                                                                                                                                        |
++----------------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `cohort`       | `1:6`         | Integer between 1 and 6. Unique identifier for population cohorts. Defaults to all cohorts. Note that calves are simulated simultaneously with their mothers when `cohort = 5`.                                           |
+|                |               |                                                                                                                                                                                                                           |
+|                |               | 1: Juveniles (male)\                                                                                                                                                                                                      |
+|                |               | 2: Juveniles (female)\                                                                                                                                                                                                    |
+|                |               | 3: Adults (male)\                                                                                                                                                                                                         |
+|                |               | 4: Adults (female, pregnant)\                                                                                                                                                                                             |
+|                |               | 5: Adults (female, lactating)\                                                                                                                                                                                            |
+|                |               | 6: Adults (female, resting)"                                                                                                                                                                                              |
++----------------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `n.cores`      | `NULL`        | Positive integer. Number of CPU cores to use in parallel processing. The default value of `NULL` detects the processor configuration and sets up computations to run on the maximum allowable number of available cores.  |
++----------------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `progress`     | `TRUE`        | Logical. If `TRUE`, a progress bar is shown during execution.                                                                                                                                                             |
++----------------+---------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+The resulting object is of class `narwsim`:
+
+```{r model_class}
+class(m)[1]
+```
+
+### Viewing outputs
+
+Outputs from the simulator can be viewed using the `print()` method. This is as simple as typing the model object name (`m`) and pressing `[enter]`. The default behavior here is to return data for the first animal, only showing the first 4 days of the simulation. This can be easily changed by the user, as demonstrated below:
+
+```{r model_print}
+# Default overview - same as print(m)
+m
+
+# First 20 days of the simulation for the fifth whle
+print(m, 20, 5)
+```
+
+The `print()` method has the following arguments:
+
++----------------+---------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Argument       | Default value | Description                                                                                                                                                            |
++================+===============+========================================================================================================================================================================+
+| `obj`          | `-`           | Input model object, as returned by `narw()`.                                                                                                                           |
++----------------+---------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `rows`         | `4`           | Positive integer, or vector of positive integers indicating which days of the simulation should be displayed. Defaults to `4`, which returns data for days 1, 2, 3, 4. |
++----------------+---------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `whale`        | `1`           | Positive integer indicating the individual for which data should be extracted.                                                                                         |
++----------------+---------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+### Summarizing outputs
+
+The `summary()` method provides a range of diagnostics for assessing how simulated whale behavior aligns with biological expectations. These include[^1]:
+
+[^1]: Simultaneously visualized graphically.
+
+-   A breakdown of mortality by cohort, region, and cause of death.
+-   A tally of daily locations by cohort, region and country (U.S. vs. Canada).
+-   A summary of spatial movements, at both daily (`step`) and annual (`migration`) scales. The proportion of animals that reached either migratory endpoint (i.e., the SEUS calving grounds and the Gulf of St Lawrence feeding grounds) is also reported for each cohort.
+-   A summary of occupancy rates and residency times in each region, per cohort.
+-   An overview of activity budgets, i.e., mean (± SD) time spent (hrs) engaging in each of the four categories of behavior considered in the model (traveling, resting, nursing, and feeding), by region.
+-   Time series of individual body conditions, by cohort.
+
+Several plots are also produced to illustrate
+
+```{r model_summary}
+summary(m)
+```
+
+### Plotting outputs
+
+Lastly, maps of simulated whale tracks can be drawn using the `plot()` method. When `web` is set to `TRUE`, interactive web-based maps that can be zoomed and panned are produced using the [`ggplotly` R package](https://plotly.com/ggplot2/). The location (easting, northing) and ID of each animal are displayed on hover.
+
+```{r model_plot}
+plot(m, web = TRUE)
+```
+
+The `plot()` method takes the following arguments:
+
++----------------+---------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Argument       | Default value | Description                                                                                                                                                             |
++================+===============+=========================================================================================================================================================================+
+| `obj`          | `-`           | Input model object, as returned by `narw()`.                                                                                                                            |
++----------------+---------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `web`          | `FALSE`       | Logical. Whether to produce static maps (`FALSE`) or interactive, web-based maps (`TRUE`).                                                                              |
++----------------+---------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `whale.id`     | `NULL`        | Positive integer indicating the individual `f`or which data should be extracted. When set to `NULL` (the default), the function plots tracks for all simulated animals. |
++----------------+---------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `nmax`         | `100`         | Positive integer. Maximum number of animals to plot. This argument should be kept \< 100 to minimize memory usage and avoid lengthy run times.                          |
++----------------+---------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| `animate`      | `FALSE`       | Logical indicating whether a video animation should be produced. This feature is currently only in development and significantly increases run times.                   |
++----------------+---------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
