@@ -13,6 +13,7 @@ ByteCompile: true
 License: GPL (>= 2)
 Imports: 
     Rcpp (>= 1.0.8),
+    data.table,
     dismo,
     fields,
     furrr,
@@ -41,3 +42,7 @@ LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 7.2.3
 Depends: 
     R (>= 2.10)
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
