@@ -260,15 +260,15 @@ meta <- function(seed = 215513,
   return(dat.out)
 }
 
-#' Initialize model
-#'
-#' @export
-load <- function(){
-  Rcpp::sourceCpp("src/simtools.cpp")
-  # Rcpp::sourceCpp("src/bioenergetics_functions.cpp")
-  source("R/run_model.R")
-  assign("init.model", value = TRUE, envir = .GlobalEnv)
-}
+#' #' Initialize model
+#' #'
+#' #' @export
+#' load <- function(){
+#'   Rcpp::sourceCpp("src/simtools.cpp")
+#'   # Rcpp::sourceCpp("src/bioenergetics_functions.cpp")
+#'   source("R/run_model.R")
+#'   assign("init.model", value = TRUE, envir = .GlobalEnv)
+#' }
 
 weighted_density <- function(){
   

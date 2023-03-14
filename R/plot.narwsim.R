@@ -24,18 +24,14 @@
 plot.narwsim <- function(obj,
                          whale.id = NULL,
                          animate = FALSE,
-                         color.by = FALSE,
                          web = FALSE,
-                         world.fill = "lightgrey",
                          nmax = 100
 ){
   
   # obj = m
   # whale.id = NULL
   # animate = FALSE
-  # color.by = FALSE
   # web = FALSE
-  # world.fill = "lightgrey"
   # nmax = 100
   
   if(!"narwsim" %in% class(obj)) stop("Input must be an object of class <narwsim>")
@@ -50,6 +46,7 @@ plot.narwsim <- function(obj,
   if(any(cohort.id == 5)) cohort.names[which(cohort.id == 5)] <- paste0(cohort.names[which(cohort.id == 5)], " + calves")
 
   sim <- obj$sim
+  locs.dead <- obj$mrt$locs
   locations <- purrr::set_names(x = cohort.ab) |>
     purrr::map(.f = ~sim[[.x]][, list(date, whale, easting, northing, region, cohort_name)])
 
@@ -80,14 +77,6 @@ plot.narwsim <- function(obj,
                    strip.text = element_text(colour = 'white', size = 12))
   
   # ....................................
-  # Dead animals
-  # ....................................
-  
-  locs.dead <- purrr::set_names(cohort.ab) |>
-    purrr::map(.f = ~ sim[[.x]][, .SD[ifelse(which.min(alive)==1,0,which.min(alive))],
-                                .SDcols = c("easting", "northing", "region", "bc", "strike"), whale])
-  
-  # ....................................
   # Generate plots
   # ....................................
   
@@ -106,7 +95,7 @@ plot.narwsim <- function(obj,
     # Plot base map (land)
     # ....................................
     
-    base_p <- gg.opts + ggplot2::geom_sf(data = sf::st_as_sf(world), fill = world.fill, color = "black", linewidth = 0.25)
+    base_p <- gg.opts + ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", linewidth = 0.25)
     
     # ....................................
     # Plot tracks
