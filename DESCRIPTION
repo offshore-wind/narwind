@@ -30,6 +30,7 @@ Imports:
     Rdpack,
     rgdal,
     rgeos,
+    scales,
     sf,
     sp,
     spatstat,

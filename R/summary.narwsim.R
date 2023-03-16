@@ -135,6 +135,7 @@ summary.narwsim <- function(obj){
       expand = c(0, 0)) +
     ggplot2::geom_hline(yintercept = 0.05, col = "#cb4154")
   
+  cat("\n")
   print(bodyc.plot)
   
   cat("=============================================================\n")
