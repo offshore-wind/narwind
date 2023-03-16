@@ -19,6 +19,20 @@ code {
     color: #28a52c;
 }
 
+h1 {
+    font-size: 28px !important;
+}
+h2 {
+  font-size: 24px !important;
+  padding-bottom: 1rem !important;
+}
+
+#pkgdown-sidebar h2 {
+    font-size: 1.2em !important;
+    margin-top: 1em !important;
+}
+
+
 code a, pre a {
     color: #4386c3;
 }

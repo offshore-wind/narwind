@@ -31,6 +31,9 @@
     <loc>/reference/deg2radians.html</loc>
   </url>
   <url>
+    <loc>/reference/entanglement_event.html</loc>
+  </url>
+  <url>
     <loc>/reference/feeding_threshold.html</loc>
   </url>
   <url>
@@ -40,10 +43,19 @@
     <loc>/reference/fetal_growth.html</loc>
   </url>
   <url>
+    <loc>/reference/fetal_length.html</loc>
+  </url>
+  <url>
+    <loc>/reference/fetal_mass.html</loc>
+  </url>
+  <url>
     <loc>/reference/fetal_tissue_mass.html</loc>
   </url>
   <url>
     <loc>/reference/fill_mask.html</loc>
+  </url>
+  <url>
+    <loc>/reference/filtration_rate.html</loc>
   </url>
   <url>
     <loc>/reference/gape_size.html</loc>
@@ -100,6 +112,9 @@
     <loc>/reference/milk_supply.html</loc>
   </url>
   <url>
+    <loc>/reference/narw.html</loc>
+  </url>
+  <url>
     <loc>/reference/narw_crs.html</loc>
   </url>
   <url>
@@ -143,5 +158,8 @@
   </url>
   <url>
     <loc>/reference/summary.narwsim.html</loc>
+  </url>
+  <url>
+    <loc>/reference/weighted_density.html</loc>
   </url>
 </urlset>
