@@ -9,10 +9,10 @@
     "\n",
     "For more information, see the package website at:\n",
     "https://pjbouchet.github.io/narwind/index.html "
-                        )
- options(tibble.width = Inf)
- options(pillar.sigfig = 5)
- Rcpp::sourceCpp("src/simtools.cpp")
- source("R/narw.R")
- assign("init.model", value = TRUE, envir = .GlobalEnv)
+  )
+  options(tibble.width = Inf)
+  options(pillar.sigfig = 5)
+  Rcpp::sourceCpp("src/simtools.cpp")
+  suppressWarnings(source("R/narw.R"))
+  assign("init.model", value = TRUE, envir = .GlobalEnv)
 }

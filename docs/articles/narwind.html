@@ -65,7 +65,7 @@
 Enrico Pirotta, Len Thomas, Catriona Harris</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2023-03-14</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2023-03-16</h4>
       
       
       <div class="hidden name"><code>narwind.Rmd</code></div>
@@ -78,20 +78,21 @@ University of St Andrews<br><h4 data-toc-skip class="date">2023-03-14</h4>
 <div class="section level2">
 <h2 id="preamble">Preamble<a class="anchor" aria-label="anchor" href="#preamble"></a>
 </h2>
-<p>This vignette illustrates the use of the <code>narwind</code> R
-package, which provides methods to forecast the abundance of critically
-endangered North Atlantic right whales (NARW, <em>Eubalaena
-glacialis</em>) under user-specified offshore wind development
-scenarios. The package offers an implementation of the
-spatially-explicit bioenergetic model described in [<strong>placeholder
-reference</strong>], whereby the movements of different NARW cohorts
-(juveniles, adult males, pregnant females, resting females, lactating
-females) are simulated across an entire calendar year. The package
-operates at a daily scale and accounts for the effects of multiple
-anthropogenic stressors affecting NARW health, reproduction, and
-survival, namely: (1) direct mortality from vessel strikes, (2)
-behavioral responses to noise exposure leading to cessation of
-foraging/nursing activities, and (3) increased energetic costs
+<p>The <code>narwind</code> R package provides methods to forecast the
+abundance of critically endangered North Atlantic right whales (NARW,
+<em>Eubalaena glacialis</em>) under user-specified offshore wind
+development scenarios. <code>narwind</code>offers an implementation of
+the spatially-explicit bioenergetic PCoMS model described in
+[<strong>placeholder reference</strong>], whereby the movements of
+different NARW cohorts (juveniles, adult males, pregnant females,
+resting females, lactating females + dependent calves) are simulated
+across throughout an entire calendar year, and population size
+projections are made over a time horizon relevant to management (35–50
+years). The package operates at a daily scale and accounts for the
+effects of multiple anthropogenic stressors affecting NARW health,
+reproduction, and survival, including: (1) direct mortality from vessel
+strikes, (2) behavioral responses to noise exposure leading to cessation
+of foraging/nursing activities, and (3) increased energetic costs
 associated with entanglement in fishing gear.</p>
 </div>
 <div class="section level2">
@@ -183,29 +184,14 @@ default values.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Simulate 20 juvenile females and store the outputs in an object called 'm'</span></span>
 <span><span class="co"># This is the same as m &lt;- narw(20,2)</span></span>
-<span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">20</span>, cohort <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
-<span><span class="co">#&gt; -------------------------------------------------------------</span></span>
-<span><span class="co">#&gt; -------------------------------------------------------------</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;      NORTH ATLANTIC RIGHT WHALE (Eubalaena glacialis)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;                 --- BIOENERGETIC MODEL ---</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; -------------------------------------------------------------</span></span>
-<span><span class="co">#&gt; -------------------------------------------------------------</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Starting up ...</span></span>
-<span><span class="co">#&gt; Running simulations ...</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Done!</span></span>
-<span><span class="co">#&gt; Time elapsed: 00:00:02</span></span></code></pre></div>
+<span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">20</span>, cohort <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <p>The arguments that can be passed to <code><a href="../reference/narw.html">narw()</a></code> are listed
 below.</p>
 <table style="width:100%;" class="table">
 <colgroup>
+<col width="5%">
 <col width="6%">
-<col width="6%">
-<col width="86%">
+<col width="87%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
@@ -280,24 +266,24 @@ by the user, as demonstrated below:</p>
 <span><span class="co">#&gt; Locations </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt;          date   easting  northing region</span></span>
-<span><span class="co">#&gt; 1: 2022-02-01 -304.5000 -358.5000   SEUS</span></span>
-<span><span class="co">#&gt; 2: 2022-02-02 -303.4106 -362.5748   SEUS</span></span>
-<span><span class="co">#&gt; 3: 2022-02-03 -310.0505 -361.5170   SEUS</span></span>
-<span><span class="co">#&gt; 4: 2022-02-04 -316.1248 -358.1293   SEUS</span></span>
+<span><span class="co">#&gt; 1: 2022-02-01 -279.5000 -293.5000   SEUS</span></span>
+<span><span class="co">#&gt; 2: 2022-02-02 -281.6726 -294.6712   SEUS</span></span>
+<span><span class="co">#&gt; 3: 2022-02-03 -281.9139 -295.9455   SEUS</span></span>
+<span><span class="co">#&gt; 4: 2022-02-04 -282.4054 -307.0256   SEUS</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Attributes </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt;    cohort alive      age        bc   length length_a   length_b   length_c</span></span>
-<span><span class="co">#&gt; 1:      2     1 1.056283 0.1163650 10.57181 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 2:      2     1 1.059023 0.1149463 10.57330 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 3:      2     1 1.061763 0.1137619 10.57479 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 4:      2     1 1.064502 0.1125326 10.57627 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt;        mass leanmass  fatmass    mass_a   mass_b   mouth_r mouth_a  mouth_w</span></span>
-<span><span class="co">#&gt; 1: 13806.16 12199.61 1606.554 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 2: 13789.94 12204.84 1585.102 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 3: 13777.41 12210.07 1567.345 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 4: 13764.22 12215.29 1548.923 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
+<span><span class="co">#&gt; 1:      2     1 5.321271 0.2869395 12.31573  1405.88 -0.3644811 -0.1903424</span></span>
+<span><span class="co">#&gt; 2:      2     1 5.321271 0.2869395 12.31573  1405.88 -0.3644811 -0.1903424</span></span>
+<span><span class="co">#&gt; 3:      2     1 5.321271 0.2869395 12.31573  1405.88 -0.3644811 -0.1903424</span></span>
+<span><span class="co">#&gt; 4:      2     1 5.321271 0.2869395 12.31573  1405.88 -0.3644811 -0.1903424</span></span>
+<span><span class="co">#&gt;        mass leanmass  fatmass    mass_a   mass_b  mouth_r mouth_a  mouth_w</span></span>
+<span><span class="co">#&gt; 1: 26969.63 19230.98 7738.651 -5.090185 3.077491 0.145158    76.7 1.787727</span></span>
+<span><span class="co">#&gt; 2: 26969.63 19230.98 7738.651 -5.090185 3.077491 0.145158    76.7 1.787727</span></span>
+<span><span class="co">#&gt; 3: 26969.63 19230.98 7738.651 -5.090185 3.077491 0.145158    76.7 1.787727</span></span>
+<span><span class="co">#&gt; 4: 26969.63 19230.98 7738.651 -5.090185 3.077491 0.145158    76.7 1.787727</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Stressors </span></span>
@@ -308,353 +294,70 @@ by the user, as demonstrated below:</p>
 <span><span class="co">#&gt; 3:        0          0        0       0           0         0      0     0</span></span>
 <span><span class="co">#&gt; 4:        0          0        0       0           0         0      0     0</span></span>
 <span><span class="co">#&gt;    dB_thresh</span></span>
-<span><span class="co">#&gt; 1:  118.5737</span></span>
-<span><span class="co">#&gt; 2:  167.4346</span></span>
-<span><span class="co">#&gt; 3:  159.9419</span></span>
-<span><span class="co">#&gt; 4:  140.8414</span></span>
+<span><span class="co">#&gt; 1:         0</span></span>
+<span><span class="co">#&gt; 2:         0</span></span>
+<span><span class="co">#&gt; 3:         0</span></span>
+<span><span class="co">#&gt; 4:         0</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Activity budgets </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;    d_travel swimspeed  t_travel t_feed t_nurse   t_rest n_zero     t_sum</span></span>
-<span><span class="co">#&gt; 1: 4.217875  1165.617 11.143287      0       0 12.85671      2  8.950577</span></span>
-<span><span class="co">#&gt; 2: 6.723597  3844.388 10.042306      0       0 13.95769      2  7.413264</span></span>
-<span><span class="co">#&gt; 3: 6.955189  4156.420  9.706716      0       0 14.29328      2  7.933290</span></span>
-<span><span class="co">#&gt; 4: 7.450508  1175.738 12.937167      0       0 11.06283      2 10.799420</span></span>
+<span><span class="co">#&gt;     d_travel swimspeed t_travel t_feed t_nurse   t_rest n_zero    t_sum</span></span>
+<span><span class="co">#&gt; 1:  2.468146  3366.780 9.586649      0       0 14.41335      2 6.292879</span></span>
+<span><span class="co">#&gt; 2:  1.296955  3769.379 9.421247      0       0 14.57875      2 5.845659</span></span>
+<span><span class="co">#&gt; 3: 11.090997  5435.979 9.793416      0       0 14.20658      2 8.493757</span></span>
+<span><span class="co">#&gt; 4:  1.466815  7144.827 8.575236      0       0 15.42476      2 7.260122</span></span>
 <span><span class="co">#&gt;    t_remain</span></span>
-<span><span class="co">#&gt; 1: 7.524712</span></span>
-<span><span class="co">#&gt; 2: 8.293368</span></span>
-<span><span class="co">#&gt; 3: 8.033355</span></span>
-<span><span class="co">#&gt; 4: 6.600290</span></span>
+<span><span class="co">#&gt; 1: 8.853561</span></span>
+<span><span class="co">#&gt; 2: 9.077171</span></span>
+<span><span class="co">#&gt; 3: 7.753122</span></span>
+<span><span class="co">#&gt; 4: 8.369939</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Growth </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt;        E_tot E_in    E_out delta_fat DE_lip ED_lip lip_anab lip_catab</span></span>
-<span><span class="co">#&gt; 1: -1858.162    0 1858.162 -20.71447   0.75     39      0.8 0.5796871</span></span>
-<span><span class="co">#&gt; 2: -1883.293    0 1883.293 -21.45130   0.75     39      0.8 0.5922964</span></span>
-<span><span class="co">#&gt; 3: -1665.710    0 1665.710 -17.75769   0.75     39      0.8 0.5543582</span></span>
-<span><span class="co">#&gt; 4: -1782.789    0 1782.789 -18.42166   0.75     39      0.8 0.5373187</span></span>
+<span><span class="co">#&gt; 1: -7090.982    0 7090.982         0   0.75     39      0.8         0</span></span>
+<span><span class="co">#&gt; 2: -6389.115    0 6389.115         0   0.75     39      0.8         0</span></span>
+<span><span class="co">#&gt; 3: -6114.916    0 6114.916         0   0.75     39      0.8         0</span></span>
+<span><span class="co">#&gt; 4: -5860.474    0 5860.474         0   0.75     39      0.8         0</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Energy intake </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;    feed     preyconc   minprey     gape feedspeed   captEff impedance daylight</span></span>
-<span><span class="co">#&gt; 1:    0 4.895215e-16 2125.0407 1.250099 0.9180476 0.9635123 0.0000000 11.10417</span></span>
-<span><span class="co">#&gt; 2:    0 4.902246e-16 2244.3347 1.250554 0.8415939 0.9289582 0.4796429 11.10611</span></span>
-<span><span class="co">#&gt; 3:    0 3.810831e-16 2129.4237 1.251009 1.1161447 0.7843389 0.1507610 11.10611</span></span>
-<span><span class="co">#&gt; 4:    0 2.947338e-16  551.8388 1.251464 1.2892835 0.8845850 0.1288770 11.10417</span></span>
+<span><span class="co">#&gt;    feed     preyconc  minprey     gape feedspeed   captEff impedance daylight</span></span>
+<span><span class="co">#&gt; 1:    0 1.670492e-15 1096.160 1.967368 0.4919129 0.9464554         0 11.08056</span></span>
+<span><span class="co">#&gt; 2:    0 1.670492e-15 2706.816 1.967368 0.4401822 0.9534351         0 11.08056</span></span>
+<span><span class="co">#&gt; 3:    0 1.670492e-15 3373.269 1.967368 1.0441348 0.9244745         0 11.08056</span></span>
+<span><span class="co">#&gt; 4:    0 1.317699e-15 1905.975 1.967368 0.9512607 0.9085235         0 11.08611</span></span>
 <span><span class="co">#&gt;    feed_effort  targetBC     cop_mass     cop_kJ digestEff  metabEff</span></span>
-<span><span class="co">#&gt; 1:   0.9644193 0.5271131 0.0006052226 0.02909872 0.8831865 0.6933464</span></span>
-<span><span class="co">#&gt; 2:   0.9657929 0.5271131 0.0003650234 0.02155693 0.8896582 0.7851157</span></span>
-<span><span class="co">#&gt; 3:   0.9671644 0.5271131 0.0004351877 0.02695738 0.8826913 0.7611081</span></span>
-<span><span class="co">#&gt; 4:   0.9682696 0.5271131 0.0002557666 0.02536387 0.8898719 0.7395924</span></span>
+<span><span class="co">#&gt; 1:   0.2153212 0.5271131 0.0005902881 0.02764622 0.8954295 0.8536224</span></span>
+<span><span class="co">#&gt; 2:   0.2153212 0.5271131 0.0004039059 0.02686124 0.8875526 0.7384856</span></span>
+<span><span class="co">#&gt; 3:   0.2153212 0.5271131 0.0004574361 0.02531074 0.8848457 0.7650987</span></span>
+<span><span class="co">#&gt; 4:   0.2153212 0.5271131 0.0002985667 0.02237427 0.8868059 0.7344022</span></span>
 <span><span class="co">#&gt;           E_cop</span></span>
-<span><span class="co">#&gt; 1: 1.078429e-05</span></span>
-<span><span class="co">#&gt; 2: 5.496224e-06</span></span>
-<span><span class="co">#&gt; 3: 7.881511e-06</span></span>
-<span><span class="co">#&gt; 4: 4.269522e-06</span></span>
+<span><span class="co">#&gt; 1: 1.247375e-05</span></span>
+<span><span class="co">#&gt; 2: 7.111191e-06</span></span>
+<span><span class="co">#&gt; 3: 7.838270e-06</span></span>
+<span><span class="co">#&gt; 4: 4.350637e-06</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Energy costs </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt;         rmr       LC    stroke   E_growth</span></span>
-<span><span class="co">#&gt; 1: 203.4899 1654.598 0.1504728 0.07387383</span></span>
-<span><span class="co">#&gt; 2: 203.5481 1679.671 0.1530659 0.07354740</span></span>
-<span><span class="co">#&gt; 3: 203.6063 1462.030 0.1335188 0.07320944</span></span>
-<span><span class="co">#&gt; 4: 203.6644 1579.052 0.1444452 0.07292552</span></span>
+<span><span class="co">#&gt; 1: 275.7422 6815.152 0.1779114 0.08770223</span></span>
+<span><span class="co">#&gt; 2: 275.7422 6113.285 0.1595889 0.08770223</span></span>
+<span><span class="co">#&gt; 3: 275.7422 5839.086 0.1524309 0.08770223</span></span>
+<span><span class="co">#&gt; 4: 275.7422 5584.644 0.1457886 0.08770223</span></span>
 <span></span>
 <span><span class="co"># First 20 days of the simulation for the fifth whle</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">m</span>, <span class="fl">20</span>, <span class="fl">5</span><span class="op">)</span></span>
-<span><span class="co">#&gt; =========================================================================================</span></span>
-<span><span class="co">#&gt; Juveniles (female) </span></span>
-<span><span class="co">#&gt; =========================================================================================</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Locations </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;           date   easting  northing region</span></span>
-<span><span class="co">#&gt;  1: 2022-02-01 -304.5000 -358.5000   SEUS</span></span>
-<span><span class="co">#&gt;  2: 2022-02-02 -303.4106 -362.5748   SEUS</span></span>
-<span><span class="co">#&gt;  3: 2022-02-03 -310.0505 -361.5170   SEUS</span></span>
-<span><span class="co">#&gt;  4: 2022-02-04 -316.1248 -358.1293   SEUS</span></span>
-<span><span class="co">#&gt;  5: 2022-02-05 -308.7811 -356.8724   SEUS</span></span>
-<span><span class="co">#&gt;  6: 2022-02-06 -309.9738 -361.2708   SEUS</span></span>
-<span><span class="co">#&gt;  7: 2022-02-07 -310.6000 -360.3543   SEUS</span></span>
-<span><span class="co">#&gt;  8: 2022-02-08 -306.6254 -361.0909   SEUS</span></span>
-<span><span class="co">#&gt;  9: 2022-02-09 -308.6672 -367.2664   SEUS</span></span>
-<span><span class="co">#&gt; 10: 2022-02-10 -308.0842 -367.8879   SEUS</span></span>
-<span><span class="co">#&gt; 11: 2022-02-11 -307.8326 -361.2013   SEUS</span></span>
-<span><span class="co">#&gt; 12: 2022-02-12 -304.0365 -367.8498   SEUS</span></span>
-<span><span class="co">#&gt; 13: 2022-02-13 -302.4723 -368.4150   SEUS</span></span>
-<span><span class="co">#&gt; 14: 2022-02-14 -300.7611 -368.9860   SEUS</span></span>
-<span><span class="co">#&gt; 15: 2022-02-15 -297.1766 -373.1762   SEUS</span></span>
-<span><span class="co">#&gt; 16: 2022-02-16 -299.4397 -370.8988   SEUS</span></span>
-<span><span class="co">#&gt; 17: 2022-02-17 -302.2272 -364.7324   SEUS</span></span>
-<span><span class="co">#&gt; 18: 2022-02-18 -311.5815 -373.6513   SEUS</span></span>
-<span><span class="co">#&gt; 19: 2022-02-19 -313.1626 -373.3965   SEUS</span></span>
-<span><span class="co">#&gt; 20: 2022-02-20 -307.1061 -369.6602   SEUS</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Attributes </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;     cohort alive      age         bc   length length_a   length_b   length_c</span></span>
-<span><span class="co">#&gt;  1:      2     1 1.056283 0.11636496 10.57181 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt;  2:      2     1 1.059023 0.11494628 10.57330 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt;  3:      2     1 1.061763 0.11376192 10.57479 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt;  4:      2     1 1.064502 0.11253260 10.57627 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt;  5:      2     1 1.067242 0.11113412 10.57776 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt;  6:      2     1 1.069982 0.10984696 10.57924 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt;  7:      2     1 1.072722 0.10871263 10.58073 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt;  8:      2     1 1.075461 0.10761757 10.58221 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt;  9:      2     1 1.078201 0.10645276 10.58369 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 10:      2     1 1.080941 0.10528702 10.58517 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 11:      2     1 1.083680 0.10397753 10.58665 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 12:      2     1 1.086420 0.10267824 10.58813 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 13:      2     1 1.089160 0.10127819 10.58961 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 14:      2     1 1.091900 0.09983364 10.59109 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 15:      2     1 1.094639 0.09820979 10.59257 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 16:      2     1 1.097379 0.09683749 10.59405 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 17:      2     1 1.100119 0.09515892 10.59553 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 18:      2     1 1.102859 0.09353836 10.59700 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 19:      2     1 1.105598 0.09200031 10.59848 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt; 20:      2     1 1.108338 0.09048484 10.59995 1346.343 -0.3025861 -0.2123623</span></span>
-<span><span class="co">#&gt;         mass leanmass  fatmass    mass_a   mass_b   mouth_r mouth_a  mouth_w</span></span>
-<span><span class="co">#&gt;  1: 13806.16 12199.61 1606.554 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt;  2: 13789.94 12204.84 1585.102 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt;  3: 13777.41 12210.07 1567.345 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt;  4: 13764.22 12215.29 1548.923 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt;  5: 13748.44 12220.52 1527.921 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt;  6: 13734.43 12225.74 1508.685 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt;  7: 13722.81 12230.97 1491.843 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt;  8: 13711.83 12236.19 1475.633 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt;  9: 13699.80 12241.42 1458.381 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 10: 13687.78 12246.64 1441.146 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 11: 13673.61 12251.86 1421.748 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 12: 13659.62 12257.08 1402.546 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 13: 13644.15 12262.30 1381.855 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 14: 13628.06 12267.52 1360.538 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 15: 13609.30 12272.73 1336.567 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 16: 13594.40 12277.95 1316.448 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 17: 13574.95 12283.17 1291.777 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 18: 13556.43 12288.38 1268.046 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 19: 13539.21 12293.60 1245.611 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; 20: 13522.38 12298.81 1223.571 -4.990869 3.046771 0.1533258    76.7 1.620704</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Stressors </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;     is_entgl entgl_head severity entgl_d entgl_start entgl_end strike noise</span></span>
-<span><span class="co">#&gt;  1:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt;  2:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt;  3:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt;  4:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt;  5:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt;  6:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt;  7:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt;  8:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt;  9:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt; 10:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt; 11:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt; 12:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt; 13:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt; 14:        1          1        0      74          14        88      0     0</span></span>
-<span><span class="co">#&gt; 15:        1          1        0      74          14        88      0     0</span></span>
-<span><span class="co">#&gt; 16:        1          1        0      74          14        88      0     0</span></span>
-<span><span class="co">#&gt; 17:        1          1        0      74          14        88      0     0</span></span>
-<span><span class="co">#&gt; 18:        1          1        0      74          14        88      0     0</span></span>
-<span><span class="co">#&gt; 19:        1          1        0      74          14        88      0     0</span></span>
-<span><span class="co">#&gt; 20:        1          1        0      74          14        88      0     0</span></span>
-<span><span class="co">#&gt;     dB_thresh</span></span>
-<span><span class="co">#&gt;  1: 118.57372</span></span>
-<span><span class="co">#&gt;  2: 167.43461</span></span>
-<span><span class="co">#&gt;  3: 159.94190</span></span>
-<span><span class="co">#&gt;  4: 140.84137</span></span>
-<span><span class="co">#&gt;  5: 118.52974</span></span>
-<span><span class="co">#&gt;  6: 136.22029</span></span>
-<span><span class="co">#&gt;  7: 136.22029</span></span>
-<span><span class="co">#&gt;  8: 153.98780</span></span>
-<span><span class="co">#&gt;  9: 159.56647</span></span>
-<span><span class="co">#&gt; 10: 189.66647</span></span>
-<span><span class="co">#&gt; 11: 156.52229</span></span>
-<span><span class="co">#&gt; 12: 131.43006</span></span>
-<span><span class="co">#&gt; 13:  95.19268</span></span>
-<span><span class="co">#&gt; 14: 170.85562</span></span>
-<span><span class="co">#&gt; 15: 136.01527</span></span>
-<span><span class="co">#&gt; 16: 165.48311</span></span>
-<span><span class="co">#&gt; 17: 143.58012</span></span>
-<span><span class="co">#&gt; 18: 176.71037</span></span>
-<span><span class="co">#&gt; 19: 129.42640</span></span>
-<span><span class="co">#&gt; 20: 118.82023</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Activity budgets </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;       d_travel swimspeed  t_travel t_feed t_nurse   t_rest n_zero     t_sum</span></span>
-<span><span class="co">#&gt;  1:  4.2178748 1165.6175 11.143287      0       0 12.85671      2  8.950577</span></span>
-<span><span class="co">#&gt;  2:  6.7235974 3844.3883 10.042306      0       0 13.95769      2  7.413264</span></span>
-<span><span class="co">#&gt;  3:  6.9551891 4156.4196  9.706716      0       0 14.29328      2  7.933290</span></span>
-<span><span class="co">#&gt;  4:  7.4505081 1175.7381 12.937167      0       0 11.06283      2 10.799420</span></span>
-<span><span class="co">#&gt;  5:  4.5572353  897.8033 11.442823      0       0 12.55718      2 11.266323</span></span>
-<span><span class="co">#&gt;  6:  1.1099646 3980.4196  9.458782      0       0 14.54122      2  5.640149</span></span>
-<span><span class="co">#&gt;  7:  4.0422540 2059.2480 10.360258      0       0 13.63974      2  7.205435</span></span>
-<span><span class="co">#&gt;  8:  6.5043161 3428.5390  9.703326      0       0 14.29667      2  8.387568</span></span>
-<span><span class="co">#&gt;  9:  0.8521404 1836.0705  9.466974      0       0 14.53303      2  5.994273</span></span>
-<span><span class="co">#&gt; 10:  6.6913813 2103.0010 10.715609      0       0 13.28439      2  8.932432</span></span>
-<span><span class="co">#&gt; 11:  7.6558884 1600.6345 11.644990      0       0 12.35501      2 10.276087</span></span>
-<span><span class="co">#&gt; 12:  1.6631368 4435.7388  9.578987      0       0 14.42101      2  5.591906</span></span>
-<span><span class="co">#&gt; 13:  1.8039571 2389.2298  9.148448      0       0 14.85155      2  7.213178</span></span>
-<span><span class="co">#&gt; 14:  5.5141990 1858.3761 10.722163      0       0 13.27784      2  8.490102</span></span>
-<span><span class="co">#&gt; 15:  3.2106284 1509.5258 10.535657      0       0 13.46434      2  7.182510</span></span>
-<span><span class="co">#&gt; 16:  6.7671720 4450.2663  9.587592      0       0 14.41241      2  7.866060</span></span>
-<span><span class="co">#&gt; 17: 12.9248074 5193.1853 10.955078      0       0 13.04492      2  7.067446</span></span>
-<span><span class="co">#&gt; 18:  1.6015772 3947.7949  9.819897      0       0 14.18010      2  5.171585</span></span>
-<span><span class="co">#&gt; 19:  7.1162679 2302.6882 10.518596      0       0 13.48140      2  9.143643</span></span>
-<span><span class="co">#&gt; 20:  4.8665765 3397.0581  9.409577      0       0 14.59042      2  8.046017</span></span>
-<span><span class="co">#&gt;     t_remain</span></span>
-<span><span class="co">#&gt;  1: 7.524712</span></span>
-<span><span class="co">#&gt;  2: 8.293368</span></span>
-<span><span class="co">#&gt;  3: 8.033355</span></span>
-<span><span class="co">#&gt;  4: 6.600290</span></span>
-<span><span class="co">#&gt;  5: 6.366838</span></span>
-<span><span class="co">#&gt;  6: 9.179926</span></span>
-<span><span class="co">#&gt;  7: 8.397283</span></span>
-<span><span class="co">#&gt;  8: 7.806216</span></span>
-<span><span class="co">#&gt;  9: 9.002863</span></span>
-<span><span class="co">#&gt; 10: 7.533784</span></span>
-<span><span class="co">#&gt; 11: 6.861956</span></span>
-<span><span class="co">#&gt; 12: 9.204047</span></span>
-<span><span class="co">#&gt; 13: 8.393411</span></span>
-<span><span class="co">#&gt; 14: 7.754949</span></span>
-<span><span class="co">#&gt; 15: 8.408745</span></span>
-<span><span class="co">#&gt; 16: 8.066970</span></span>
-<span><span class="co">#&gt; 17: 8.466277</span></span>
-<span><span class="co">#&gt; 18: 9.414208</span></span>
-<span><span class="co">#&gt; 19: 7.428179</span></span>
-<span><span class="co">#&gt; 20: 7.976991</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Growth </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;         E_tot E_in    E_out delta_fat DE_lip ED_lip lip_anab lip_catab</span></span>
-<span><span class="co">#&gt;  1: -1858.162    0 1858.162 -20.71447   0.75     39      0.8 0.5796871</span></span>
-<span><span class="co">#&gt;  2: -1883.293    0 1883.293 -21.45130   0.75     39      0.8 0.5922964</span></span>
-<span><span class="co">#&gt;  3: -1665.710    0 1665.710 -17.75769   0.75     39      0.8 0.5543582</span></span>
-<span><span class="co">#&gt;  4: -1782.789    0 1782.789 -18.42166   0.75     39      0.8 0.5373187</span></span>
-<span><span class="co">#&gt;  5: -1857.658    0 1857.658 -21.00234   0.75     39      0.8 0.5879026</span></span>
-<span><span class="co">#&gt;  6: -1797.851    0 1797.851 -19.23535   0.75     39      0.8 0.5563520</span></span>
-<span><span class="co">#&gt;  7: -1597.993    0 1597.993 -16.84240   0.75     39      0.8 0.5480656</span></span>
-<span><span class="co">#&gt;  8: -1524.987    0 1524.987 -16.20971   0.75     39      0.8 0.5527291</span></span>
-<span><span class="co">#&gt;  9: -1655.809    0 1655.809 -17.25220   0.75     39      0.8 0.5417983</span></span>
-<span><span class="co">#&gt; 10: -1556.688    0 1556.688 -17.23525   0.75     39      0.8 0.5757305</span></span>
-<span><span class="co">#&gt; 11: -1757.730    0 1757.730 -19.39806   0.75     39      0.8 0.5738647</span></span>
-<span><span class="co">#&gt; 12: -1825.752    0 1825.752 -19.20154   0.75     39      0.8 0.5468871</span></span>
-<span><span class="co">#&gt; 13: -1794.557    0 1794.557 -20.69114   0.75     39      0.8 0.5995570</span></span>
-<span><span class="co">#&gt; 14: -1942.162    0 1942.162 -21.31672   0.75     39      0.8 0.5707399</span></span>
-<span><span class="co">#&gt; 15: -2100.555    0 2100.555 -23.97173   0.75     39      0.8 0.5934288</span></span>
-<span><span class="co">#&gt; 16: -1944.481    0 1944.481 -20.11916   0.75     39      0.8 0.5380337</span></span>
-<span><span class="co">#&gt; 17: -2335.693    0 2335.693 -24.67046   0.75     39      0.8 0.5492434</span></span>
-<span><span class="co">#&gt; 18: -2252.408    0 2252.408 -23.73089   0.75     39      0.8 0.5478611</span></span>
-<span><span class="co">#&gt; 19: -1975.799    0 1975.799 -22.43476   0.75     39      0.8 0.5904485</span></span>
-<span><span class="co">#&gt; 20: -2073.756    0 2073.756 -22.04077   0.75     39      0.8 0.5526783</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Energy intake </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;     feed     preyconc   minprey     gape feedspeed   captEff   impedance</span></span>
-<span><span class="co">#&gt;  1:    0 4.895215e-16 2125.0407 1.250099 0.9180476 0.9635123 0.000000000</span></span>
-<span><span class="co">#&gt;  2:    0 4.902246e-16 2244.3347 1.250554 0.8415939 0.9289582 0.479642898</span></span>
-<span><span class="co">#&gt;  3:    0 3.810831e-16 2129.4237 1.251009 1.1161447 0.7843389 0.150760967</span></span>
-<span><span class="co">#&gt;  4:    0 2.947338e-16  551.8388 1.251464 1.2892835 0.8845850 0.128876971</span></span>
-<span><span class="co">#&gt;  5:    0 3.805408e-16 1553.0683 1.251919 0.7716268 0.8860393 0.029894485</span></span>
-<span><span class="co">#&gt;  6:    0 3.810831e-16  622.9668 1.252374 1.1412285 0.8819864 0.198621948</span></span>
-<span><span class="co">#&gt;  7:    0 3.805408e-16 1987.2803 1.252829 1.3393158 0.9059477 0.117007026</span></span>
-<span><span class="co">#&gt;  8:    0 4.902246e-16 1960.5896 1.253283 0.9428478 0.9303722 0.486851102</span></span>
-<span><span class="co">#&gt;  9:    0 3.814962e-16 2289.4796 1.253738 1.0833596 0.8485016 0.181805466</span></span>
-<span><span class="co">#&gt; 10:    0 3.814962e-16 2501.1340 1.254193 0.9591592 0.9214849 0.083306876</span></span>
-<span><span class="co">#&gt; 11:    0 3.810831e-16 2623.2678 1.254647 1.3479817 0.9377101 0.005084504</span></span>
-<span><span class="co">#&gt; 12:    0 4.908088e-16 1135.1944 1.255102 0.8962177 0.8708520 0.219489789</span></span>
-<span><span class="co">#&gt; 13:    0 4.908088e-16 2093.9173 1.255556 0.9237650 0.8813484 0.151467584</span></span>
-<span><span class="co">#&gt; 14:    0 6.311297e-16 1864.9538 1.256010 0.8549820 0.8964837 0.317836303</span></span>
-<span><span class="co">#&gt; 15:    0 6.318300e-16 2853.9134 1.256465 1.1623483 0.9439280 0.116585953</span></span>
-<span><span class="co">#&gt; 16:    0 6.311297e-16 1121.6995 1.256919 0.8668260 0.8734394 0.257836941</span></span>
-<span><span class="co">#&gt; 17:    0 4.902246e-16 2355.1878 1.257373 0.5056009 0.9647819 0.161641440</span></span>
-<span><span class="co">#&gt; 18:    0 3.819092e-16 1840.2873 1.257827 0.9541902 0.8860990 0.480783723</span></span>
-<span><span class="co">#&gt; 19:    0 2.957365e-16 2086.1270 1.258281 1.1732464 0.9495363 0.322532645</span></span>
-<span><span class="co">#&gt; 20:    0 3.814962e-16 2095.5213 1.258735 0.5906773 0.9540674 0.222219704</span></span>
-<span><span class="co">#&gt;     daylight feed_effort  targetBC     cop_mass     cop_kJ digestEff  metabEff</span></span>
-<span><span class="co">#&gt;  1: 11.10417   0.9644193 0.5271131 0.0006052226 0.02909872 0.8831865 0.6933464</span></span>
-<span><span class="co">#&gt;  2: 11.10611   0.9657929 0.5271131 0.0003650234 0.02155693 0.8896582 0.7851157</span></span>
-<span><span class="co">#&gt;  3: 11.10611   0.9671644 0.5271131 0.0004351877 0.02695738 0.8826913 0.7611081</span></span>
-<span><span class="co">#&gt;  4: 11.10417   0.9682696 0.5271131 0.0002557666 0.02536387 0.8898719 0.7395924</span></span>
-<span><span class="co">#&gt;  5: 11.10444   0.9693796 0.5271131 0.0003651410 0.02295970 0.8870151 0.7695434</span></span>
-<span><span class="co">#&gt;  6: 11.10611   0.9705976 0.5271131 0.0002911837 0.02415392 0.8860914 0.7756696</span></span>
-<span><span class="co">#&gt;  7: 11.10444   0.9716781 0.5271131 0.0004261993 0.02541201 0.8899124 0.7544631</span></span>
-<span><span class="co">#&gt;  8: 11.10611   0.9725989 0.5271131 0.0004239394 0.01832820 0.8881687 0.7387756</span></span>
-<span><span class="co">#&gt;  9: 11.10778   0.9734609 0.5271131 0.0003525849 0.02784863 0.8774220 0.7670604</span></span>
-<span><span class="co">#&gt; 10: 11.10778   0.9743494 0.5271131 0.0003635809 0.02257809 0.8922781 0.8239921</span></span>
-<span><span class="co">#&gt; 11: 11.10611   0.9752102 0.5271131 0.0003519319 0.02455647 0.8834812 0.6770983</span></span>
-<span><span class="co">#&gt; 12: 11.10806   0.9761443 0.5271131 0.0004457770 0.02065075 0.8975171 0.6951573</span></span>
-<span><span class="co">#&gt; 13: 11.10806   0.9770379 0.5271131 0.0003204986 0.02438806 0.8871767 0.6375143</span></span>
-<span><span class="co">#&gt; 14: 11.10778   0.9779649 0.5271131 0.0004018872 0.02290323 0.8933097 0.7977275</span></span>
-<span><span class="co">#&gt; 15: 11.10972   0.9788837 0.5271131 0.0004471339 0.02017955 0.8920583 0.7991743</span></span>
-<span><span class="co">#&gt; 16: 11.10778   0.9798727 0.5271131 0.0004593390 0.02393283 0.8855352 0.7400076</span></span>
-<span><span class="co">#&gt; 17: 11.10611   0.9806736 0.5271131 0.0002458446 0.02308587 0.8821986 0.7624401</span></span>
-<span><span class="co">#&gt; 18: 11.10972   0.9816116 0.5271131 0.0003722884 0.02662202 0.8760612 0.6907606</span></span>
-<span><span class="co">#&gt; 19: 11.10972   0.9824755 0.5271131 0.0006794176 0.02497307 0.8795912 0.7715363</span></span>
-<span><span class="co">#&gt; 20: 11.10778   0.9832591 0.5271131 0.0003269556 0.02410640 0.8844018 0.7934193</span></span>
-<span><span class="co">#&gt;            E_cop</span></span>
-<span><span class="co">#&gt;  1: 1.078429e-05</span></span>
-<span><span class="co">#&gt;  2: 5.496224e-06</span></span>
-<span><span class="co">#&gt;  3: 7.881511e-06</span></span>
-<span><span class="co">#&gt;  4: 4.269522e-06</span></span>
-<span><span class="co">#&gt;  5: 5.722568e-06</span></span>
-<span><span class="co">#&gt;  6: 4.834037e-06</span></span>
-<span><span class="co">#&gt;  7: 7.271716e-06</span></span>
-<span><span class="co">#&gt;  8: 5.098374e-06</span></span>
-<span><span class="co">#&gt;  9: 6.608541e-06</span></span>
-<span><span class="co">#&gt; 10: 6.035475e-06</span></span>
-<span><span class="co">#&gt; 11: 5.169798e-06</span></span>
-<span><span class="co">#&gt; 12: 5.743536e-06</span></span>
-<span><span class="co">#&gt; 13: 4.420827e-06</span></span>
-<span><span class="co">#&gt; 14: 6.559301e-06</span></span>
-<span><span class="co">#&gt; 15: 6.432559e-06</span></span>
-<span><span class="co">#&gt; 16: 7.203928e-06</span></span>
-<span><span class="co">#&gt; 17: 3.817500e-06</span></span>
-<span><span class="co">#&gt; 18: 5.997669e-06</span></span>
-<span><span class="co">#&gt; 19: 1.151452e-05</span></span>
-<span><span class="co">#&gt; 20: 5.530615e-06</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Energy costs </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;          rmr       LC    stroke   E_growth</span></span>
-<span><span class="co">#&gt;  1: 203.4899 1654.598 0.1504728 0.07387383</span></span>
-<span><span class="co">#&gt;  2: 203.5481 1679.671 0.1530659 0.07354740</span></span>
-<span><span class="co">#&gt;  3: 203.6063 1462.030 0.1335188 0.07320944</span></span>
-<span><span class="co">#&gt;  4: 203.6644 1579.052 0.1444452 0.07292552</span></span>
-<span><span class="co">#&gt;  5: 203.7226 1653.863 0.1515534 0.07263132</span></span>
-<span><span class="co">#&gt;  6: 203.7807 1593.998 0.1463737 0.07229825</span></span>
-<span><span class="co">#&gt;  7: 203.8388 1394.082 0.1282542 0.07199088</span></span>
-<span><span class="co">#&gt;  8: 203.8969 1321.018 0.1217202 0.07171875</span></span>
-<span><span class="co">#&gt;  9: 203.9550 1451.783 0.1339646 0.07145572</span></span>
-<span><span class="co">#&gt; 10: 204.0131 1352.604 0.1250128 0.07117671</span></span>
-<span><span class="co">#&gt; 11: 204.0711 1553.588 0.1438185 0.07089756</span></span>
-<span><span class="co">#&gt; 12: 204.1291 1621.552 0.1503940 0.07058541</span></span>
-<span><span class="co">#&gt; 13: 204.1872 1590.300 0.1477709 0.07027569</span></span>
-<span><span class="co">#&gt; 14: 204.2451 1489.025 0.1386467 0.06994289</span></span>
-<span><span class="co">#&gt; 15: 204.3031 1647.360 0.1537203 0.06959994</span></span>
-<span><span class="co">#&gt; 16: 204.3611 1491.229 0.1395011 0.06921588</span></span>
-<span><span class="co">#&gt; 17: 204.4190 1882.383 0.1764447 0.06888972</span></span>
-<span><span class="co">#&gt; 18: 204.4769 1799.040 0.1690735 0.06849328</span></span>
-<span><span class="co">#&gt; 19: 204.5348 1522.374 0.1434288 0.06811027</span></span>
-<span><span class="co">#&gt; 20: 204.5927 1620.273 0.1530064 0.06774632</span></span></code></pre></div>
+<span><span class="co"># print(m, 20, 5)</span></span></code></pre></div>
 <p>The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method has the following arguments:</p>
-<table style="width:100%;" class="table">
+<table style="width:99%;" class="table">
 <colgroup>
+<col width="5%">
 <col width="8%">
-<col width="7%">
-<col width="83%">
+<col width="85%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
@@ -743,18 +446,9 @@ model (traveling, resting, nursing, and feeding), by region.</li>
 <span><span class="co">#&gt; MORTALITY &amp; HEALTH</span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    dead          alive    </span></span>
-<span><span class="co">#&gt; --------  ------------  ---------</span></span>
-<span><span class="co">#&gt; jv(fml)   100.0% (20)   0.0% (0) </span></span>
-<span><span class="co">#&gt; --- jv(fml)  ---</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region   strike   starve     </span></span>
-<span><span class="co">#&gt; -------  -------  -----------</span></span>
-<span><span class="co">#&gt; GSL      - (0)    5.0%  (1)  </span></span>
-<span><span class="co">#&gt; MIDA     - (0)    20.0%  (4) </span></span>
-<span><span class="co">#&gt; SCOS     - (0)    10.0%  (2) </span></span>
-<span><span class="co">#&gt; SEUS     - (0)    50.0% (10) </span></span>
-<span><span class="co">#&gt; SNE      - (0)    15.0%  (3)</span></span></code></pre></div>
+<span><span class="co">#&gt; cohort    dead       alive       </span></span>
+<span><span class="co">#&gt; --------  ---------  ------------</span></span>
+<span><span class="co">#&gt; jv(fml)   0.0% (0)   100.0% (20)</span></span></code></pre></div>
 <p><img src="narwind_files/figure-html/model_summary-1.png" width="700"></p>
 <pre><code><span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; LOCATIONS</span></span>
@@ -764,34 +458,34 @@ model (traveling, resting, nursing, and feeding), by region.</li>
 <span><span class="co">#&gt; ----------  -------------</span></span>
 <span><span class="co">#&gt; BOF_lower   0.0%    (0)  </span></span>
 <span><span class="co">#&gt; BOF_upper   0.0%    (0)  </span></span>
-<span><span class="co">#&gt; CABOT       0.4%    (9)  </span></span>
+<span><span class="co">#&gt; CABOT       5.4%  (392)  </span></span>
 <span><span class="co">#&gt; CCB         0.0%    (0)  </span></span>
-<span><span class="co">#&gt; GOM         4.6%   (93)  </span></span>
-<span><span class="co">#&gt; GSL         0.1%    (2)  </span></span>
-<span><span class="co">#&gt; MIDA        10.9%  (220) </span></span>
-<span><span class="co">#&gt; SCOS        2.6%   (52)  </span></span>
-<span><span class="co">#&gt; SEUS        74.4% (1503) </span></span>
-<span><span class="co">#&gt; SNE         7.0%  (142)  </span></span>
+<span><span class="co">#&gt; GOM         14.8% (1080) </span></span>
+<span><span class="co">#&gt; GSL         17.3% (1261) </span></span>
+<span><span class="co">#&gt; MIDA        6.9%  (506)  </span></span>
+<span><span class="co">#&gt; SCOS        20.4% (1490) </span></span>
+<span><span class="co">#&gt; SEUS        23.5% (1712) </span></span>
+<span><span class="co">#&gt; SNE         11.8%  (859) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; country   jv(fml)      </span></span>
 <span><span class="co">#&gt; --------  -------------</span></span>
-<span><span class="co">#&gt; Canada    3.1%   (63)  </span></span>
-<span><span class="co">#&gt; U.S.      96.9% (1958) </span></span>
+<span><span class="co">#&gt; Canada    43.1% (3143) </span></span>
+<span><span class="co">#&gt; U.S.      56.9% (4157) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; MOVEMENTS (km)</span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    step                         migration                     </span></span>
-<span><span class="co">#&gt; --------  ---------------------------  ------------------------------</span></span>
-<span><span class="co">#&gt; jv(fml)   12.3 (± 14.9) [0.2 – 95.7]   1,640 (± 1,071) [237 – 3,945] </span></span>
+<span><span class="co">#&gt; cohort    step                        migration                     </span></span>
+<span><span class="co">#&gt; --------  --------------------------  ------------------------------</span></span>
+<span><span class="co">#&gt; jv(fml)   15.2 (± 16.5) [0.1 – 111]   5,530 (± 509) [4,401 – 6,554] </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; cohort    reached SEUS   reached GSL </span></span>
 <span><span class="co">#&gt; --------  -------------  ------------</span></span>
-<span><span class="co">#&gt; jv(fml)   100.0% (20)    5.0% (1)    </span></span>
+<span><span class="co">#&gt; jv(fml)   100.0% (20)    65.0% (13)  </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; HABITAT USE</span></span>
@@ -807,14 +501,14 @@ model (traveling, resting, nursing, and feeding), by region.</li>
 <span><span class="co">#&gt; ----------  ------------</span></span>
 <span><span class="co">#&gt; BOF_lower   0.0% (0)    </span></span>
 <span><span class="co">#&gt; BOF_upper   0.0% (0)    </span></span>
-<span><span class="co">#&gt; CABOT       5.0% (1)    </span></span>
+<span><span class="co">#&gt; CABOT       70.0% (14)  </span></span>
 <span><span class="co">#&gt; CCB         0.0% (0)    </span></span>
-<span><span class="co">#&gt; GOM         15.0% (3)   </span></span>
-<span><span class="co">#&gt; GSL         5.0% (1)    </span></span>
-<span><span class="co">#&gt; MIDA        50.0% (10)  </span></span>
-<span><span class="co">#&gt; SCOS        15.0% (3)   </span></span>
+<span><span class="co">#&gt; GOM         100.0% (20) </span></span>
+<span><span class="co">#&gt; GSL         65.0% (13)  </span></span>
+<span><span class="co">#&gt; MIDA        100.0% (20) </span></span>
+<span><span class="co">#&gt; SCOS        100.0% (20) </span></span>
 <span><span class="co">#&gt; SEUS        100.0% (20) </span></span>
-<span><span class="co">#&gt; SNE         30.0% (6)   </span></span>
+<span><span class="co">#&gt; SNE         100.0% (20) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; +++++++++++ Days spent in each region +++++++++++</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -822,24 +516,22 @@ model (traveling, resting, nursing, and feeding), by region.</li>
 <span><span class="co">#&gt; ----------  -------------------------</span></span>
 <span><span class="co">#&gt; BOF_lower   0 (± 0) [0 – 0]          </span></span>
 <span><span class="co">#&gt; BOF_upper   0 (± 0) [0 – 0]          </span></span>
-<span><span class="co">#&gt; CABOT       9 (± 0) [9 – 9]          </span></span>
+<span><span class="co">#&gt; CABOT       28 (± 9.6) [16 – 49]     </span></span>
 <span><span class="co">#&gt; CCB         0 (± 0) [0 – 0]          </span></span>
-<span><span class="co">#&gt; GOM         31 (± 8.7) [25 – 41]     </span></span>
-<span><span class="co">#&gt; GSL         2 (± 0) [2 – 2]          </span></span>
-<span><span class="co">#&gt; MIDA        22 (± 12.9) [7 – 53]     </span></span>
-<span><span class="co">#&gt; SCOS        17.3 (± 17.1) [6 – 37]   </span></span>
-<span><span class="co">#&gt; SEUS        75.2 (± 27.4) [34 – 121] </span></span>
-<span><span class="co">#&gt; SNE         23.7 (± 9.5) [9 – 37]    </span></span>
+<span><span class="co">#&gt; GOM         54 (± 20) [23 – 99]      </span></span>
+<span><span class="co">#&gt; GSL         97 (± 42.6) [41 – 168]   </span></span>
+<span><span class="co">#&gt; MIDA        25.3 (± 8.9) [16 – 53]   </span></span>
+<span><span class="co">#&gt; SCOS        74.5 (± 63.1) [22 – 216] </span></span>
+<span><span class="co">#&gt; SEUS        85.6 (± 37.7) [23 – 160] </span></span>
+<span><span class="co">#&gt; SNE         43 (± 15) [28 – 78]      </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; +++++++++++ Total number of regions visited +++++++++++</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;  No.regions  jv(fml)    </span></span>
 <span><span class="co">#&gt; -----------  -----------</span></span>
-<span><span class="co">#&gt;           1  50.0% (10) </span></span>
-<span><span class="co">#&gt;           2  20.0%  (4) </span></span>
-<span><span class="co">#&gt;           3  15.0%  (3) </span></span>
-<span><span class="co">#&gt;           5  10.0%  (2) </span></span>
-<span><span class="co">#&gt;           7  5.0%  (1)  </span></span>
+<span><span class="co">#&gt;           5  30.0%  (6) </span></span>
+<span><span class="co">#&gt;           6  5.0%  (1)  </span></span>
+<span><span class="co">#&gt;           7  65.0% (13) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
@@ -853,14 +545,14 @@ model (traveling, resting, nursing, and feeding), by region.</li>
 <span><span class="co">#&gt; ----------  ---------------  ---------------  ------------  ---------------</span></span>
 <span><span class="co">#&gt; BOF_lower   0 (± 0)          0 (± 0)          0 (± 0)       0 (± 0)        </span></span>
 <span><span class="co">#&gt; BOF_upper   0 (± 0)          0 (± 0)          0 (± 0)       0 (± 0)        </span></span>
-<span><span class="co">#&gt; CABOT       6.58 (± 3.24)    8.57 (± 4.04)    0 (± 0)       13.26 (± 1.36) </span></span>
+<span><span class="co">#&gt; CABOT       8.25 (± 3.67)    9.87 (± 3.36)    0 (± 0)       11.04 (± 2)    </span></span>
 <span><span class="co">#&gt; CCB         0 (± 0)          0 (± 0)          0 (± 0)       0 (± 0)        </span></span>
-<span><span class="co">#&gt; GOM         8.91 (± 4.31)    9.61 (± 3.55)    0 (± 0)       12.13 (± 2.78) </span></span>
-<span><span class="co">#&gt; GSL         6.66 (± 5.39)    9.69 (± 5.42)    0 (± 0)       15.28 (± NA)   </span></span>
-<span><span class="co">#&gt; MIDA        16.11 (± 3.41)   7.89 (± 3.41)    0 (± 0)       0 (± 0)        </span></span>
-<span><span class="co">#&gt; SCOS        13.94 (± 4.42)   4.71 (± 4.13)    0 (± 0)       9.27 (± 3.91)  </span></span>
-<span><span class="co">#&gt; SEUS        10.85 (± 1.69)   13.15 (± 1.69)   0 (± 0)       0 (± 0)        </span></span>
-<span><span class="co">#&gt; SNE         9.67 (± 3.57)    10.92 (± 3.24)   0 (± 0)       12.42 (± 2.23)</span></span></code></pre>
+<span><span class="co">#&gt; GOM         8.36 (± 3.66)    9.75 (± 3.55)    0 (± 0)       11.75 (± 2.07) </span></span>
+<span><span class="co">#&gt; GSL         8.19 (± 3.72)    9.82 (± 3.38)    0 (± 0)       11.07 (± 1.99) </span></span>
+<span><span class="co">#&gt; MIDA        16.15 (± 3.49)   7.85 (± 3.49)    0 (± 0)       0 (± 0)        </span></span>
+<span><span class="co">#&gt; SCOS        12.43 (± 4.83)   7.3 (± 4.09)     0 (± 0)       8.79 (± 3.12)  </span></span>
+<span><span class="co">#&gt; SEUS        10.78 (± 1.62)   13.22 (± 1.62)   0 (± 0)       0 (± 0)        </span></span>
+<span><span class="co">#&gt; SNE         8.93 (± 3.8)     10.32 (± 3.55)   0 (± 0)       12.35 (± 2.05)</span></span></code></pre>
 <p><img src="narwind_files/figure-html/model_summary-3.png" width="700"></p>
 </div>
 <div class="section level3">
@@ -873,13 +565,14 @@ panned are produced using the <a href="https://plotly.com/ggplot2/" class="exter
 The location (easting, northing) and ID of each animal are displayed on
 hover.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">m</span>, web <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span></code></pre></div>
+<p><img src="narwind_files/figure-html/model_plot-1.png" width="576"></p>
 <p>The <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> method takes the following arguments:</p>
 <table style="width:100%;" class="table">
 <colgroup>
+<col width="6%">
 <col width="8%">
-<col width="7%">
-<col width="83%">
+<col width="85%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
