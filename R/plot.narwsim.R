@@ -22,36 +22,34 @@
 #' }
 
 plot.narwsim <- function(obj,
-                         whale.id = NULL,
+                         whaleID = NULL,
                          animate = FALSE,
                          web = FALSE,
                          nmax = 100
 ){
   
   # obj = m
-  # whale.id = NULL
+  # whaleID = NULL
   # animate = FALSE
   # web = FALSE
   # nmax = 100
   
   if(!"narwsim" %in% class(obj)) stop("Input must be an object of class <narwsim>")
   
-  cohort.names <- obj$param$cohort.names
-  cohort.ab <- unname(obj$param$cohort.ab)
-  cohort.id <- obj$param$cohort.id
+  cohortID <- obj$param$cohortID
+  cohort.ab <- obj$param$cohorts[id %in% cohortID, abb]
+  cohort.names <- obj$param$cohorts[id %in% cohortID, name]
   n.ind <- obj$param$nsim
   if(n.ind > nmax) {warning("Plotting only the first ", nmax, " tracks"); n.ind <- nmax}
-  if(is.null(whale.id)) whale.id <- seq_len(n.ind)
-  
-  if(any(cohort.id == 5)) cohort.names[which(cohort.id == 5)] <- paste0(cohort.names[which(cohort.id == 5)], " + calves")
+  if(is.null(whaleID)) whaleID <- seq_len(n.ind)
 
   sim <- obj$sim
-  locs.dead <- obj$mrt$locs
-  locations <- purrr::set_names(x = cohort.ab) |>
-    purrr::map(.f = ~sim[[.x]][, list(date, whale, easting, northing, region, cohort_name)])
-
-
+  locs.dead <- obj$dead
   
+  locations <- purrr::set_names(x = cohort.ab) |>
+    purrr::map(.f = ~sim[[.x]][day > 0, list(date, whale, easting, northing, region, cohort_name)])
+  tracks <- data.table::rbindlist(locations)
+
   # ....................................
   # Load required objects
   # ....................................
@@ -65,63 +63,47 @@ plot.narwsim <- function(obj,
   gg.opts <- ggplot2::ggplot() + 
     ggplot2::geom_sf(data = support_grd, fill = "orange", linewidth = 0, na.rm = TRUE, alpha = 0.5) +
     ggplot2::xlab("") +
-    ggplot2::ylab("") +
-    ggplot2::theme(axis.text.y = ggplot2::element_text(angle = 90, vjust = 0.5, hjust = 0.5),
-                   axis.text = ggplot2::element_text(colour = "black"),
-                   panel.border = ggplot2::element_rect(colour = "black", fill = NA, linewidth = 0.5),
-                   axis.text.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
-                   axis.title = element_text(size = 12),
-                   axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-                   axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
-                   strip.background = element_rect(fill = "grey20"),
-                   strip.text = element_text(colour = 'white', size = 12))
+    ggplot2::ylab("")
   
   # ....................................
   # Generate plots
   # ....................................
   
-  plot.list <- purrr::set_names(cohort.ab) |> 
-    purrr::map2(.y = cohort.names, .f = ~{
+  COLORS <- c('starve' = 'firebrick', 'strike' = 'deepskyblue4')
+  SHAPES <- c('Calves' = 1, 'Juveniles' = 16, 'Adults' = 16)
+  
+  plot.list <- purrr::set_names(cohort.ab) |>
+  purrr::map2(.y = cohort.names, .f = ~ {
     
-    tracks <- lapply(seq_len(n.ind), function(x) data.frame(locations[[.x]][whale == x,])) |>
-      do.call(what = rbind) |> 
-      dplyr::filter(whale %in% whale.id)
-    
-    locs.dead <- purrr::map(.x = locs.dead, .f = ~ .x |> 
-                              dplyr::filter(whale %in% whale.id) |> 
-                              dplyr::mutate(cause_death = ifelse(strike == 1 & bc > 0.05, "strike", "starve")))
-    
-    # ....................................
+    # Extract movement tracks
+    tracks.cohort <- tracks[whale %in% whaleID & cohort_name == .y]
+    if(any(cohortID == 5)) tracks$cohort_name <- paste0(tracks$cohort_name, " + calves")
+
     # Plot base map (land)
-    # ....................................
-    
-    base_p <- gg.opts + ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", linewidth = 0.25)
-    
-    # ....................................
-    # Plot tracks
-    # ....................................
-    
-    track_p <- base_p +
-      
-      ggplot2::geom_path(
-        data = tracks,
-        mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = 0.2) +
-      
-      {if(nrow(locs.dead[[.x]]) > 0) 
-        ggplot2::geom_point(data = locs.dead[[.x]], aes(x = easting, y = northing, colour = factor(cause_death)))} +
-      
-      ggplot2::scale_color_manual(values = c("firebrick", "royalblue4")) +
-      ggplot2::theme(legend.position = "bottom",
-                     legend.text = element_text(size = 10),
-                     legend.key = element_rect(fill = "transparent")) +
+    base_p <- gg.opts + ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", linewidth = 0.25) +
+      theme_narw(vertical = TRUE)
+
+    # Produce plot
+    track_p <- 
+      base_p +
+      ggplot2::geom_path(data = tracks.cohort, 
+                         mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = 0.2) +
+      ggplot2::geom_point(data = locs.dead[cohort > 0 & whale %in% whaleID], aes(x = easting, y = northing, colour = factor(cause_death),
+                                                                                 shape = factor(class))) +
+      ggplot2::geom_point(data = locs.dead[cohort == 0 &  whale %in% whaleID], aes(x = easting, y = northing, colour = factor(cause_death),
+                                                                                   shape = factor(class))) +
+      ggplot2::scale_color_manual(values = COLORS) +
+      ggplot2::scale_shape_manual(values = SHAPES) +
+      ggplot2::theme(
+        legend.title = element_blank(),
+        legend.position = "bottom",
+        legend.text = element_text(size = 10),
+        legend.key = element_rect(fill = "transparent")) +
       labs(color = NULL) +
       ggplot2::coord_sf(expand = FALSE) +
-      # ggtitle(.y) +
       ggplot2::facet_wrap(~cohort_name)
 
-    
     track_p
-    
   })
   
   if(web){

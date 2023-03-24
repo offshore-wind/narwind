@@ -17,15 +17,6 @@ summary.narwsim <- function(obj){
   
   options(pillar.sigfig = 7)
   
-  gg.opts <- ggplot2::theme(axis.text = element_text(size = 10, color = "black"),
-                 axis.text.y = element_text(margin = margin(t = 0, r = 5, b = 0, l = 0)),
-                 axis.text.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
-                 axis.title = element_text(size = 12),
-                 axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
-                 axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
-                 strip.background = element_rect(fill = "grey20"),
-                 strip.text = element_text(colour = 'white', size = 12))
-  
   if(!"narwsim" %in% class(obj)) stop("Input must be of class <narwsim>")
   
   cat("-------------------------------------------------------------\n")
@@ -48,14 +39,13 @@ summary.narwsim <- function(obj){
   cat("SNE: Southern New England\n\n")
   
   n.ind <- obj$param$nsim
-  cohort.names <- obj$param$cohort.names
-  cohort.ab <- unname(obj$param$cohort.ab)
-  cohort.id <- obj$param$cohort.id
+  cohortID <- obj$param$cohortID
+  cohort.ab <- obj$param$cohorts[id %in% cohortID, abb]
+  cohort.names <- obj$param$cohorts[id %in% cohortID, name]
   init.month <- obj$init$month
   
   sim <- obj$sim
-  dead.dt <- obj$mrt$dt
-  locs.dead <- obj$mrt$locs
+  locs.dead <- obj$dead
   
   # xpos <- sapply(obj$init$xy[[1]][init.month, ], FUN = function(x) raster::xFromCell(raster::raster(density_narw$Feb), x))
   # ypos <- sapply(obj$init$xy[[1]][init.month, ], FUN = function(x) raster::yFromCell(raster::raster(density_narw$Feb), x))
@@ -76,38 +66,21 @@ summary.narwsim <- function(obj){
   cat("MORTALITY & HEALTH\n")
   cat("=============================================================")
 
-  n.dead <- suppressWarnings(dead.dt[, if(cohort == 5) list(dead = sum(dead), 
-                                   alive = n.ind - sum(dead),
-                                   dead_calf = sum(dead_calf),
-                                   alive_calf = n.ind - sum(dead_calf)) 
-          else list(dead = sum(dead), alive = n.ind - sum(dead)), by = cohort] |> 
-      format_dt(direction = "row"))
-    
-  n.dead.region <- purrr::set_names(cohort.ab) |> 
-    purrr::map(.f = ~ {
-      if(nrow(locs.dead[[.x]]) > 0){
-      locs.dead[[.x]] |> 
-        dplyr::mutate(starve = ifelse(bc < 0.05, 1, 0)) |>
-        dplyr::count(region, strike, starve) |> 
-        dplyr::mutate(strike = strike * n, starve = starve * n) |> 
-        dplyr::group_by(region) |>
-        dplyr::summarise(strike = sum(strike), starve = sum(starve)) |> 
-        dplyr::ungroup() |> 
-        format_dt()
-      } else {
-        NULL
-      }
-    }) |> tibble::enframe() |> 
-    dplyr::rename(cohort = name) |> 
-    tidyr::unnest(cols = c(value))
- 
+  n.dead <- locs.dead[, list(dead = .N, alive = n.ind - .N), name] |>  
+    format_dt(direction = "row") |> dplyr::rename(cohort = name)
+  
   print(knitr::kable(n.dead, format = "simple"))
   
+  n.dead.region <- locs.dead[, list(strike = sum(strike), starve = sum(bc<0.05)), list(name, region)] |> 
+    tidyr::pivot_longer(!c(name, region), names_to = "cause_death", values_to = "count") |> 
+    tidyr::pivot_wider(names_from = region, values_from = count) |> 
+    format_dt(direction = "row") |> dplyr::rename(cohort = name)
+
+  cat("\n+++++++++++ By region +++++++++++")
+  
   if(nrow(n.dead.region)> 0){
-    for(k in cohort.ab){
-      cat("---", k, " ---")
-      n.dead.region |> dplyr::filter(cohort == k) |> dplyr::select(-cohort) |> knitr::kable(format = "simple") |> print()
-      }}
+    purrr::walk(.x = split(n.dead.region, f = n.dead.region$cohort), .f = ~knitr::kable(.x, format = "simple") |> print())
+  }
   cat("\n")
   
   bodyc.plot <- purrr::map(.x = sim, .f = ~{
@@ -125,7 +98,7 @@ summary.narwsim <- function(obj){
     ggplot2::ggplot(data = , aes(x = day, y = bc, group = whale)) +
     ggplot2::geom_path(col = "grey70") +
     ggplot2::facet_grid(vars(animal), vars(cohort_name), scales = 'free') +
-    gg.opts +
+    theme_narw() +
     ylab("Body condition") +
     xlab("Day of the year") +
     ggplot2::scale_x_continuous(breaks = seq(5, 365, by = 25)) +
@@ -172,7 +145,6 @@ summary.narwsim <- function(obj){
     tidyr::pivot_wider(names_from = cohort, values_from = n) |> 
     format_dt()
     
-   
   print(knitr::kable(locs.by.region, format = "simple"))
   print(knitr::kable(locs.by.country, format = "simple"))
   cat("\n")
@@ -268,16 +240,25 @@ summary.narwsim <- function(obj){
   # Number of regions per individual
   
   reg.per.ind.df <- purrr::map(.x = cohort.ab, .f = ~{
-    move.out[[.x]] |> 
-      dplyr::group_by(whale) |> 
-      dplyr::summarise(nreg = dplyr::n_distinct(region)) |> 
-      janitor::tabyl(nreg) |> 
-      dplyr::mutate(cohort = .x)}) |> 
-    do.call(what = rbind) |> 
-    dplyr::select(-percent) |>
+    dt1 <- move.out[[.x]][, .(nreg = uniqueN(region)), whale]
+    dt1[,.(n = .N, cohort = .x), nreg]  
+  }) |> data.table::rbindlist() |> 
     dplyr::rename(No.regions = nreg) |> 
     tidyr::pivot_wider(names_from = cohort, values_from = n) |> 
     format_dt()
+  
+  # reg.per.ind.df <- purrr::map(.x = cohort.ab, .f = ~{
+  #   move.out[[.x]] |> 
+  #     dplyr::group_by(whale) |> 
+  #     dplyr::summarise(nreg = dplyr::n_distinct(region)) |> 
+  #     janitor::tabyl(nreg) |> 
+  #     dplyr::mutate(cohort = .x)
+  #   }) |> 
+  #   do.call(what = rbind) |> 
+  #   dplyr::select(-percent) |>
+  #   dplyr::rename(No.regions = nreg) |> 
+  #   tidyr::pivot_wider(names_from = cohort, values_from = n) |> 
+  #   format_dt()
   
   cat("+++++++++++ Number of animals visiting each region (N = ", n.ind, ") +++++++++++", sep = "")
   print(knitr::kable(indiv_reg.df, format = "simple"))
@@ -297,7 +278,7 @@ summary.narwsim <- function(obj){
  
   tot.hrs <- purrr::set_names(cohort.ab) |>
     purrr::map(.f = ~ mean(sim[[.x]][
-      alive == 1,
+      alive == 1 & day > 0,
       list(total = sum(t_travel, t_feed, t_rest, t_nurse)), list(whale, day)]$total)) |>
     tibble::enframe() |>
     tidyr::unnest(cols = c(value)) |>
@@ -360,7 +341,7 @@ summary.narwsim <- function(obj){
     ggplot2::geom_boxplot(fill = "darkgrey") +
     ggplot2::facet_wrap(. ~ factor(behav), scales = 'free', ncol = 2) +
     ylab("Time spent (hrs)") +
-    xlab("") + gg.opts +
+    xlab("") + theme_narw() +
     labs(title = cohort.names[which(cohort.ab==k)]) +
     scale_y_continuous(breaks = seq(0,24,4), limits = c(0,24))
   suppressWarnings(print(p))
