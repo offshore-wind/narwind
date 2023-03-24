@@ -515,8 +515,10 @@ transpose_array <- function(input, cohortID, dates) {
     
     tp <- lapply(X = .x, FUN = function(l) {
       tmp <- aperm(l, c(3, 1, 2))
+      if(dim(tmp)[3] > 1){
       dimnames(tmp)[[1]] <- format(dates)
       dimnames(tmp)[[3]] <- paste0("whale.", seq_len(dim(tmp)[3]))
+      }
       tmp
     })
     
@@ -530,6 +532,7 @@ transpose_array <- function(input, cohortID, dates) {
       outl[["E"]] <- list(adjuv = tp[["E"]], calves = tp[["E_calves"]])
       
       tp[grepl("fetus", names(tp))] <- NULL  
+      outl[["inits"]] <- list(adjuv = tp[["inits"]], calves = tp[["inits_calves"]])
       outl[["attrib"]] <- list(adjuv = tp[["attrib"]], calves = tp[["attrib_calves"]])
       outl[["kj"]] <- list(adjuv = do.call(abind::abind, list(tp[["in.kj"]], tp[["out.kj"]], along = 2)),
                            calves = do.call(abind::abind, list(tp[["in.kj_calves"]], tp[["out.kj_calves"]], along = 2)))
@@ -537,7 +540,7 @@ transpose_array <- function(input, cohortID, dates) {
     } else if(.y == 4){ # Pregnant females
       
       outl[["E"]] <- tp[["E"]]
-      
+      outl[["inits"]] <- tp[["inits"]]
       tp[grepl("calves", names(tp))] <- NULL  
       outl[["attrib"]] <- list(adjuv = tp[["attrib"]], fetus = tp[["attrib_fetus"]])
       outl[["kj"]] <- do.call(abind::abind, list(tp[grepl("kj", names(tp))], along = 2))
@@ -546,7 +549,7 @@ transpose_array <- function(input, cohortID, dates) {
     } else {
       
       outl[["E"]] <- tp[["E"]]
-      
+      outl[["inits"]] <- tp[["inits"]]
       tp[grepl("fetus", names(tp))] <- NULL  
       tp[grepl("calves", names(tp))] <- NULL  
       outl[["attrib"]] <- tp[["attrib"]]
@@ -559,6 +562,21 @@ transpose_array <- function(input, cohortID, dates) {
   
   return(out.array)
 }
+
+consolidate <- function(dtl, nsim, cnames, dates){
+  purrr::map2(.x = dtl,
+              .y = cnames, 
+              .f = ~{
+                dt <- data.table::data.table(day = rep(0:365, times = nsim), 
+                                               date = rep(dates, times = nsim),
+                                               whale = rep(1:nsim, each = 366))
+                a <- cbind(array2dt(.x), dt)
+                a$region <- sort(regions$region)[a$region]
+                a$cohort_name <- .y
+                data.table::setcolorder(a, c((ncol(a)-3):(ncol(a)-1), 1:(ncol(a)-4))) 
+              })
+}
+
 
 # transpose_array2 <- function(input, array.name, dates){
 #   purrr::map(.x = input, .f = ~{ # different cohorts
@@ -2076,6 +2094,37 @@ get_world <- function(sc = "medium"){
 # }
 
 # PLOTTING ------------------------------------------------------
+
+theme_narw <- function(vertical = FALSE){
+  
+  # font <- "Georgia"   # Assign font family up front
+  
+  theme_grey() %+replace%    # Replace elements we want to change
+    
+    ggplot2::theme(
+      
+      # Axis elements
+      axis.text = ggplot2::element_text(size = 10, color = "black"),
+      axis.text.y = ggplot2::element_text(margin = margin(t = 0, r = 5, b = 0, l = 0), 
+                                          angle = ifelse(vertical, 90, 0),
+                                          vjust = ifelse(vertical, 0.5, 0),
+                                          hjust = ifelse(vertical, 0.5, 0)),
+      axis.text.x = ggplot2::element_text(margin = margin(t = 5, r = 0, b = 0, l = 0)),
+      axis.title = ggplot2::element_text(size = 12),
+      axis.title.y = ggplot2::element_text(margin = margin(t = 0, r = 20, b = 0, l = 0), angle = 90),
+      axis.title.x = ggplot2::element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
+
+      # Panel elements
+      panel.border = ggplot2::element_rect(colour = "black", fill = NA, linewidth = ifelse(vertical, 0.5, 0)),
+
+      # Facet elements
+      strip.background = ggplot2::element_rect(fill = "grey20"),
+      strip.text = ggplot2::element_text(colour = 'white', size = 12),
+      strip.text.x = element_text(margin = margin(0.2,0,0.2,0, "cm")),
+      strip.text.y = element_text(margin = margin(0,0.2,0,0.2, "cm"), angle = -90)
+      
+    )
+}
 
 plot_raster <- function(r, prob = FALSE, zero = FALSE){
   
