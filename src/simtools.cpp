@@ -51,6 +51,8 @@ struct Animal {
   double mouth_angle;
   double mouth_width;
   Rcpp::NumericVector entangled;
+  int strike;
+  int respnoise;
   
   // Member initializer list - age initialized by default at birth
   Animal() : 
@@ -68,7 +70,8 @@ struct Animal {
     mouth_ratio(start_mouth(cohortID, age)), 
     mouth_angle(76.7), 
     mouth_width(length*mouth_ratio), 
-    entangled(Rcpp::NumericVector::create(0,0,0,0)) { }
+    entangled(Rcpp::NumericVector::create(0,0,0,0,0,0)),
+    strike(0), respnoise(0) { }
   
   // x: Easting
   // y: Northing
@@ -105,7 +108,8 @@ struct Animal {
     mouth_ratio(start_mouth(cohort, age)), 
     mouth_angle(76.7), 
     mouth_width(length*mouth_ratio),
-    entangled(Rcpp::NumericVector::create(0,0,0,0)){ }
+    entangled(Rcpp::NumericVector::create(0,0,0,0,0,0)),
+    strike(0), respnoise(0) { }
   
 };
 
@@ -209,7 +213,7 @@ template<typename AnimalType,
          int nparam_E_calves = 4,
          int nparam_animal = 16,
          int nparam_fetus = 15,
-         int nparam_stressors = 9,
+         int nparam_stressors = 12,
          int nparam_activity = 9,
          int nparam_feeding = 15,
          int nparam_nursing = 12,
@@ -301,8 +305,9 @@ Rcpp::List movesim(
   Rcpp::NumericVector attrib_stressors(n*t*nparam_stressors);
   attrib_stressors.attr("dim") = Rcpp::Dimension(nparam_stressors,n,t);
   attrib_stressors.attr("dimnames") = Rcpp::List::create(
-    Rcpp::CharacterVector::create("is_entgl", "entgl_head", "severity", "entgl_d",
-                                  "entgl_start", "entgl_end", "strike", "noise", "dB_thresh"),
+    Rcpp::CharacterVector::create("gear_risk", "is_entgl", "entgl_head", "severity", "entgl_d",
+                                  "entgl_start", "entgl_end", "strike_risk", "strike",
+                                  "noise_resp", "noise_lvl", "dB_thresh"),
                                   R_NilValue, R_NilValue
   );
   
@@ -349,7 +354,7 @@ Rcpp::List movesim(
     R_NilValue, R_NilValue
   );
   
-  // Loop over time points and environments: One environment per time point
+
   Rcpp::NumericVector::iterator data_out = out.begin();
   Rcpp::NumericVector::iterator attrib_out = attrib.begin();
   Rcpp::NumericVector::iterator attrib_E_out = attrib_E.begin();
@@ -388,11 +393,7 @@ Rcpp::List movesim(
   
   // Stressors +++
   
-  int vessel_strike = 0;
-  int resp_noise = 0;
   double gear_risk;
-  int start_entanglement = 0;
-  int end_entanglement = 0;
   double strike_risk;
   // double p_response;
   double dB;
@@ -634,14 +635,14 @@ Rcpp::List movesim(
     current_month = densitySeq[env - environments.begin()];
     
     for(auto animal = animals.begin(); animal != animals_end; ++animal) {
-      
+
       current_x = animal->x;
       current_y = animal->y;
       
       current_animal = animal - animals.begin();
       current_region = layers[current_month](current_x, current_y, 'R');
-      
-      // Save current coordinates (fills by column)
+
+      // Coordinates coordinates (fills by column)
       
       *(data_out++) = animal->x;
       *(data_out++) = animal->y;
@@ -651,36 +652,35 @@ Rcpp::List movesim(
       // VESSEL STRIKES
       // ------------------------------------------------------------
       
-      if(stressors){
+      if(current_day > 1){
         
-        if(animal->alive){
+        if(stressors){
           
-          // Vessel strikes +++
-          strike_risk = layers[current_month](current_x, current_y, 'V');
-          
-          // Incidence of a vessel strike -- (d.u.)
-          vessel_strike = R::rbinom(1, strike_risk);
-          
+          if(animal->alive){
+            
+            // Vessel strikes +++
+            strike_risk = layers[current_month](current_x, current_y, 'V');
+            
+            // Incidence of a vessel strike -- (d.u.)
+            animal->strike = R::rbinom(1, strike_risk);
+            
+          } // End if alive
+        } // End if stressors
+
+        // ------------------------------------------------------------
+        // MORTALITY
+        // ------------------------------------------------------------
+        
+        if(animal->strike){
+          animal->alive = 0;
+          calves[current_animal].alive = 0;
         }
         
-      } // End if stressors
-      
-      // ------------------------------------------------------------
-      // MORTALITY
-      // ------------------------------------------------------------
-      
-      // Juveniles and adults
-      if(vessel_strike | animal->bc < starvation){
-        animal->alive = 0;
-        calves[current_animal].alive = 0;
-      }
-      
-      // Calves
-      if(vessel_strike | calves[current_animal].bc < starvation){
-        calves[current_animal].alive = 0;
-      }
+      } // End if current_day > 1
       
       if(animal->alive){
+        
+        if(current_day > 1){
         
         // ------------------------------------------------------------
         // COORDINATES
@@ -744,7 +744,7 @@ Rcpp::List movesim(
         
         if(stressors){
           
-          resp_noise = 0; // Reset daily
+          animal->respnoise = 0; // Reset daily
           
           // Pile-driving noise +++
           dB = layers[current_month](current_x, current_y, 'N');
@@ -753,7 +753,7 @@ Rcpp::List movesim(
           response_dB = response_threshold(doseresp);
           
           // Behavioral response to pile-driving noise exposure -- (d.u.)
-          if(dB > response_dB) resp_noise = 1;
+          if(dB > response_dB) animal->respnoise = 1;
           
           // if(dB <= dose_lwr){
           //   p_response = 0;
@@ -762,31 +762,35 @@ Rcpp::List movesim(
           // } else {
           //   p_response = prob_response(dose, doseresp, animal->doseID, dB);
           // }
-          // resp_noise = R::rbinom(1, p_response);
+          // animal->respnoise = R::rbinom(1, p_response);
           
           // ------------------------------------------------------------
           // FISHING GEAR
           // ------------------------------------------------------------
           
           // An animal can only become entangled if not carrying gear already 
+         
+         
           if(animal->entangled(0) == 0){
+            
             gear_risk = layers[current_month](current_x, current_y, 'F');
             animal->entangled = entanglement_event(gear_risk);
+            
             if(animal->entangled(0) == 1){
-              start_entanglement = current_day;
-              end_entanglement = current_day + animal->entangled(3);
-            } else {
-              start_entanglement = 0;
-              end_entanglement = 0;
+              animal->entangled(4) = current_day;
+              animal->entangled(5) = current_day + animal->entangled(3);
             }
+            
+          } else {
+
+            // Terminate entanglement event
+            if(current_day == animal->entangled(5)){
+              animal->entangled = entanglement_event(0); // Reset entanglement state
+            }
+            
           }
-          
-          // Terminate entanglement event
-          if(current_day == end_entanglement){
-            animal->entangled = entanglement_event(0);
-            end_entanglement = 0;
-            start_entanglement = 0;
-          }
+
+
           
         } // End if stressors
         
@@ -802,7 +806,7 @@ Rcpp::List movesim(
         min_calanus = rtnorm(1784.979, 718.77, 0, INFINITY);
         
         // Determine whether the prey concentration is sufficient to support foraging -- (d.u.)
-        if(resp_noise){
+        if(animal->respnoise){
           is_feeding = 0;
         } else {
           is_feeding = feeding_threshold(min_calanus, D_cop);
@@ -863,7 +867,7 @@ Rcpp::List movesim(
         
         // int can_feed = 0;
         // if(D_cop > min_calanus) can_feed = 1;
-        // std::cout << current_region << " - " << resp_noise << " - " << response_dB << " - " << dB << " - " << daylight_hours << " - " << is_feeding << " - " << can_feed << " - " << min_calanus << " - " << D_cop << " - " << travel_time << " - " << 
+        // std::cout << current_region << " - " << animal->respnoise << " - " << response_dB << " - " << dB << " - " << daylight_hours << " - " << is_feeding << " - " << can_feed << " - " << min_calanus << " - " << D_cop << " - " << travel_time << " - " << 
         //   feeding_time << " - " << resting_time << " - " << nursing_time << " - " << t_remain << std::endl;
         
         if(travel_time > 0) travel_time += t_remain;
@@ -950,7 +954,7 @@ Rcpp::List movesim(
         E_calanus = Econtent_cop(cop_mass, cop_kJ, digestive_efficiency, metabolizing_efficiency);
         
         // ENERGY INTAKE (MJ)
-        E_in = (1 - resp_noise) * is_feeding * D_cop * mouth_gape * (1 - gape_reduction) *
+        E_in = (1 - animal->respnoise) * is_feeding * D_cop * mouth_gape * (1 - gape_reduction) *
           swim_speed_foraging * capture_efficiency * feeding_time * feeding_nursing_effort[0] *
           E_calanus;
         
@@ -1024,11 +1028,11 @@ Rcpp::List movesim(
           }
           
           // ENERGY INTAKE (MJ)
-          E_in_calves = (1 - resp_noise) * milk_assim * milk_provisioning * mammary_efficiency *
+          E_in_calves = (1 - animal->respnoise) * milk_assim * milk_provisioning * mammary_efficiency *
             (milk_production_rate/D_milk) * t_suckling * feeding_nursing_effort[1] * D_milk *
             (milk_lipids * ED_lipids + milk_protein * ED_protein);
           
-          // std::cout<<resp_noise << "|"<<milk_assim << "|"<< milk_provisioning<< "|"<<mammary_efficiency
+          // std::cout<<animal->respnoise << "|"<<milk_assim << "|"<< milk_provisioning<< "|"<<mammary_efficiency
           //   << "|"<< mammary_M<< "|"<< milk_production_rate<< "|"<< t_suckling<< "|"<< 
           // feeding_nursing_effort[1]<< "|"<< D_milk<< "|"<< milk_lipids * ED_lipids + milk_protein * ED_protein <<std::endl;
           // 
@@ -1144,7 +1148,7 @@ Rcpp::List movesim(
         // ------------------------------------------------------------
         
         // Adults and juveniles -- (MJ)
-        E_out = (resting_metab + LC_tot + E_gest + E_lac + E_growth);
+        E_out = (resting_metab + LC_tot/10 + E_gest + E_lac + E_growth);
         if(animal->entangled(0) == 1) E_out = E_out + entanglement_cost;
         
         // Adults and juveniles -- (MJ)
@@ -1183,16 +1187,6 @@ Rcpp::List movesim(
           animal->tot_mass = animal->fat_mass + animal->lean_mass;
           animal->bc = animal->fat_mass / animal->tot_mass;
           
-          // if(current_day < 5){
-          //   
-          //   // Blubber mass / body condition
-          //   std::cout << "Before" << std::endl;
-          //   std::cout << calves[current_animal].length << " " << calves[current_animal].tot_mass <<
-          //     " " <<calves[current_animal].lean_mass << " " <<calves[current_animal].fat_mass << " " <<
-          //       calves[current_animal].bc << " " <<std::endl;
-          // 
-          // }
-          
           // Same for calves
           if(cohortID == 5 && calves[current_animal].alive == 1){
             
@@ -1214,29 +1208,33 @@ Rcpp::List movesim(
             
           }
           
-          // if(current_day < 5){
-          //   
-          //   // Blubber mass / body condition
-          //   std::cout << "After" << std::endl;
-          //   std::cout << "delta " << delta_blubber_calves << std::endl;
-          //   std::cout << calves[current_animal].length << " " << calves[current_animal].tot_mass <<
-          //     " " <<calves[current_animal].lean_mass << " " <<calves[current_animal].fat_mass << " " <<
-          //       calves[current_animal].bc << " " <<std::endl;
-          // }
-          // 
-          
-        }
-        
-        
-        // ------------------------------------------------------------
-        // STORE VALUES in output matrices
-        // ------------------------------------------------------------
+        } // End energy allocation
         
         // Convert back to relevant units
         travel_time = travel_time / 3600;
         feeding_time = feeding_time / 3600;
         resting_time = resting_time / 3600;
         nursing_time = nursing_time / 3600;
+        
+        // ------------------------------------------------------------
+        // STARVATION
+        // ------------------------------------------------------------
+        
+        if(animal->bc < starvation) animal->alive = 0;
+        if(calves[current_animal].bc < starvation) calves[current_animal].alive = 0;
+        
+        } // End if current_day > 1
+        
+      // }
+        
+        // ------------------------------------------------------------
+        // STORE VALUES in output matrices
+        // ------------------------------------------------------------
+        
+      // // Restart if(alive) conditional otherwise some attributes may still be
+      // // recorded despite animals having died of starvation
+      //   
+      // if(animal->alive){
         
         // +++ Animal traits +++
         
@@ -1259,15 +1257,22 @@ Rcpp::List movesim(
         
         // +++ Stressors +++
         
+        if(stressors){
+          
+        *(attrib_stressors_out++) = gear_risk;             // Probability of becoming entangled
         *(attrib_stressors_out++) = animal->entangled(0);  // Is the animal entangled?
         *(attrib_stressors_out++) = animal->entangled(1);  // Does the entanglement involve the anterior part of the body?
         *(attrib_stressors_out++) = animal->entangled(2);  // Entanglement severity
         *(attrib_stressors_out++) = animal->entangled(3);  // Entanglement duration
-        *(attrib_stressors_out++) = start_entanglement;    // Day when entanglement event started
-        *(attrib_stressors_out++) = end_entanglement;      // Day when entanglement event ended
-        *(attrib_stressors_out++) = vessel_strike;         // Incidence of vessel strike
-        *(attrib_stressors_out++) = resp_noise;            // Incidence of behavioral response to noise exposure
+        *(attrib_stressors_out++) = animal->entangled(4);  // Day when entanglement event started
+        *(attrib_stressors_out++) = animal->entangled(5);  // Day when entanglement event ended
+        *(attrib_stressors_out++) = strike_risk;           // Probability of being struck by vessels
+        *(attrib_stressors_out++) = animal->strike;         // Incidence of vessel strike
+        *(attrib_stressors_out++) = animal->respnoise;            // Incidence of behavioral response to noise exposure
+        *(attrib_stressors_out++) = dB;                    // Noise levels
         *(attrib_stressors_out++) = response_dB;           // Behavioral response threshold
+        
+        }
         
         // +++ Energy budget +++
         
@@ -1389,17 +1394,16 @@ Rcpp::List movesim(
           *(attrib_E_calves_out++) = E_out_calves;                  // Energy expenditure (calves)
           *(attrib_E_calves_out++) = delta_blubber_calves;          // Change in blubber mass (calves)
           
-          
         }
         
       } else { 
         
         // If the animal is dead
-        // Set all outputs to 0 -- this is required otherwise attributes from the next animal
-        // are erroneously recorded
+        // Set all outputs other than location to 0
+        // This is required otherwise attributes from the next animal are erroneously recorded
         
-        *(attrib_out++) = 0.0L;              // Unique cohort identifier
-        *(attrib_out++) = 0.0L;              // Alive or dead
+        *(attrib_out++) = animal->cohortID;  // Unique cohort identifier
+        *(attrib_out++) = animal->alive;     // Alive or dead
         *(attrib_out++) = 0.0L;              // Age
         *(attrib_out++) = 0.0L;              // Body condition
         *(attrib_out++) = 0.0L;              // Total body length 
@@ -1417,15 +1421,18 @@ Rcpp::List movesim(
         
         // +++ Stressors +++
         
-        *(attrib_stressors_out++) = 0.0L;    // Is the animal entangled?
-        *(attrib_stressors_out++) = 0.0L;    // Does the entanglement involve the anterior part of the body?
-        *(attrib_stressors_out++) = 0.0L;    // Entanglement severity
-        *(attrib_stressors_out++) = 0.0L;    // Entanglement duration
-        *(attrib_stressors_out++) = 0.0L;    // Day when entanglement event started
-        *(attrib_stressors_out++) = 0.0L;    // Day when entanglement event ended
-        *(attrib_stressors_out++) = 0.0L;    // Incidence of vessel strike
-        *(attrib_stressors_out++) = 0.0L;    // Incidence of behavioral response to noise exposure
-        *(attrib_stressors_out++) = 0.0L;    // Behavioral response threshold
+        *(attrib_stressors_out++) = 0.0L;                     // Probability of becoming entangled
+        *(attrib_stressors_out++) = animal->entangled(0);     // Is the animal entangled?
+        *(attrib_stressors_out++) = animal->entangled(1);     // Does the entanglement involve the anterior part of the body?
+        *(attrib_stressors_out++) = animal->entangled(2);     // Entanglement severity
+        *(attrib_stressors_out++) = animal->entangled(3);     // Entanglement duration
+        *(attrib_stressors_out++) = animal->entangled(4);     // Day when entanglement event started
+        *(attrib_stressors_out++) = animal->entangled(5);     // Day when entanglement event ended
+        *(attrib_stressors_out++) = 0.0L;                     // Probability of being struck by vessels
+        *(attrib_stressors_out++) = animal->strike;           // Incidence of vessel strike
+        *(attrib_stressors_out++) = animal->respnoise;        // Incidence of behavioral response to noise exposure
+        *(attrib_stressors_out++) = 0.0L;                     // Noise levels
+        *(attrib_stressors_out++) = 0.0L;                     // Behavioral response threshold
         
         // +++ Energy budget +++
         
@@ -1507,7 +1514,7 @@ Rcpp::List movesim(
         
         if(cohortID == 5){
           
-          *(attrib_calves_out++) = 0.0L;    // Unique cohort identifier
+          *(attrib_calves_out++) = calves[current_animal].cohortID ; // Unique cohort identifier
           *(attrib_calves_out++) = 0.0L;    // Alive or dead
           *(attrib_calves_out++) = 0.0L;    // Age
           *(attrib_calves_out++) = 0.0L;    // Body condition
@@ -1549,6 +1556,9 @@ Rcpp::List movesim(
           
         } 
       } // End if alive
+      
+
+      
     } // End loop over animals
   } // End loop over time points (days)
   
