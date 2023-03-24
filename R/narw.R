@@ -17,7 +17,7 @@
 #' }
 
 narw <- function(nsim = 1e3,
-                 cohort = 1:6,
+                 cohortID = 1:6,
                  scenario = NULL,
                  init.month = 2,
                  step.size = 120,
@@ -27,8 +27,8 @@ narw <- function(nsim = 1e3,
                  n.prop = 50, # In line with sample sizes used in case studies from Michelot (2020)
                  progress = TRUE){
   
-  # nsim = 10
-  # cohort = 2
+  # nsim = 3
+  # cohortID = 5
   # scenario = NULL
   # init.month = 2
   # step.size = 120
@@ -40,7 +40,7 @@ narw <- function(nsim = 1e3,
 
   if(!init.month %in% 1:12) stop("<init.month> must be an integer between 1 and 12")
   if(!"init.model" %in% ls(envir = .GlobalEnv)) stop("The model must first be initialized using <load_model>")
-  if(any(!cohort %in% 1:6)) stop("Unrecognized cohort")
+  if(any(!cohortID %in% 1:6)) stop("Unrecognized cohort")
   
   cat("-------------------------------------------------------------\n")
   cat("-------------------------------------------------------------\n")
@@ -57,29 +57,49 @@ narw <- function(nsim = 1e3,
   # Define cohorts and their parameters
   # ............................................................
   
-  cohort.names <- c("Juveniles (male)", # 1
-                    "Juveniles (female)", # 2
-                    "Adults (male)", # 3
-                    "Adults (female, pregnant)", # 4
-                    "Adults (female, lactating)", # 5
-                    "Adults (female, resting)") # 6
-  
-  cohort.ab <- abbreviate(tolower(cohort.names), minlength = 6)
-  cohort.ab <- gsub(pattern = "j\\(", replacement = "jv\\(", x = cohort.ab)
-  cohort.ab <- unname(gsub(pattern = "a\\(", replacement = "ad\\(", x = cohort.ab))
+  cohorts <- data.table::data.table(id = 0:6,
+                                    name = c("Calves (male, female)",
+                                            "Juveniles (male)",
+                                            "Juveniles (female)",
+                                            "Adults (male)",
+                                            "Adults (female, pregnant)",
+                                            "Adults (female, lactating)",
+                                            "Adults (female, resting)"),
+                                   class = c("Calves", "Juveniles", "Juveniles", "Adults", "Adults", "Adults", "Adults"))
+  cohorts[, abb:= abbreviate(tolower(name), minlength = 6)]
+  cohorts[, abb:= gsub(pattern = "j\\(", replacement = "jv\\(", x = abb)]
+  cohorts[, abb:= gsub(pattern = "a\\(", replacement = "ad\\(", x = abb)]
+
+  # # For simulator
+  # cohort.names <- c("Juveniles (male)", # 1
+  #                   "Juveniles (female)", # 2
+  #                   "Adults (male)", # 3
+  #                   "Adults (female, pregnant)", # 4
+  #                   "Adults (female, lactating)", # 5
+  #                   "Adults (female, resting)") # 6
+  # 
+  # # For population model
+  # if(5 %in% cohortID) all.cohorts <- c("Calves (male + female)", cohort.names) else all.cohorts <- cohort.names
+  # age.cat <- c("Calves", "Juveniles", "Juveniles", "Adults", "Adults", "Adults", "Adults")
+  # 
+  # cohort.ab <- abbreviate(tolower(cohort.names), minlength = 6)
+  # cohort.ab <- gsub(pattern = "j\\(", replacement = "jv\\(", x = cohort.ab)
+  # cohort.ab <- unname(gsub(pattern = "a\\(", replacement = "ad\\(", x = cohort.ab))
   
   # age.minmax <- matrix(data = c(rep(c(1,9), 2), rep(c(9,69), 4)), nrow = 6, ncol = 2, byrow = TRUE)
   # row.names(age.minmax) <- cohort.ab
   
-  cohort.names <- cohort.names[cohort]
-  cohort.ab <- cohort.ab[cohort] 
+  # cohort.names <- cohort.names[cohortID]
+  # cohort.ab <- cohort.ab[cohortID] 
   
   # ............................................................
   # Dose-response
   # ............................................................
   
   spline_dr <- splinefun(x = doseresponse[,2], y = doseresponse[,1])
-  median_doseresponse <- spline_dr(runif(10000)) # Using inverse transform sampling
+  
+  # Use inverse transform sampling to generate 10,000 thresholds of response
+  median_doseresponse <- spline_dr(runif(10000))
   
   # Checking that we get the dose-response back
   # y <- sapply(X = doseresponse[,1], FUN = function(x) sum(dose_n <= x) / 10000000)
@@ -99,6 +119,7 @@ narw <- function(nsim = 1e3,
   
   maps <- lapply(density_narw, raster::as.matrix)
   maps.weighted <- lapply(density_weighted, raster::as.matrix)
+  if(!all(sapply(maps, class)[1,] %in% "matrix")) stop("Cannot find input of class <matrix>.")
   
   # ............................................................
   # Load prey, daylight, and stressor surfaces
@@ -110,12 +131,6 @@ narw <- function(nsim = 1e3,
   noisemaps <- lapply(dummy_noise, raster::as.matrix)
   daylightmaps <- lapply(daylight, raster::as.matrix)
   regionsmap <- raster::as.matrix(regions_m)
-  
-  # ............................................................
-  # Check inputs
-  # ............................................................
-  
-  if(!all(sapply(maps, class)[1,] %in% "matrix")) stop("Cannot find input of class <matrix>.")
   
   # ............................................................
   # Reference information for maps
@@ -131,30 +146,28 @@ narw <- function(nsim = 1e3,
   # ............................................................
   
   # Define time steps and sequence of density maps for each day
-  
-  start.date <- paste0('2022', stringr::str_pad(init.month, width = 2, pad = "0"), '01')
-  date_seq <- seq(from = lubridate::ymd(start.date), by = 'day', length.out = 365)
-  map_seq <- lubridate::month(date_seq)
+  start.date <- paste0(lubridate::year(Sys.Date()), stringr::str_pad(init.month, width = 2, pad = "0"), "01")
+  init.date <- paste0(lubridate::year(Sys.Date()), "-", stringr::str_pad(init.month, width = 2, pad = "0"), "-", "00")
+  date_seq <- c(init.date, as.character(seq(from = lubridate::ymd(start.date), by = 'day', length.out = 365)))
+  map_seq <- c(init.month, lubridate::month(date_seq[2:366]))
   
   # Simulate initial locations for latent animals
   # Return cell ID for each animal (columns) x month (rows)
-  init.inds <- purrr::map(.x = cohort, 
+  init.inds <- purrr::map(.x = cohortID, 
     .f = ~init_xy(maps = maps, maps.weighted = maps.weighted, coords = coords, cohort.id = .x, nsim = nsim)) |> 
-    purrr::set_names(nm = cohort.ab)
+    purrr::set_names(nm = cohorts[id %in% cohortID, abb])
   
   # ............................................................
   # Run simulation
   # ............................................................
-  
-  # TODO: estimate spatial step size
-  
-  if(length(cohort) > 1){
+
+  if(length(cohortID) > 1){
     
     Ncores <- parallel::detectCores(all.tests = FALSE, logical = TRUE)-1
     
     # Set number of cores to use
     if(is.null(n.cores)){
-      n.cores <- min(4, length(cohort.names), Ncores)
+      n.cores <- min(4, length(cohortID), Ncores)
     } else {
       if(n.cores > Ncores)
         stop("Insufficient cores.")
@@ -171,7 +184,7 @@ narw <- function(nsim = 1e3,
     on.exit(snow::stopCluster(cl))
     
     sink(tempfile())
-    pb <- utils::txtProgressBar(max = length(cohort.names), style = 3)
+    pb <- utils::txtProgressBar(max = length(cohortID), style = 3)
     sink()
     pbar <- function(n) utils::setTxtProgressBar(pb, n)
     opts <- list(progress = pbar)
@@ -191,7 +204,7 @@ narw <- function(nsim = 1e3,
     start.time <- Sys.time()
     
     # # Compute estimates
-    out <- foreach::foreach(i = seq_along(cohort), 
+    out <- foreach::foreach(i = seq_along(cohortID), 
                             .options.snow = opts,
                             .packages = c("Rcpp"), 
                             .noexport = c("NARW_simulator")) %dopar% {
@@ -201,11 +214,11 @@ narw <- function(nsim = 1e3,
 
                               Rcpp::sourceCpp("src/simtools.cpp")
 
-                              if(cohort[i] == 5) d <- maps.weighted else d <- maps
-                              if(cohort[i] >0) d <- maps.weighted else d <- maps
+                              if(cohortID[i] == 5) d <- maps.weighted else d <- maps
+                              if(cohortID[i] >0) d <- maps.weighted else d <- maps
                               
                               NARW_simulator(
-                                cohortID = cohort[i],
+                                cohortID = cohortID[i],
                                 densities = d,
                                 densitySeq = map_seq,
                                 latentDensitySeq = 1:12,
@@ -227,7 +240,7 @@ narw <- function(nsim = 1e3,
                                 growth = growth,
                                 progress = FALSE)} # End foreach loop
     
-    names(out) <- cohort.ab
+    names(out) <- cohorts[id %in% cohortID, abb]
     
     close(pb) # Close progress bar
     
@@ -235,18 +248,18 @@ narw <- function(nsim = 1e3,
     
     cat("Running simulations ...\n")
 
-    if(cohort == 5) d <- maps.weighted else d <- maps
-    if(cohort >0) d <- maps.weighted else d <- maps
+    if(cohortID == 5) d <- maps.weighted else d <- maps
+    if(cohortID > 0) d <- maps.weighted else d <- maps
     
     # Simulated animals begin at the position of their corresponding latent animal for the starting month
     # This can be checked by running the below code
-    # xpos <- apply(init_inds, 2, FUN = function(x) raster::xFromCell(raster::raster(density_narw$Feb), x))
-    # ypos <- apply(init_inds, 2, FUN = function(x) raster::yFromCell(raster::raster(density_narw$Feb), x))
+    # xpos <- apply(init.inds[[1]], 2, FUN = function(x) raster::xFromCell(raster::raster(density_narw$Feb), x))
+    # ypos <- apply(init.inds[[1]], 2, FUN = function(x) raster::yFromCell(raster::raster(density_narw$Feb), x))
     
     start.time <- Sys.time()
     
     out <- list(NARW_simulator(
-      cohortID = cohort,
+      cohortID = cohortID,
       densities = d,
       densitySeq = map_seq,
       latentDensitySeq = seq_along(density_narw),
@@ -273,20 +286,21 @@ narw <- function(nsim = 1e3,
   end.time <- Sys.time()
   run_time <- hms::round_hms(hms::as_hms(difftime(time1 = end.time, time2 = start.time, units = "auto")), 1)
   
-  # Transpose the output array to have data for each day as rows
+  # Transpose the output arrays to have data for each day as rows
+  out.t <- transpose_array(input = out, cohortID = cohortID, dates = date_seq) |> 
+    purrr::set_names(nm = cohorts[id %in% cohortID, abb])
   
-  out.t <- transpose_array(input = out, cohortID = cohort, dates = date_seq) |> 
-    purrr::set_names(nm = cohort.ab)
-
-  for (k in seq_along(cohort)) {
-    if (cohort[k] %in% 4:5) out.t[[k]][["attrib"]] <- abind::abind(out.t[[k]][["attrib"]][[1]], out.t[[k]][["attrib"]][[2]], along = 2)
-    if (cohort[k] == 5){
+  # Consolidate the data
+  for (k in seq_along(cohortID)) {
+    if (cohortID[k] %in% 4:5){
+      out.t[[k]][["attrib"]] <- abind::abind(out.t[[k]][["attrib"]][[1]], out.t[[k]][["attrib"]][[2]], along = 2)
+    }
+    if (cohortID[k] == 5){
       out.t[[k]][["E"]] <- abind::abind(out.t[[k]][["E"]][[1]], out.t[[k]][["E"]][[2]], along = 2)
       out.t[[k]][["kj"]] <- abind::abind(out.t[[k]][["kj"]][[1]], out.t[[k]][["kj"]][[2]], along = 2)
     } 
   }
   
-
  out.dt <- purrr::map(.x = out.t,
                       .f = ~abind::abind(
    .x[["locs"]],
@@ -296,88 +310,110 @@ narw <- function(nsim = 1e3,
    .x[["kj"]],
    .x[["activ"]],
    along = 2))
- 
- # for (k in seq_along(cohort.id)) {
- #   outsim[["sim"]][[cohort.ab[k]]] <-
- #     abind::abind(
- #       out.t[[k]][["locs"]],
- #       out.t[[k]][["attrib"]],
- #       out.t[[k]][["stress"]],
- #       out.t[[k]][["E"]],
- #       out.t[[k]][["kj"]],
- #       out.t[[k]][["activ"]],
- #       along = 2)
- # }
 
   outsim <- list()  
-  outsim[["sim"]] <- purrr::map2(.x = out.dt,
-                                 .y = cohort.names, 
-                                 .f = ~{
-      dt <- data.table::data.table(day = rep(1:365, times = nsim), 
-                                   date = rep(date_seq, times = nsim),
-                                   whale = rep(1:nsim, each = 365))
-        a <- cbind(array2dt(.x), dt)
-        a$region <- sort(regions$region)[a$region]
-        a$cohort_name <- .y
-        data.table::setcolorder(a, c((ncol(a)-3):(ncol(a)-1), 1:(ncol(a)-4))) 
-      
+  outsim[["sim"]] <- consolidate(out.dt, nsim, cohorts[id %in% cohortID, name], date_seq)
+  
+  # ............................................................
+  # Mortality and start/end body condition
+  # ............................................................
+
+  gam.dt <- purrr::map(.x = seq_along(cohortID), .f = ~ {
+    
+    dt_adjuv <- data.table::merge.data.table(x = dplyr::left_join(
+      x = outsim[["sim"]][[.x]][day == 0, list(cohort = unique(cohortID), cohort_name = unique(cohort_name), start_bc = bc), whale],
+      y = outsim[["sim"]][[.x]][day == 365, list(end_bc = bc, alive), whale], by = "whale"
+    ), y = outsim[["sim"]][[.x]][day > 0, .SD[ifelse(which.min(alive) == 1, 0, which.min(alive))],
+                                 .SDcols = c("date", "day", "cohort", "easting", "northing", "region", "bc", "strike"), whale
+    ], by = c("cohort", "whale"), all.x = TRUE)
+    
+    if (cohortID[.x] == 5) {
+      dt_calves <- data.table::merge.data.table(
+        x = dplyr::left_join(
+          x = outsim[["sim"]][[.x]][day == 0, list(cohort = unique(cohort_calf), cohort_name = unique(cohort_name), start_bc = bc_calf), whale],
+          y = outsim[["sim"]][[.x]][day == 365, list(end_bc = bc_calf, alive_calf), whale], by = "whale"
+        ) |> dplyr::rename_with(~ tolower(gsub("_calf", "", .x, fixed = TRUE))),
+        y = outsim[["sim"]][[.x]][day > 0, .SD[ifelse(which.min(alive_calf) == 1, 0, which.min(alive_calf))],
+                                  .SDcols = c("date", "day", "cohort_calf", "easting", "northing", "region", "bc_calf", "strike"), whale
+        ] |>
+          dplyr::rename_with(~ tolower(gsub("_calf", "", .x, fixed = TRUE))), by = c("cohort", "whale"), all.x = TRUE
+      )
+    } else {
+      dt_calves <- data.table::data.table()
     }
-  )
+    
+    dplyr::bind_rows(dt_adjuv, dt_calves) 
+  }) |> data.table::rbindlist()
   
-  # ............................................................
-  # Mortality
-  # ............................................................
+  # Add full cohort information
+  gam.dt <- data.table::merge.data.table(x = gam.dt, y = cohorts, by.x = "cohort", by.y = "id", all.x = TRUE)
+  data.table::setcolorder(gam.dt, c("cohort", "cohort_name", "name", "class", "abb", "whale", "alive", "start_bc", "end_bc", "bc", "strike",
+                                    "date", "day", "easting", "northing", "region")) 
   
-  # if(cohort == 5){
-  #   dead.dt <- purrr::map(.x = outsim[["sim"]], .f = ~{
-  #     
-  #   }) |> tibble::enframe() |>
-  #     tidyr::unnest(cols = c(value)) |>
-  #     dplyr::rename(cohort = name)
-  #   
-  #   
-  # } else {
-  dead.dt <- purrr::imap(
-    .x = cohort.ab,
-    .f = ~ {
-      if (.x == 5) {
-        outsim[["sim"]][[.y]][, list(row = which.min(alive), row_calf = which.min(alive_calf)), whale] |>
-          dplyr::mutate(dead = as.numeric(row > 1), dead_calf = as.numeric(row_calf > 1), cohort = .x)
-      } else {
-        outsim[["sim"]][[.y]][, list(row = which.min(alive)), whale] |>
-          dplyr::mutate(dead = as.numeric(row > 1), cohort = .x)
-      }}) |>
-    tibble::enframe() |>
-    tidyr::unnest(cols = c(value)) |>
-    dplyr::select(-name) |> 
-    data.table::as.data.table()
-  
-  locs.dead <- purrr::set_names(cohort.ab) |>
-    purrr::map(.f = ~  outsim[["sim"]][[.x]][, .SD[ifelse(which.min(alive)==1, 0, which.min(alive))], 
-                                .SDcols = c("date", "day", "easting", "northing", "region", "bc", "strike"), whale])
-  
-  outsim[["mrt"]] <- list(locs = locs.dead, dt = dead.dt)
-  
+  # locs.dead <- purrr::map(.x = seq_along(cohortID), .f = ~ {
+  # 
+  #   dt1 <- outsim[["sim"]][[.x]][day > 0, .SD[ifelse(which.min(alive) == 1, 0, which.min(alive))],
+  #             .SDcols = c("date", "day", "cohort", "easting", "northing", "region", "bc", "strike"), whale]
+  # 
+  #   if(cohortID[.x] == 5){
+  #   dt2 <- outsim[["sim"]][[.x]][day > 0, .SD[ifelse(which.min(alive_calf) == 1, 0, which.min(alive_calf))],
+  #        .SDcols = c("date", "day", "cohort_calf", "easting", "northing", "region", "bc_calf", "strike"), whale] |>
+  #       dplyr::rename_with(~ tolower(gsub("_calf", "", .x, fixed = TRUE)))
+  #   } else {
+  #     dt2 <- data.table::data.table()
+  #   }
+  #     dplyr::bind_rows(dt1, dt2)
+  #   }) |> data.table::rbindlist()
+  # 
+  # Only retain dead animals
+  locs.dead <- gam.dt[alive == 0]
+  locs.dead[, cause_death:=ifelse(strike == 1, "strike", "starve")]
+  data.table::setorder(locs.dead, whale, -cohort)
+  outsim[["dead"]] <- locs.dead
+
   # ............................................................
   # Fit GAM models
   # ............................................................
+
+  gam.dtl <- split(gam.dt, f = factor(gam.dt$name))
+
+  gamfit <- tryCatch(
+    {
+      purrr::map(.x = gam.dtl, .f = ~ {
+        list(
+          surv = mgcv::gam(alive ~ s(start_bc),
+            data = .x,
+            method = "REML",
+            family = binomial("logit")
+          ),
+          bc = mgcv::gam(end_bc ~ s(start_bc, k = 3),
+            data = .x[.x$alive == 1, ],
+            family = "Gamma",
+            method = "REML"
+          )
+        )
+      }) |>
+        tibble::enframe() |>
+        dplyr::rename(cohort = name, gam = value)
+    },
+    error = function(cond) {
+      return(NULL)
+    },
+    warning = function(cond) {
+      return(NA)
+    }
+  ) 
   
-  terminal.dt <- purrr::map(.x = outsim[["sim"]], .f = ~{
-    dplyr::left_join(x = .x[day == 1, list(cohort = unique(cohort), cohort_name = unique(cohort_name), start_bc = bc), whale],
-                     y = .x[day == 365, list(end_bc = bc, alive), whale], by = "whale")
-    }) |> do.call(what = rbind)
-  
-  # outsim[["mod"]] <- mgcv::gam(formula = alive ~ s(start_bc, by = cohort_name), family = "binomial", data = pop.dt)
+  if(is.null(gamfit)) warning("Terminal functions could not be fitted. Insufficient data available.")
   
   # ............................................................
   # Add parameters to list output
   # ............................................................
   
+  outsim$gam <- list(fit = gamfit, dt = gam.dt)
   outsim$param <- list(nsim = nsim, 
-                       cohort.id = cohort,
-                       cohort.names = cohort.names,
-                       cohort.ab = cohort.ab)
-  
+                       cohortID = cohortID,
+                       cohorts = cohorts)
   outsim$init <- list(month = init.month, xy = init.inds)
   outsim$run <- run_time
   
@@ -385,6 +421,7 @@ narw <- function(nsim = 1e3,
   class(outsim$init$xy) <- c("xyinits", class(outsim$init$xy))
   cat("\nDone!\n")
   cat(paste0("Time elapsed: ", run_time))
+  if(is.null(gamfit)) cat("\n")
   gc()
   return(outsim)
 }
