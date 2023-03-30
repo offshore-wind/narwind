@@ -40,7 +40,7 @@ struct Animal {
   int cohortID;
   int alive;
   long double age;
-  double bc;
+  long double bc;
   Eigen::MatrixXd lengthatage;
   long double length;
   Eigen::MatrixXd massatlength;
@@ -60,7 +60,7 @@ struct Animal {
     cohortID(0), 
     alive(1), 
     age(0),
-    bc(0.06), 
+    bc(start_bcondition(cohortID)),
     lengthatage(agL(age)), 
     length(age2length(age, lengthatage)),
     massatlength(mL()), 
@@ -98,7 +98,7 @@ struct Animal {
     cohortID(cohort),
     alive(1),
     age(start_age(cohort)),
-    bc(start_percfat(cohort)),
+    bc(start_bcondition(cohort)),
     lengthatage(agL(age)), 
     length(age2length(age, lengthatage)),
     massatlength(mL()),
@@ -649,6 +649,27 @@ Rcpp::List movesim(
       *(data_out++) = current_region;
       
       // ------------------------------------------------------------
+      // TARGET BC
+      // ------------------------------------------------------------
+      
+      if(animal->cohortID == 4){  // Pregnant females
+        
+        target_bc[0] = 0.6439795;
+        target_bc[1] = 0;
+        
+      } else if(animal->cohortID == 5){ // Lactating mothers and their calves
+        
+        target_bc[0] = 0.5271131;
+        target_bc[1] = 0.6439795;
+        
+      } else { // All other cohorts
+        
+        target_bc[0] = 0.5271131;
+        target_bc[1] = 0;
+        
+      }
+      
+      // ------------------------------------------------------------
       // VESSEL STRIKES
       // ------------------------------------------------------------
       
@@ -911,20 +932,14 @@ Rcpp::List movesim(
         
         if(animal->cohortID == 4){  // Pregnant females
           
-          target_bc[0] = 0.6439795;
           feeding_nursing_effort[0] = scale_effort(animal->bc, 1, 0, 27.36939, 0.4258282 , 0.5918155);
           
         } else if(animal->cohortID == 5){ // Lactating mothers and their calves
-          
-          target_bc[0] = 0.5271131;
-          target_bc[1] = 0.6439795;
-          
           // Feeding effort is zero for lactating mothers (Miller et al. 2012)
           feeding_nursing_effort[1] = scale_effort(calves[current_animal].bc, 1, 0, 27.36939, 0.4258282 , 0.5918155);
           
         } else { // All other cohorts
           
-          target_bc[0] = 0.5271131;
           feeding_nursing_effort[0] = scale_effort(animal->bc, 1, 0, 24.18117, 0.2219739, 1.284047);
           
         }
@@ -1045,9 +1060,9 @@ Rcpp::List movesim(
         // ------------------------------------------------------------
         
         // Metabolic scalar for RMR based on age class -- (d.u.)
-        if(cohortID == 0) phi_rmr = 1.4; // Calves
-        if(cohortID > 0 & cohortID <= 2) phi_rmr = 1.2; // Juveniles
-        
+        // if(cohortID == 0) phi_rmr = 1.4; // Calves
+        // if(cohortID > 0 & cohortID <= 2) phi_rmr = 1.2; // Juveniles
+         phi_rmr = 1;
         // Resting metabolic rate -- (MJ)
         // Calculated based on lean mass as blubber is more or less metabolically inert (George et al. 2021)
         resting_metab = RMR(2, animal->lean_mass, phi_rmr);
@@ -1060,9 +1075,9 @@ Rcpp::List movesim(
         Rcpp::NumericVector delta = {feeding_time, (24*3600) - feeding_time}; // Time spent in different activities
         Rcpp::NumericVector phi = {2, scalar_LC}; // Scalars on locomotory costs
         
-        LC_tot = locomotor_costs(animal->tot_mass, stroke_rate, delta, phi)/1000000;
+        LC_tot = 0 * locomotor_costs(animal->tot_mass, stroke_rate, delta, phi)/1000000;
         if(cohortID == 5){
-          LC_tot_calves = locomotor_costs(calves[current_animal].tot_mass, stroke_rate, delta, phi)/1000000;
+          LC_tot_calves = 0 * locomotor_costs(calves[current_animal].tot_mass, stroke_rate, delta, phi)/1000000;
         }
         
         // ------------------------------------------------------------
@@ -1119,7 +1134,7 @@ Rcpp::List movesim(
         // Cost of growth (adults and juveniles) -- (MJ)
         length_nextday = age2length(animal->age + 1.0L/365.0L, animal->lengthatage);
         lean_mass_nextday = length2mass(length_nextday, animal->massatlength, true);
-        mass_increment = (lean_mass_nextday - animal->lean_mass) / 365.0L;
+        mass_increment = (lean_mass_nextday - animal->lean_mass);
         
         E_growth = growth_cost(mass_increment, animal->bc, lean_water, blubber_lipids[current_animal],
                                ED_lipids, ED_protein, deposition_lipids, deposition_protein);
@@ -1134,7 +1149,7 @@ Rcpp::List movesim(
           
           length_nextday_calves = age2length(calves[current_animal].age + 1.0L/365.0L, calves[current_animal].lengthatage);
           lean_mass_nextday_calves = length2mass(length_nextday_calves, calves[current_animal].massatlength, true);
-          mass_increment_calves = (lean_mass_nextday_calves - calves[current_animal].lean_mass) / 365.0L;
+          mass_increment_calves = (lean_mass_nextday_calves - calves[current_animal].lean_mass);
           
           E_growth_calves = growth_cost(mass_increment_calves, calves[current_animal].bc, lean_water, blubber_lipids[current_animal],
                                         ED_lipids, ED_protein, deposition_lipids, deposition_protein);
@@ -1148,13 +1163,14 @@ Rcpp::List movesim(
         // ------------------------------------------------------------
         
         // Adults and juveniles -- (MJ)
-        E_out = (resting_metab + LC_tot/10 + E_gest + E_lac + E_growth);
+        E_out = (resting_metab + LC_tot + E_gest + E_lac + E_growth);
         if(animal->entangled(0) == 1) E_out = E_out + entanglement_cost;
         
         // Adults and juveniles -- (MJ)
         if(cohortID == 5){
-          E_out_calves = (resting_metab_calves + LC_tot_calves + E_growth_calves);
-          if(animal->entangled(0) == 1) E_out_calves = E_out_calves + entanglement_cost;
+          E_out_calves = 0;
+          // E_out_calves = (resting_metab_calves + LC_tot_calves + E_growth_calves);
+          // if(animal->entangled(0) == 1) E_out_calves = E_out_calves + entanglement_cost;
         }
         
         // ------------------------------------------------------------
@@ -1233,8 +1249,10 @@ Rcpp::List movesim(
         
       // // Restart if(alive) conditional otherwise some attributes may still be
       // // recorded despite animals having died of starvation
-      //   
-      // if(animal->alive){
+
+      } // End if animal->alive
+       
+      if(animal->alive){
         
         // +++ Animal traits +++
         
@@ -1347,52 +1365,6 @@ Rcpp::List movesim(
           *(attrib_fetus_out++) = bones_lipids[current_animal];          // Lipid content in fetal bones
           *(attrib_fetus_out++) = blubber_lipids[current_animal];        // Lipid content in fetal blubber
           *(attrib_fetus_out++) = blubber_protein[current_animal];       // Protein content in fetal blubber
-          
-        }
-        
-        // +++ Calf traits +++
-        
-        if(cohortID == 5){
-          
-          *(attrib_calves_out++) = calves[current_animal].cohortID;            // Unique cohort identifier
-          *(attrib_calves_out++) = calves[current_animal].alive;               // Alive or dead
-          *(attrib_calves_out++) = calves[current_animal].age;                 // Age
-          *(attrib_calves_out++) = calves[current_animal].bc;                  // Body condition
-          *(attrib_calves_out++) = calves[current_animal].length;              // Body length
-          *(attrib_calves_out++) = calves[current_animal].lengthatage(0,0);    // Coefficient of the Gompertz growth curve
-          *(attrib_calves_out++) = calves[current_animal].lengthatage(0,1);    // Coefficient of the Gompertz growth curve
-          *(attrib_calves_out++) = calves[current_animal].lengthatage(0,2);    // Coefficient of the Gompertz growth curve
-          *(attrib_calves_out++) = calves[current_animal].tot_mass;            // Total body mass (including blubber)
-          *(attrib_calves_out++) = calves[current_animal].lean_mass;           // Lean body mass (excluding blubber)
-          *(attrib_calves_out++) = calves[current_animal].fat_mass;            // Blubber mass
-          *(attrib_calves_out++) = calves[current_animal].massatlength(0,0);   // Intercept of the logarithmic mass-at-length relationship
-          *(attrib_calves_out++) = calves[current_animal].massatlength(0,1);   // Slope of the logarithmic mass-at-length relationship
-          *(attrib_calves_out++) = calves[current_animal].mouth_ratio;         // Ratio of mouth width to total body length
-          *(attrib_calves_out++) = calves[current_animal].mouth_angle;         // Upper angle of the mouth
-          *(attrib_calves_out++) = calves[current_animal].mouth_width;         // Width of the mouth
-          
-          *(attrib_nursing_out++) = milk_assim;                     // Milk assimilation
-          *(attrib_nursing_out++) = milk_provisioning;              // Milk provisioning
-          *(attrib_nursing_out++) = mammary_M;                      // Mass of mammary glands
-          *(attrib_nursing_out++) = milk_production_rate;           // Milk yield
-          *(attrib_nursing_out++) = D_milk;                         // Density of milk
-          *(attrib_nursing_out++) = t_suckling;                     // Time spent suckling during nursing activities
-          *(attrib_nursing_out++) = target_bc[1];                   // Target body condition (mother)
-          *(attrib_nursing_out++) = feeding_nursing_effort[1];      // Nursing effort
-          *(attrib_nursing_out++) = milk_lipids;                    // Proportion of lipids in milk
-          *(attrib_nursing_out++) = milk_protein;                   // Proportion of protein in milk
-          *(attrib_nursing_out++) = ED_lipids;                      // Energy density of lipids
-          *(attrib_nursing_out++) = ED_protein;                     // Energy density of protein
-          
-          *(attrib_costs_calves_out++) = resting_metab_calves;           // Resting metabolic rate
-          *(attrib_costs_calves_out++) = LC_tot_calves;                  // Locomotory costs
-          *(attrib_costs_calves_out++) = E_growth_calves;                // Energetic cost associated with growth
-          *(attrib_costs_calves_out++) = mass_increment_calves;          // Daily change in mass
-          
-          *(attrib_E_calves_out++) = E_in_calves - E_out_calves;    // Net energy (calves)
-          *(attrib_E_calves_out++) = E_in_calves;                   // Energy gain (calves)
-          *(attrib_E_calves_out++) = E_out_calves;                  // Energy expenditure (calves)
-          *(attrib_E_calves_out++) = delta_blubber_calves;          // Change in blubber mass (calves)
           
         }
         
@@ -1510,9 +1482,53 @@ Rcpp::List movesim(
           
         }
         
+      } // End if alive
+        
         // +++ Calf traits +++
         
-        if(cohortID == 5){
+        if(cohortID == 5 && calves[current_animal].alive == 1){
+          
+          *(attrib_calves_out++) = calves[current_animal].cohortID;            // Unique cohort identifier
+          *(attrib_calves_out++) = calves[current_animal].alive;               // Alive or dead
+          *(attrib_calves_out++) = calves[current_animal].age;                 // Age
+          *(attrib_calves_out++) = calves[current_animal].bc;                  // Body condition
+          *(attrib_calves_out++) = calves[current_animal].length;              // Body length
+          *(attrib_calves_out++) = calves[current_animal].lengthatage(0,0);    // Coefficient of the Gompertz growth curve
+          *(attrib_calves_out++) = calves[current_animal].lengthatage(0,1);    // Coefficient of the Gompertz growth curve
+          *(attrib_calves_out++) = calves[current_animal].lengthatage(0,2);    // Coefficient of the Gompertz growth curve
+          *(attrib_calves_out++) = calves[current_animal].tot_mass;            // Total body mass (including blubber)
+          *(attrib_calves_out++) = calves[current_animal].lean_mass;           // Lean body mass (excluding blubber)
+          *(attrib_calves_out++) = calves[current_animal].fat_mass;            // Blubber mass
+          *(attrib_calves_out++) = calves[current_animal].massatlength(0,0);   // Intercept of the logarithmic mass-at-length relationship
+          *(attrib_calves_out++) = calves[current_animal].massatlength(0,1);   // Slope of the logarithmic mass-at-length relationship
+          *(attrib_calves_out++) = calves[current_animal].mouth_ratio;         // Ratio of mouth width to total body length
+          *(attrib_calves_out++) = calves[current_animal].mouth_angle;         // Upper angle of the mouth
+          *(attrib_calves_out++) = calves[current_animal].mouth_width;         // Width of the mouth
+          
+          *(attrib_nursing_out++) = milk_assim;                     // Milk assimilation
+          *(attrib_nursing_out++) = milk_provisioning;              // Milk provisioning
+          *(attrib_nursing_out++) = mammary_M;                      // Mass of mammary glands
+          *(attrib_nursing_out++) = milk_production_rate;           // Milk yield
+          *(attrib_nursing_out++) = D_milk;                         // Density of milk
+          *(attrib_nursing_out++) = t_suckling;                     // Time spent suckling during nursing activities
+          *(attrib_nursing_out++) = target_bc[1];                   // Target body condition (mother)
+          *(attrib_nursing_out++) = feeding_nursing_effort[1];      // Nursing effort
+          *(attrib_nursing_out++) = milk_lipids;                    // Proportion of lipids in milk
+          *(attrib_nursing_out++) = milk_protein;                   // Proportion of protein in milk
+          *(attrib_nursing_out++) = ED_lipids;                      // Energy density of lipids
+          *(attrib_nursing_out++) = ED_protein;                     // Energy density of protein
+          
+          *(attrib_costs_calves_out++) = resting_metab_calves;           // Resting metabolic rate
+          *(attrib_costs_calves_out++) = LC_tot_calves;                  // Locomotory costs
+          *(attrib_costs_calves_out++) = E_growth_calves;                // Energetic cost associated with growth
+          *(attrib_costs_calves_out++) = mass_increment_calves;          // Daily change in mass
+          
+          *(attrib_E_calves_out++) = E_in_calves - E_out_calves;    // Net energy (calves)
+          *(attrib_E_calves_out++) = E_in_calves;                   // Energy gain (calves)
+          *(attrib_E_calves_out++) = E_out_calves;                  // Energy expenditure (calves)
+          *(attrib_E_calves_out++) = delta_blubber_calves;          // Change in blubber mass (calves)
+          
+        } else {
           
           *(attrib_calves_out++) = calves[current_animal].cohortID ; // Unique cohort identifier
           *(attrib_calves_out++) = 0.0L;    // Alive or dead
@@ -1555,9 +1571,6 @@ Rcpp::List movesim(
           *(attrib_E_calves_out++) = 0.0L;   // Change in blubber mass (calves)
           
         } 
-      } // End if alive
-      
-
       
     } // End loop over animals
   } // End loop over time points (days)
