@@ -27,7 +27,7 @@ narw <- function(nsim = 1e3,
                  n.prop = 50, # In line with sample sizes used in case studies from Michelot (2020)
                  progress = TRUE){
   
-  # nsim = 3
+  # nsim = 10
   # cohortID = 5
   # scenario = NULL
   # init.month = 2
@@ -364,7 +364,7 @@ narw <- function(nsim = 1e3,
   #   }
   #     dplyr::bind_rows(dt1, dt2)
   #   }) |> data.table::rbindlist()
-  # 
+
   # Only retain dead animals
   locs.dead <- gam.dt[alive == 0]
   locs.dead[, cause_death:=ifelse(strike == 1, "strike", "starve")]
@@ -374,43 +374,71 @@ narw <- function(nsim = 1e3,
   # ............................................................
   # Fit GAM models
   # ............................................................
-
-  gam.dtl <- split(gam.dt, f = factor(gam.dt$name))
-
-  gamfit <- tryCatch(
-    {
-      purrr::map(.x = gam.dtl, .f = ~ {
-        list(
-          surv = mgcv::gam(alive ~ s(start_bc),
-            data = .x,
-            method = "REML",
-            family = binomial("logit")
-          ),
-          bc = mgcv::gam(end_bc ~ s(start_bc, k = 3),
-            data = .x[.x$alive == 1, ],
-            family = "Gamma",
-            method = "REML"
-          )
-        )
-      }) |>
-        tibble::enframe() |>
-        dplyr::rename(cohort = name, gam = value)
-    },
-    error = function(cond) {
-      return(NULL)
-    },
-    warning = function(cond) {
-      return(NA)
-    }
-  ) 
   
-  if(is.null(gamfit)) warning("Terminal functions could not be fitted. Insufficient data available.")
+  # https://stats.stackexchange.com/questions/403772/different-ways-of-modelling-interactions-between-continuous-and-categorical-pred
+  
+  # print(gam.dt)
+  
+  surv.fit <- suppressWarnings(
+    tryCatch(
+      {mgcv::gam(alive ~ factor(cohort) + s(start_bc, by = factor(cohort)),
+          data = gam.dt,
+          method = "REML",
+          family = binomial("logit"))},
+      error = function(cond) {
+        return(NA)
+      }))
+  
+  bc.fit <- suppressWarnings(
+    tryCatch(
+      {mgcv::gam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort)),
+                 data = gam.dt[gam.dt$alive == 1, ],
+                 method = "REML",
+                 family = "Gamma")},
+      error = function(cond) {
+        return(NA)
+      }))
+  
+  # Separate GAMS for each cohort
+  
+  # gam.dtl <- split(gam.dt, f = factor(gam.dt$cohort))
+  # 
+  # gamfit <- suppressWarnings(purrr::map(.x = unique(cohorts$id), .f = ~ {
+  #   gam.dat <- gam.dtl[[as.character(.x)]]
+  #   gam.out <- list(surv = NA, bc = NA)
+  #   surv.fit <- tryCatch({
+  #       surv = mgcv::gam(alive ~ s(start_bc),
+  #                        data = gam.dat,
+  #                        method = "REML",
+  #                        family = binomial("logit"))},
+  #       error = function(cond) {return(NA)})
+  #   bc.fit <- tryCatch({  bc = mgcv::gam(end_bc ~ s(start_bc, k = 3),
+  #                      data = gam.dat[gam.dat$alive == 1, ],
+  #                      family = "Gamma",
+  #                      method = "REML")},
+  #              error = function(cond) {return(NA)})
+  #   gam.out[["surv"]] <- surv.fit
+  #   gam.out[["bc"]] <- bc.fit
+  #   gam.out
+  #   }) |> purrr::set_names(unique(cohorts$id)) |> 
+  #     tibble::enframe() |> 
+  #     dplyr::rename(cohort = name, gam = value)
+  # )
+  # gamfit$surv <- purrr::map(.x = gamfit$gam, .f = ~.x[["surv"]])
+  # gamfit$bc <- purrr::map(.x = gamfit$gam, .f = ~.x[["bc"]])
+  # gamfit$gam <- NULL
+  # 
+  # all.fitted <- sum(purrr::map_lgl(.x = gamfit$surv, .f = ~sum(class(.x)=="logical"))) + 
+  #   sum(purrr::map_lgl(.x = gamfit$bc, .f = ~sum(class(.x)=="logical"))) == 0
+  # 
+  # if(!all.fitted) simwarn <- "Warning: Some terminal functions could not be fitted. Insufficient data available." else simwarn <- NULL
   
   # ............................................................
   # Add parameters to list output
   # ............................................................
   
-  outsim$gam <- list(fit = gamfit, dt = gam.dt)
+  # outsim$gam <- list(fit = gamfit, dt = gam.dt)
+  outsim$gam <- list(fit = list(surv = surv.fit, bc = bc.fit), dat = gam.dt)
   outsim$param <- list(nsim = nsim, 
                        cohortID = cohortID,
                        cohorts = cohorts)
@@ -421,7 +449,6 @@ narw <- function(nsim = 1e3,
   class(outsim$init$xy) <- c("xyinits", class(outsim$init$xy))
   cat("\nDone!\n")
   cat(paste0("Time elapsed: ", run_time))
-  if(is.null(gamfit)) cat("\n")
   gc()
   return(outsim)
 }
