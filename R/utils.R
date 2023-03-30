@@ -2205,6 +2205,22 @@ gape_size_R <- function(L, omega, alpha){
 
 # UTILITIES ------------------------------------------------------
 
+inspect <- function(obj, cohort = "ad(f,l)", whaleID = 1, calf = FALSE){
+  pdf(file = "allplots.pdf")
+  par(mfrow = c(3,3))
+  if(calf){
+    nn <- names(m$sim[[1]])[7:112][grepl(pattern = "calf", names(m$sim[[1]])[7:112])]
+  } else {
+    nn <- names(m$sim[[1]])[7:112]
+  }
+  for(i in nn){
+    dat <- obj[["sim"]][[cohort]][whale == whaleID, c("day", i), with = FALSE]
+    plot(dat, xlab = "Day", ylab = "", main = i, type = "l")
+  }
+  par(mfrow = c(1,1))
+  dev.off()
+}
+
 format_dt <- function(dt, direction = "col"){
   dt |>  janitor::adorn_percentages(denominator = direction) |>
     janitor::adorn_pct_formatting() |> 
