@@ -4,12 +4,12 @@
 #include <RcppEigen.h>
 #include <random>
 #include <cmath>
-
 #include <cstdio>
 #include <vector>
 #include "spline.h"
 
 // [[Rcpp::plugins(cpp11)]]
+
 
 // [[Rcpp::export]]
 Rcpp::NumericVector random_multivariate_normal(const Eigen::MatrixXd mu, const Eigen::MatrixXd Sigma){
@@ -125,7 +125,7 @@ int multinomial(Rcpp::NumericVector probs) {
                                         double p_anterior = 0.732, // weighted mean of entries in spreadsheet of model parameters,
                                         Rcpp::NumericVector p_severity = Rcpp::NumericVector::create(0.761, 0.155, 0.084)){       
    
-   Rcpp::NumericVector out (4); // Store results
+   Rcpp::NumericVector out (6); // Store results
    
    // Is the animal entangled?
    // Annual entanglement rate = 0.259 -- Knowlton et al. (2012)
@@ -185,7 +185,7 @@ int multinomial(Rcpp::NumericVector probs) {
  }
 
 //' Initialize body condition
-//' @name start_percfat
+//' @name start_bcondition
  //' @description Performs a random draw from a beta distribution to initialize 
  //' the body condition of simulated animals, taken as the ration of fat mass to total mass.
  //' @param age Age in years
@@ -193,15 +193,79 @@ int multinomial(Rcpp::NumericVector probs) {
  //' @param shape2 Second shape parameter of the beta distribution
  // [[Rcpp::export]]
  
- long double start_percfat(double cohort, int shape1 = 6, int shape2 = 20){
+ long double start_bcondition(double cohort, int month = 10){
+   
    long double bc;
+   
+   // Calves
    if(cohort == 0){
-     bc = 0.060L;
+     bc = rtnorm(0.06, 0.01, 0.06, 1);
+     
+     // Pregnant and lactating females
+   } else if(cohort == 4 | cohort == 5){
+     
+     if(month >= 7 & month <= 10){ // During the foraging season
+       bc = rtnorm(0.4, 0.05, 0.05, 1); 
+     } else {
+       bc = rtnorm(0.3, 0.05, 0.05, 1); // Other time of year
+     }
+     
+     // All other individuals
    } else {
-     bc = R::rbeta(shape1, shape2);
+     
+     if(month >= 7 & month <= 10){ // During the foraging season
+       bc = rtnorm(0.35, 0.085, 0.05, 1); 
+     } else {
+       bc = rtnorm(0.15, 0.085, 0.05, 1); // Other time of year
+     }
+     
    }
    return bc;
  }
+
+//' Initialize body condition
+ //' @name start_bodycondition
+ //' @description Performs a random draw from a beta distribution to initialize
+ //' the body condition of simulated animals, taken as the ration of fat mass to total mass.
+ //' @param age Age in years
+ //' @param shape1 First shape parameter of the beta distribution
+ //' @param shape2 Second shape parameter of the beta distribution
+ // [[Rcpp::export]]
+
+Rcpp::NumericVector start_bodycondition(Rcpp::NumericVector cohort, int month = 10){
+
+  int n = cohort.size();
+  Rcpp::NumericVector bc(n);
+
+  for(int i = 0; i < n; i++) {
+
+    // Calves
+    if(cohort[i] == 0){
+      bc[i] = rtnorm(0.06, 0.01, 0.06, 1);
+
+      // Pregnant and lactating females
+    } else if(cohort[i] == 4 | cohort[i] == 5){
+
+      if(month >= 7 & month <= 10){ // During the foraging season
+        bc[i] = rtnorm(0.4, 0.05, 0.05, INFINITY);
+      } else {
+        bc[i] = rtnorm(0.3, 0.05, 0.05, INFINITY); // Other time of year
+      }
+
+      // All other individuals
+    } else {
+
+      if(month >= 7 & month <= 10){ // During the foraging season
+        bc[i] = rtnorm(0.35, 0.085, 0.05, INFINITY);
+      } else {
+        bc[i] = rtnorm(0.15, 0.085, 0.05, INFINITY); // Other time of year
+      }
+    }
+  }
+
+  return bc;
+}
+
 
 //' Age to length conversion
 //' @name age2length
