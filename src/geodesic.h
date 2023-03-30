@@ -2,6 +2,8 @@
 #define GEODESIC_BFS
 #include <queue>
 #include <iostream>
+#include <string>
+#include "parallel_hashmap/phmap.h"
 
 // QItem for current location and distance 
 // from source location 
@@ -213,6 +215,21 @@ int geoDist(Eigen::MatrixXd mat,
   
   return -1;
   
+}
+
+// [[Rcpp::export]]
+int geo_hash(int cell){
+
+  phmap::flat_hash_map<int, int> geo = 
+    {
+    // std::int64_t
+    {3, 1},
+    {4, 1},
+    {6, 1}
+    
+    };
+  
+  return geo[cell];
 }
 
 #endif
