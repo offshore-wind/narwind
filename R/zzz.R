@@ -12,7 +12,7 @@
   )
   options(tibble.width = Inf)
   options(pillar.sigfig = 5)
-  Rcpp::compileAttributes()
+  # Rcpp::compileAttributes()
   # system.file(package = "data.table")
   # Rcpp::sourceCpp("src/simtools.cpp")
   # suppressWarnings(source("R/narw.R"))
