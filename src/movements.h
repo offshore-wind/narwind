@@ -307,25 +307,16 @@ public:
         // Only consider proposals with non-zero mass
         if(latent_envs[environment.id](xn, yn, 'D') > 0) {
           
-          bool calc_geo = false;
-          
-          // if(animal.cohortID == 5 && (environment.id <= 3 || environment.id >= 11) && yn <= -12){
-          //   
-          //   // std::cout << "in SEUS" << std::endl;
-          //   xnew = xn;
-          //   ynew = yn;
-          //   
-          // } else {
+          // bool calc_geo = false;
             
-            if((x0 >= 685 & x0 <= 1420 & y0 >= 1070 & y0 <= 1865) ||
-               (x0 >= 520 & x0 <= 730 & y0 >= 825 & y0 <= 960)) calc_geo = true;
+            // if((x0 >= 685 & x0 <= 1420 & y0 >= 1070 & y0 <= 1865) ||
+            //    (x0 >= 520 & x0 <= 730 & y0 >= 825 & y0 <= 960)) calc_geo = true;
             
-            if(calc_geo){
-              dist_to_latent = geoD(support, xn, yn, active_latent.x, active_latent.y, limits, resolution);
-            } else {
-              dist_to_latent = std::pow(xn - active_latent.x, 2) +
-                std::pow(yn - active_latent.y, 2);
-            }
+            // if(calc_geo){
+            //   dist_to_latent = geoD(support, xn, yn, active_latent.x, active_latent.y, limits, resolution);
+            // } else {
+              dist_to_latent = std::pow(xn - active_latent.x, 2) + std::pow(yn - active_latent.y, 2);
+            // }
             
             // Keep track of the point that gets closest to latent
             if(dist_to_latent < dmin) {
@@ -333,7 +324,6 @@ public:
               ynew = yn;
               dmin = dist_to_latent;
             }
-          // }
           
         }
       }

@@ -715,47 +715,47 @@ Rcpp::List movesim(
         // *(data_out++) = animal->x;
         // *(data_out++) = animal->y;
         
-        bool calc_geo = false;
-        int gd;
-        int *gdptr;
-        gdptr = &gd;
+        // bool calc_geo = false;
+        // int gd;
+        // int *gdptr;
+        // gdptr = &gd;
         
-        
-        // Only activate geodesic calculations in some areas
-        if((current_x >= 685 & current_x <= 1420 & current_y >= 1070 & current_y <= 1865) ||
-           (current_x >= 520 & current_x <= 730 & current_y >= 825 & current_y <= 960)) calc_geo = true;
-        
-        if(!calc_geo){
-          
-          // Update the animal's state
-          m.update(*animal, *env, TRUE, current_region, support, limits, resolution);
-          
-        } else {
-          
-          while(calc_geo == true){
-            
-            // Update the animal's state
-            m.update(*animal, *env, TRUE, current_region, support, limits, resolution);
-            
-            double next_x = animal->x;
-            double next_y = animal->y;
-            
-            // Calculate geodesic distance
-            *gdptr = geoD(support, current_x, current_y, next_x, next_y, limits, resolution);
-            
-            if(*gdptr >= 0 & *gdptr < (2*stepsize)){
-              
-              calc_geo = false;
-              
-            } else {
-              
-              animal->x = current_x;
-              animal->y = current_y;
-            }
-            
-          } // End while calc_geo
-          
-        } // End if(calc_geo)
+        m.update(*animal, *env, TRUE, current_region, support, limits, resolution);
+        // // Only activate geodesic calculations in some areas
+        // if((current_x >= 685 & current_x <= 1420 & current_y >= 1070 & current_y <= 1865) ||
+        //    (current_x >= 520 & current_x <= 730 & current_y >= 825 & current_y <= 960)) calc_geo = true;
+        // 
+        // if(!calc_geo){
+        //   
+        //   // Update the animal's state
+        //   m.update(*animal, *env, TRUE, current_region, support, limits, resolution);
+        //   
+        // } else {
+        //   
+        //   while(calc_geo == true){
+        //     
+        //     // Update the animal's state
+        //     m.update(*animal, *env, TRUE, current_region, support, limits, resolution);
+        //     
+        //     double next_x = animal->x;
+        //     double next_y = animal->y;
+        //     
+        //     // Calculate geodesic distance
+        //     *gdptr = geoD(support, current_x, current_y, next_x, next_y, limits, resolution);
+        //     
+        //     if(*gdptr >= 0 & *gdptr < (2*stepsize)){
+        //       
+        //       calc_geo = false;
+        //       
+        //     } else {
+        //       
+        //       animal->x = current_x;
+        //       animal->y = current_y;
+        //     }
+        //     
+        //   } // End while calc_geo
+        //   
+        // } // End if(calc_geo)
         
         travel_dist = std::sqrt(std::pow(current_x - animal->x, 2) +  std::pow(current_y - animal->y, 2));
         
