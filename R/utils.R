@@ -2423,15 +2423,21 @@ rescale_raster <- function(x, x.min = NULL, x.max = NULL, new.min = 0, new.max =
   new.min + (x - x.min) * ((new.max - new.min) / (x.max - x.min))
 }
 
-
-save_objects <- function(obj = NULL, redo = FALSE){
-  if(is.null(obj)) obj <- c("regions", "regions_m",  "world", "support_poly", "density_narw", "density_support", "density_weighted", "turbines", "dummy_prey", "dummy_noise", "dummy_vessel", "dummy_fishing", "daylight", "params")
-  # if(redo & length(obj) == 1) targets::tar_delete(obj); targets::tar_make(obj)
-  suppressWarnings(targets::tar_load(obj))
-  for(i in obj) {
-    file.name <- paste0("data/", i, ".rda")
-    if(file.exists(file.name)) file.remove(file.name)
-    do.call(save, c(lapply(i, as.name), file = paste0("data/", i, ".rda")))
+save_object <- function(obj, tg = TRUE, internal = FALSE) {
+  if (internal) {
+    tmp_env <- new.env(hash = FALSE)
+    load("R/sysdata.rda", envir = tmp_env)
+    if(tg) dat <- suppressWarnings(targets::tar_read(obj)) else dat <- get(obj, envir = .GlobalEnv)
+    tmp_env[[obj]] <- dat
+    save(list = names(tmp_env), file = "R/sysdata.rda", envir = tmp_env)
+    # usethis::use_data(daylight, density_support, doseresponse, entgl_d, params, regions, regions_m, support_poly, wL, world, internal = TRUE, overwrite = TRUE)
+  } else {
+    suppressWarnings(targets::tar_load(obj))
+    for (i in obj) {
+      file.name <- paste0("data/", i, ".rda")
+      if (file.exists(file.name)) file.remove(file.name)
+      do.call(save, c(lapply(i, as.name), file = paste0("data/", i, ".rda")))
+    }
   }
 }
 
