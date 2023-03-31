@@ -39,7 +39,7 @@ narw <- function(nsim = 1e3,
   # progress = TRUE
 
   if(!init.month %in% 1:12) stop("<init.month> must be an integer between 1 and 12")
-  if(!"init.model" %in% ls(envir = .GlobalEnv)) stop("The model must first be initialized using <load_model>")
+  # if(!"init.model" %in% ls(envir = .GlobalEnv)) stop("The model must first be initialized using <load_model>")
   if(any(!cohortID %in% 1:6)) stop("Unrecognized cohort")
   
   cat("-------------------------------------------------------------\n")

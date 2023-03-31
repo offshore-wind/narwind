@@ -12,7 +12,9 @@
   )
   options(tibble.width = Inf)
   options(pillar.sigfig = 5)
-  Rcpp::sourceCpp("src/simtools.cpp")
-  suppressWarnings(source("R/narw.R"))
-  assign("init.model", value = TRUE, envir = .GlobalEnv)
+  Rcpp::compileAttributes()
+  # system.file(package = "data.table")
+  # Rcpp::sourceCpp("src/simtools.cpp")
+  # suppressWarnings(source("R/narw.R"))
+  # assign("init.model", value = TRUE, envir = .GlobalEnv)
 }
