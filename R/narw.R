@@ -212,7 +212,7 @@ narw <- function(nsim = 1e3,
                               # Set environments
                               .GlobalEnv$coords <- coords
 
-                              Rcpp::sourceCpp("src/simtools.cpp")
+                              # Rcpp::sourceCpp("src/simtools.cpp")
 
                               if(cohortID[i] == 5) d <- maps.weighted else d <- maps
                               if(cohortID[i] >0) d <- maps.weighted else d <- maps
