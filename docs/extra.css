@@ -16,7 +16,7 @@ code {
 }
 
 .ch, .st {
-    color: #28a52c;
+    color: #dc8f14;
 }
 
 h1 {
@@ -123,15 +123,6 @@ nav[data-toggle='toc'] .nav > .active > a, nav[data-toggle='toc'] .nav > .active
     background-color: #f0f7fd;
 }
 
-nav[data-toggle='toc'] .nav > .active > a, nav[data-toggle='toc'] .nav > .active:hover > a, nav[data-toggle='toc'] .nav > .active:focus > a {
-    padding-left: 5px;
-    font-size: 1.5rem;
-    font-weight: 400;
-    color: #337ab7;
-    border-left: 2px solid #337ab7;
-    background-color: #f0f7fd;
-}
-
 .logo {
     height: 280px;
     padding-top: 1em;
@@ -160,3 +151,13 @@ ul{padding-left: 1.2em;}
 
 .csl-entry{
   margin-bottom: 10px !important;}
+
+  nav[data-toggle='toc'] .nav .nav > li > a {
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.hasCopyButton {
+    padding-top: 2rem;
+    padding-bottom: 1rem;
+}

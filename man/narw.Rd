@@ -6,9 +6,8 @@
 \usage{
 narw(
   nsim = 1000,
-  cohort = 1:6,
+  cohortID = 1:6,
   scenario = NULL,
-  init.month = 2,
   step.size = 120,
   stressors = TRUE,
   growth = TRUE,

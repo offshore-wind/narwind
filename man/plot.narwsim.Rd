@@ -4,7 +4,14 @@
 \alias{plot.narwsim}
 \title{Plot}
 \usage{
-\method{plot}{narwsim}(obj, whale.id = NULL, animate = FALSE, web = FALSE, nmax = 100)
+\method{plot}{narwsim}(
+  obj,
+  inits = FALSE,
+  whaleID = NULL,
+  animate = FALSE,
+  web = FALSE,
+  nmax = 100
+)
 }
 \arguments{
 \item{obj}{Object returned by run_model}

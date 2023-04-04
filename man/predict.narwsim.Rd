@@ -4,10 +4,14 @@
 \alias{predict.narwsim}
 \title{Forecast NARW abundance}
 \usage{
-\method{predict}{narwsim}(obj)
+\method{predict}{narwsim}(obj, yrs = 35, n = 1000)
 }
 \arguments{
-\item{obj}{Object returned by run_model}
+\item{obj}{Object returned by narw()}
+
+\item{yrs}{Number of years for the projection}
+
+\item{n}{Number of replicate projections}
 }
 \description{
 Forecast NARW abundance
@@ -20,6 +24,7 @@ animals <- run_model(10)
 plot(animals)
 }
 
+----------------------------
 }
 \author{
 Phil J. Bouchet

@@ -14,18 +14,25 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Assessing population effects of offshore wind development on North Atlantic right whales (Eubalaena glacialis)
+# narwind: Offshore wind impacts on North Atlantic right whales
 
 <!-- badges: start -->
-[![lifecycle](https://img.shields.io/badge/lifecycle-maturing-blue.svg?style=flat-square)](https://www.tidyverse.org/lifecycle/#maturing)
-[![status](https://img.shields.io/badge/repo%20status-active-green.svg?style=flat-square)](https://www.repostatus.org/#active)
+
+[![lifecycle](https://img.shields.io/badge/lifecycle-maturing-blue.svg?style=flat-square)](https://www.tidyverse.org/lifecycle/#maturing) [![status](https://img.shields.io/badge/repo%20status-active-green.svg?style=flat-square)](https://www.repostatus.org/#active)
+
 <!-- badges: end -->
 
+The `narwind` R package provides methods to forecast the abundance of critically endangered North Atlantic right whales under user-specified offshore wind development scenarios. `narwind` offers an implementation of the spatially-explicit bioenergetic PCoMS model described in [placeholder reference], whereby the movements of different NARW cohorts (juveniles, adult males, pregnant females, resting females, lactating females + dependent calves) are simulated across throughout an entire calendar year, and population size projections are made over a time horizon relevant to management (35--50 years). The package operates at a daily scale and accounts for the effects of multiple anthropogenic stressors affecting NARW health, reproduction, and survival, including: (1) direct mortality from vessel strikes, (2) behavioral responses to noise exposure leading to cessation of foraging/nursing activities, and (3) increased energetic costs associated with entanglement in fishing gear.
 
 ## Background
 
+Marine renewable energy sources are poised to make a vital contribution in the fight against climate warming and global anthropogenic change. While offshore wind power remains a nascent market in the United States, strong and persistent oceanic wind regimes in the North Atlantic offer vast potential for the expansion of the industry along the U.S. eastern seaboard. However, concerns have been raised that the deployment of thousands of turbines may adversely affect iconic marine wildlife such as seabirds and cetaceans. Much of what is known about the impacts of offshore wind developments on cetaceans comes from studies conducted in Europe, where efforts to monitor animal behavior during both construction and operation activities have been made for a limited number of species common to that area, primarily harbor porpoises. Little information exists on the responses of baleen whales to offshore wind activities, and in contrast to European case studies on resident cetacean populations, many marine mammals occurring within U.S. waters are migratory. This makes it difficult to directly apply lessons learnt and determine with certainty what potential offshore wind effects may be emergent in the North Atlantic in the future. It is also critical to recognize that every new development represents an incremental addition to the pre-existing and rapidly expanding footprint of human activities on offshore marine ecosystems. There is therefore a need to consider the cumulative impacts of offshore wind in the context of additional concurrent human uses of ocean areas. This is particularly important for sensitive wildlife species, such as those in low abundance and/or in decline, and those occurring within narrow habitat ranges.
+
+One such species is the Critically Endangered North Atlantic right whale (NARW, *Eubalaena glacialis*), which numbers only 340 individuals and continues to experience a downward trajectory towards extinction. Assessing the full scope of potential offshore wind impacts on NARWs across the U.S. Atlantic calls for a quantitative framework capable of integrating the state of individuals (e.g., energy reserves, reproductive status) with the state of the surrounding biophysical and anthropogenic environment (e.g., resource density, wind farm characteristics) to project changes in NARW vital rates and translate short-term patterns of disturbance into long-term demographic outcomes. Bioenergetic models represent such an approach and have been used as a major implementation of the Population Consequences of Disturbance (PCoD) paradigm. PCoD is a conceptual model of the pathways through which the effects of sub-lethal stressors may scale up to population-level impacts; it has been implemented in various ways and has become a major component of several regulatory frameworks (e.g., U.S. Marine Mammal Protection Act,16 U.S. Code § 1361 et seq.; Endangered Species Act,16 U.S. Code § 1531 et seq.). PCoD models have been developed for several cetacean species such as gray whales, humpback whales, bottlenose dolphins, beaked whales, as well as pinnipeds like the northern elephant seal. Significant attention has also been given to NARW in the last decade, but without explicit consideration of offshore wind energy areas, or of the interactions that may arise between the myriad of pressures which NARW are currently facing. An expanded framework known as the Population Consequences of Multiple Stressors (PCoMS) now exists to accommodate scenarios where individuals within a population are exposed to multiple stressors that may combine in unexpected ways to generate cumulative impacts greater than the individual sum of their parts. PCoMS models encompassing each key NARW habitat have been identified as a high priority target for management in a recent review of NARW health and monitoring needs.
 
 ## Getting started
+
+If you are just getting started with `narwind`, we recommend reading the tutorial vignette (under `Articles > Getting started`), which provides a detailed introduction to the package.
 
 ## Installation
 
@@ -39,7 +46,10 @@ remotes::install_github("pjbouchet/narwind") # OR
 devtools::install_github("pjbouchet/narwind")
 ```
 
-The package relies on compiled code (C++) and functionalities provided by the [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) package. The Rtools software may be needed on Windows machines. 
-Installation instructions can be found at <https://cran.r-project.org/bin/windows/Rtools/rtools40.html>.
+The package relies on compiled code (C++) and functionality provided by the [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) package. The `Rtools` software may be needed on Windows machines. Installation instructions can be found at <https://cran.r-project.org/bin/windows/Rtools/rtools40.html>.
+
+## Funding
+
+This R package was developed as part of a dedicated study funded by the U.S. Bureau of Ocean Energy Management (BOEM, Contract 140M0121C0008).
 
 ## References

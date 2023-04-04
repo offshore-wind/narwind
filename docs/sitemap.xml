@@ -7,6 +7,9 @@
     <loc>/articles/index.html</loc>
   </url>
   <url>
+    <loc>/articles/narw_density.html</loc>
+  </url>
+  <url>
     <loc>/articles/narwind.html</loc>
   </url>
   <url>
@@ -29,6 +32,9 @@
   </url>
   <url>
     <loc>/reference/deg2radians.html</loc>
+  </url>
+  <url>
+    <loc>/reference/density_narw.html</loc>
   </url>
   <url>
     <loc>/reference/entanglement_event.html</loc>
@@ -148,6 +154,9 @@
     <loc>/reference/start_age.html</loc>
   </url>
   <url>
+    <loc>/reference/start_bcondition.html</loc>
+  </url>
+  <url>
     <loc>/reference/start_entangled.html</loc>
   </url>
   <url>
@@ -158,6 +167,9 @@
   </url>
   <url>
     <loc>/reference/summary.narwsim.html</loc>
+  </url>
+  <url>
+    <loc>/reference/theme_narw.html</loc>
   </url>
   <url>
     <loc>/reference/weighted_density.html</loc>

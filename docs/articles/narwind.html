@@ -46,6 +46,18 @@
 <li>
   <a href="../reference/index.html">Reference</a>
 </li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Articles
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+<li>
+      <a href="../articles/narw_density.html">NARW density in Canada</a>
+    </li>
+  </ul>
+</li>
       </ul>
 <ul class="nav navbar-nav navbar-right"></ul>
 </div>
@@ -65,7 +77,7 @@
 Enrico Pirotta, Len Thomas, Catriona Harris</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2023-03-16</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2023-04-04</h4>
       
       
       <div class="hidden name"><code>narwind.Rmd</code></div>
@@ -146,23 +158,6 @@ for instance, enter the command <code><a href="https://rdrr.io/r/stats/lm.html" 
 <p>The first step is to load the package. This is done using the
 <code>library</code> command, which prints a welcome message with basic
 information in the R console:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://devtools.r-lib.org/reference/load_all.html" class="external-link">load_all</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Loading <span style="color: #0000BB;">narwind</span></span></span>
-<span><span class="co">#&gt; -----------------------------------------------------------------------------------</span></span>
-<span><span class="co">#&gt; Population Effects of Offshore Wind Development on North Atlantic Right Whales</span></span>
-<span><span class="co">#&gt; -----------------------------------------------------------------------------------</span></span>
-<span><span class="co">#&gt; narwind: version 1.0</span></span>
-<span><span class="co">#&gt; Package developed under funding from the U.S. Bureau of Ocean Energy Management</span></span>
-<span><span class="co">#&gt; (BOEM Contract No. 140M0121C0008)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; For more information, see the package website at:</span></span>
-<span><span class="co">#&gt; https://pjbouchet.github.io/narwind/index.html</span></span>
-<span><span class="co">#&gt; Warning: ── <span style="font-weight: bold;">Conflicts</span> ────────────────────────────────────────────── narwind conflicts</span></span>
-<span><span class="co">#&gt; ──</span></span>
-<span><span class="co">#&gt; <span style="color: #BB0000;">✖</span> `<span style="color: #00BB00;">narw</span>` masks `<span style="color: #0000BB;">narwind</span>::narw()`.</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> <span style="color: #555555;">Did you accidentally source a file rather than using `load_all()`?</span></span></span>
-<span><span class="co">#&gt;   <span style="color: #555555;">Run `rm(list = c("narw"))` to remove the conflicts.</span></span></span></code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> <code>narwind</code> is largely written in
 C++, i.e., a high-level, general-purpose programming language often used
@@ -181,7 +176,7 @@ above.</p>
 function. The number of simulated animals per cohort, <code>nsim</code>,
 is the only mandatory argument; all others are optional and set to
 default values.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Simulate 20 juvenile females and store the outputs in an object called 'm'</span></span>
 <span><span class="co"># This is the same as m &lt;- narw(20,2)</span></span>
 <span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">20</span>, cohort <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
@@ -242,7 +237,7 @@ execution.</td>
 </tbody>
 </table>
 <p>The resulting object is of class <code>narwsim</code>:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
 <span><span class="co">#&gt; [1] "narwsim"</span></span></code></pre></div>
 </div>
@@ -250,12 +245,12 @@ execution.</td>
 <h3 id="viewing-outputs">Viewing outputs<a class="anchor" aria-label="anchor" href="#viewing-outputs"></a>
 </h3>
 <p>Outputs from the simulator can be viewed using the
-<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method. This is as simple as typing the model
+<code><a href="https://www.math.uzh.ch/pages/spam/reference/print.html" class="external-link">print()</a></code> method. This is as simple as typing the model
 object name (<code>m</code>) and pressing <code>[enter]</code>. The
 default behavior here is to return data for the first animal, only
 showing the first 4 days of the simulation. This can be easily changed
 by the user, as demonstrated below:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Default overview - same as print(m)</span></span>
 <span><span class="va">m</span></span>
 <span><span class="co">#&gt; =========================================================================================</span></span>
@@ -265,94 +260,99 @@ by the user, as demonstrated below:</p>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Locations </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;          date  easting  northing region</span></span>
-<span><span class="co">#&gt; 1: 2022-02-01 20.50000 -53.50000   SEUS</span></span>
-<span><span class="co">#&gt; 2: 2022-02-02 14.75437 -45.55786   SEUS</span></span>
-<span><span class="co">#&gt; 3: 2022-02-03 23.60557 -50.74120   SEUS</span></span>
-<span><span class="co">#&gt; 4: 2022-02-04 19.66053 -50.13333   SEUS</span></span>
+<span><span class="co">#&gt;    day       date  easting northing region</span></span>
+<span><span class="co">#&gt; 1:   1 2023-10-01 570.5000 711.5000    SNE</span></span>
+<span><span class="co">#&gt; 2:   2 2023-10-02 572.8459 710.8892    SNE</span></span>
+<span><span class="co">#&gt; 3:   3 2023-10-03 576.8999 714.1513    SNE</span></span>
+<span><span class="co">#&gt; 4:   4 2023-10-04 566.5474 716.2079    SNE</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Attributes </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;    cohort alive   age        bc   length length_a   length_b  length_c     mass</span></span>
-<span><span class="co">#&gt; 1:      2     1 6.869 0.2330852 12.45229   1404.7 -0.4210679 -0.182138 23770.13</span></span>
-<span><span class="co">#&gt; 2:      2     1 6.869 0.2330852 12.45229   1404.7 -0.4210679 -0.182138 23770.13</span></span>
-<span><span class="co">#&gt; 3:      2     1 6.869 0.2330852 12.45229   1404.7 -0.4210679 -0.182138 23770.13</span></span>
-<span><span class="co">#&gt; 4:      2     1 6.869 0.2330852 12.45229   1404.7 -0.4210679 -0.182138 23770.13</span></span>
-<span><span class="co">#&gt;    leanmass  fatmass    mass_a   mass_b   mouth_r mouth_a  mouth_w</span></span>
-<span><span class="co">#&gt; 1: 18229.66 5540.465 -4.675318 2.931193 0.1413656    76.7 1.760325</span></span>
-<span><span class="co">#&gt; 2: 18229.66 5540.465 -4.675318 2.931193 0.1413656    76.7 1.760325</span></span>
-<span><span class="co">#&gt; 3: 18229.66 5540.465 -4.675318 2.931193 0.1413656    76.7 1.760325</span></span>
-<span><span class="co">#&gt; 4: 18229.66 5540.465 -4.675318 2.931193 0.1413656    76.7 1.760325</span></span>
+<span><span class="co">#&gt;    day cohort gsl alive      age        bc   length length_a   length_b</span></span>
+<span><span class="co">#&gt; 1:   1      2   0     1 8.539626 0.4342804 12.11183   1364.5 -0.3657856</span></span>
+<span><span class="co">#&gt; 2:   2      2   0     1 8.542365 0.4342003 12.11235   1364.5 -0.3657856</span></span>
+<span><span class="co">#&gt; 3:   3      2   0     1 8.545105 0.4341172 12.11287   1364.5 -0.3657856</span></span>
+<span><span class="co">#&gt; 4:   4      2   0     1 8.547845 0.4339878 12.11339   1364.5 -0.3657856</span></span>
+<span><span class="co">#&gt;      length_c     mass leanmass  fatmass    mass_a   mass_b  mouth_r mouth_a</span></span>
+<span><span class="co">#&gt; 1: -0.1313088 27596.59 15611.93 11984.66 -4.744729 2.943317 0.144827    76.7</span></span>
+<span><span class="co">#&gt; 2: -0.1313088 27596.16 15613.90 11982.26 -4.744729 2.943317 0.144827    76.7</span></span>
+<span><span class="co">#&gt; 3: -0.1313088 27595.59 15615.87 11979.72 -4.744729 2.943317 0.144827    76.7</span></span>
+<span><span class="co">#&gt; 4: -0.1313088 27592.76 15617.84 11974.92 -4.744729 2.943317 0.144827    76.7</span></span>
+<span><span class="co">#&gt;     mouth_w</span></span>
+<span><span class="co">#&gt; 1: 1.754045</span></span>
+<span><span class="co">#&gt; 2: 1.754045</span></span>
+<span><span class="co">#&gt; 3: 1.754045</span></span>
+<span><span class="co">#&gt; 4: 1.754045</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Stressors </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;    is_entgl entgl_head severity entgl_d entgl_start entgl_end strike noise</span></span>
-<span><span class="co">#&gt; 1:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt; 2:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt; 3:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt; 4:        0          0        0       0           0         0      0     0</span></span>
-<span><span class="co">#&gt;    dB_thresh</span></span>
-<span><span class="co">#&gt; 1:         0</span></span>
-<span><span class="co">#&gt; 2:         0</span></span>
-<span><span class="co">#&gt; 3:         0</span></span>
-<span><span class="co">#&gt; 4:         0</span></span>
+<span><span class="co">#&gt;    day is_entgl entgl_head severity entgl_d entgl_start entgl_end strike</span></span>
+<span><span class="co">#&gt; 1:   1        0          0        0       0           0         0      0</span></span>
+<span><span class="co">#&gt; 2:   2        0          0        0       0           0         0      0</span></span>
+<span><span class="co">#&gt; 3:   3        0          0        0       0           0         0      0</span></span>
+<span><span class="co">#&gt; 4:   4        1          1        0      98           5       103      0</span></span>
+<span><span class="co">#&gt;    noise_resp noise_lvl dB_thresh</span></span>
+<span><span class="co">#&gt; 1:          0        60  167.8385</span></span>
+<span><span class="co">#&gt; 2:          0        60  148.1454</span></span>
+<span><span class="co">#&gt; 3:          0        60  143.6136</span></span>
+<span><span class="co">#&gt; 4:          0        60  159.7249</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Activity budgets </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;     d_travel swimspeed  t_travel t_feed t_nurse   t_rest n_zero    t_sum</span></span>
-<span><span class="co">#&gt; 1:  9.802544  5536.257 10.678116      0       0 13.32188      2 6.184984</span></span>
-<span><span class="co">#&gt; 2: 10.257231  3490.313 10.397949      0       0 13.60205      2 9.081645</span></span>
-<span><span class="co">#&gt; 3:  3.991595  4840.793  9.712616      0       0 14.28738      2 6.223917</span></span>
-<span><span class="co">#&gt; 4:  1.510523  1972.477  9.758049      0       0 14.24195      2 6.015502</span></span>
-<span><span class="co">#&gt;    t_remain</span></span>
-<span><span class="co">#&gt; 1: 8.907508</span></span>
-<span><span class="co">#&gt; 2: 7.459177</span></span>
-<span><span class="co">#&gt; 3: 8.888042</span></span>
-<span><span class="co">#&gt; 4: 8.992249</span></span>
+<span><span class="co">#&gt;    day  d_travel swimspeed  t_travel   t_feed t_nurse    t_rest n_zero</span></span>
+<span><span class="co">#&gt; 1:   1  2.424104  1804.578  9.644303  0.00000       0 14.355697      2</span></span>
+<span><span class="co">#&gt; 2:   2  5.203462  1486.786  5.321012 12.42987       0  6.249117      1</span></span>
+<span><span class="co">#&gt; 3:   3 10.554795  4050.615 10.672276  0.00000       0 13.327724      2</span></span>
+<span><span class="co">#&gt; 4:   4 10.870773  5273.142 10.813231  0.00000       0 13.186769      2</span></span>
+<span><span class="co">#&gt;        t_sum t_remain</span></span>
+<span><span class="co">#&gt; 1:  7.398010 8.300995</span></span>
+<span><span class="co">#&gt; 2: 18.536378 1.821207</span></span>
+<span><span class="co">#&gt; 3:  7.866902 8.066549</span></span>
+<span><span class="co">#&gt; 4:  6.496610 8.751695</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Growth </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;        E_tot E_in    E_out delta_fat DE_lip ED_lip lip_anab lip_catab</span></span>
-<span><span class="co">#&gt; 1: -4651.957    0 4651.957         0   0.75     39      0.8         0</span></span>
-<span><span class="co">#&gt; 2: -4261.411    0 4261.411         0   0.75     39      0.8         0</span></span>
-<span><span class="co">#&gt; 3: -5663.145    0 5663.145         0   0.75     39      0.8         0</span></span>
-<span><span class="co">#&gt; 4: -4417.746    0 4417.746         0   0.75     39      0.8         0</span></span>
+<span><span class="co">#&gt;    day     E_tot    E_in    E_out delta_fat DE_lip ED_lip lip_anab lip_catab</span></span>
+<span><span class="co">#&gt; 1:   1 -220.9927 0.00000 220.9927 -2.482985   0.75     39      0.8 0.5842510</span></span>
+<span><span class="co">#&gt; 2:   2 -218.8074 2.19446 221.0019 -2.396151   0.75     39      0.8 0.5694499</span></span>
+<span><span class="co">#&gt; 3:   3 -221.0111 0.00000 221.0111 -2.539549   0.75     39      0.8 0.5975108</span></span>
+<span><span class="co">#&gt; 4:   4 -469.8425 0.00000 469.8425 -4.798583   0.75     39      0.8 0.5310850</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Energy intake </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;    feed     preyconc   minprey     gape feedspeed   captEff impedance daylight</span></span>
-<span><span class="co">#&gt; 1:    0 5.853154e-09 2720.3550 2.007185 0.5597133 0.9386335         0 10.99056</span></span>
-<span><span class="co">#&gt; 2:    0 4.547844e-09 1486.2760 2.007185 0.7010541 0.9439358         0 10.98667</span></span>
-<span><span class="co">#&gt; 3:    0 7.523593e-09  879.2156 2.007185 0.8332389 0.9044154         0 10.98889</span></span>
-<span><span class="co">#&gt; 4:    0 5.852338e-09 1585.9258 2.007185 0.9793049 0.8671810         0 10.98889</span></span>
+<span><span class="co">#&gt;    day feed preyconc   minprey     gape feedspeed   captEff impedance daylight</span></span>
+<span><span class="co">#&gt; 1:   1    0 1344.983 1458.3957 1.865464 0.7008901 0.8736602 0.0000000 11.18667</span></span>
+<span><span class="co">#&gt; 2:   2    1 1344.983  942.7493 1.865669 1.3345262 0.9251695 0.3042104 11.18667</span></span>
+<span><span class="co">#&gt; 3:   3    0 1424.718 1481.9111 1.865874 1.0681980 0.9754286 0.4070404 11.18500</span></span>
+<span><span class="co">#&gt; 4:   4    0 1245.189 2036.9214 1.866079 0.9440565 0.9301422 0.2731820 11.18500</span></span>
 <span><span class="co">#&gt;    feed_effort  targetBC     cop_mass     cop_kJ digestEff  metabEff</span></span>
-<span><span class="co">#&gt; 1:   0.5176495 0.5271131 0.0004444376 0.02263933 0.8827658 0.7164818</span></span>
-<span><span class="co">#&gt; 2:   0.5176495 0.5271131 0.0004136803 0.02037770 0.8882616 0.7172286</span></span>
-<span><span class="co">#&gt; 3:   0.5176495 0.5271131 0.0004758879 0.02071137 0.8798148 0.7342712</span></span>
-<span><span class="co">#&gt; 4:   0.5176495 0.5271131 0.0001711611 0.02684233 0.8911280 0.6782097</span></span>
+<span><span class="co">#&gt; 1: 0.007502788 0.5271131 0.0004930470 0.03092918 0.8861356 0.7375350</span></span>
+<span><span class="co">#&gt; 2: 0.007517563 0.5271131 0.0002481966 0.02006514 0.8760189 0.6936689</span></span>
+<span><span class="co">#&gt; 3: 0.007532045 0.5271131 0.0003612771 0.02496677 0.8763330 0.8003921</span></span>
+<span><span class="co">#&gt; 4: 0.007547086 0.5271131 0.0004595583 0.02455236 0.8852611 0.7473367</span></span>
 <span><span class="co">#&gt;           E_cop</span></span>
-<span><span class="co">#&gt; 1: 6.363925e-06</span></span>
-<span><span class="co">#&gt; 2: 5.370547e-06</span></span>
-<span><span class="co">#&gt; 3: 6.367386e-06</span></span>
-<span><span class="co">#&gt; 4: 2.776702e-06</span></span>
+<span><span class="co">#&gt; 1: 9.966428e-06</span></span>
+<span><span class="co">#&gt; 2: 3.026242e-06</span></span>
+<span><span class="co">#&gt; 3: 6.326663e-06</span></span>
+<span><span class="co">#&gt; 4: 7.464859e-06</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
 <span><span class="co">#&gt; Energy costs </span></span>
 <span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;         rmr       LC    stroke   E_growth</span></span>
-<span><span class="co">#&gt; 1: 266.0809 4385.814 0.1454761 0.06186888</span></span>
-<span><span class="co">#&gt; 2: 266.0809 3995.268 0.1325218 0.06186888</span></span>
-<span><span class="co">#&gt; 3: 266.0809 5397.002 0.1790169 0.06186888</span></span>
-<span><span class="co">#&gt; 4: 266.0809 4151.603 0.1377074 0.06186888</span></span>
+<span><span class="co">#&gt;    day      rmr LC    stroke E_growth</span></span>
+<span><span class="co">#&gt; 1:   1 199.9365  0 0.1209014 21.05627</span></span>
+<span><span class="co">#&gt; 2:   2 199.9533  0 0.1526573 21.04859</span></span>
+<span><span class="co">#&gt; 3:   3 199.9701  0 0.1546609 21.04098</span></span>
+<span><span class="co">#&gt; 4:   4 199.9870  0 0.1483103 21.03327</span></span>
 <span></span>
 <span><span class="co"># First 20 days of the simulation for the fifth whle</span></span>
 <span><span class="co"># print(m, 20, 5)</span></span></code></pre></div>
-<p>The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method has the following arguments:</p>
+<p>The <code><a href="https://www.math.uzh.ch/pages/spam/reference/print.html" class="external-link">print()</a></code> method has the following arguments:</p>
 <table style="width:99%;" class="table">
 <colgroup>
 <col width="5%">
@@ -389,7 +389,7 @@ extracted.</td>
 <div class="section level3">
 <h3 id="summarizing-outputs">Summarizing outputs<a class="anchor" aria-label="anchor" href="#summarizing-outputs"></a>
 </h3>
-<p>The <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> method provides a range of diagnostics for
+<p>The <code><a href="https://rdrr.io/pkg/terra/man/summary.html" class="external-link">summary()</a></code> method provides a range of diagnostics for
 assessing how simulated whale behavior aligns with biological
 expectations. These include<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>:</p>
 <ul>
@@ -409,8 +409,8 @@ model (traveling, resting, nursing, and feeding), by region.</li>
 <li>Time series of individual body conditions, by cohort.</li>
 </ul>
 <p>Several plots are also produced to illustrate</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/terra/man/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span>
 <span><span class="co">#&gt; -------------------------------------------------------------</span></span>
 <span><span class="co">#&gt; -------------------------------------------------------------</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -440,15 +440,22 @@ model (traveling, resting, nursing, and feeding), by region.</li>
 <span><span class="co">#&gt; Cohort(s):</span></span>
 <span><span class="co">#&gt; Juveniles (female) </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Simulation start: February </span></span>
+<span><span class="co">#&gt; Simulation start: October </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; MORTALITY &amp; HEALTH</span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    dead       alive       </span></span>
-<span><span class="co">#&gt; --------  ---------  ------------</span></span>
-<span><span class="co">#&gt; jv(fml)   0.0% (0)   100.0% (20)</span></span></code></pre></div>
+<span><span class="co">#&gt; cohort               dead        alive      </span></span>
+<span><span class="co">#&gt; -------------------  ----------  -----------</span></span>
+<span><span class="co">#&gt; Juveniles (female)   10.0% (2)   90.0% (18) </span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; +++++++++++ By region +++++++++++</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; cohort               cause_death   CCB         GOM       </span></span>
+<span><span class="co">#&gt; -------------------  ------------  ----------  ----------</span></span>
+<span><span class="co">#&gt; Juveniles (female)   strike        50.0% (1)   50.0% (1) </span></span>
+<span><span class="co">#&gt; Juveniles (female)   starve        50.0% (1)   50.0% (1)</span></span></code></pre></div>
 <p><img src="narwind_files/figure-html/model_summary-1.png" width="700"></p>
 <pre><code><span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; LOCATIONS</span></span>
@@ -456,83 +463,80 @@ model (traveling, resting, nursing, and feeding), by region.</li>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; region      jv(fml)      </span></span>
 <span><span class="co">#&gt; ----------  -------------</span></span>
-<span><span class="co">#&gt; BOF_lower   0.0%    (0)  </span></span>
-<span><span class="co">#&gt; BOF_upper   0.0%    (0)  </span></span>
-<span><span class="co">#&gt; CABOT       4.9%  (361)  </span></span>
-<span><span class="co">#&gt; CCB         0.1%    (7)  </span></span>
-<span><span class="co">#&gt; GOM         15.9% (1160) </span></span>
-<span><span class="co">#&gt; GSL         18.4% (1343) </span></span>
-<span><span class="co">#&gt; MIDA        7.3%  (530)  </span></span>
-<span><span class="co">#&gt; SCOS        18.8% (1373) </span></span>
-<span><span class="co">#&gt; SEUS        22.4% (1636) </span></span>
-<span><span class="co">#&gt; SNE         12.2%  (890) </span></span>
+<span><span class="co">#&gt; BOF_lower   1.5%  (106)  </span></span>
+<span><span class="co">#&gt; BOF_upper   1.1%   (74)  </span></span>
+<span><span class="co">#&gt; CABOT       0.0%    (0)  </span></span>
+<span><span class="co">#&gt; CCB         3.3%  (227)  </span></span>
+<span><span class="co">#&gt; GOM         53.2% (3693) </span></span>
+<span><span class="co">#&gt; GSL         0.0%    (0)  </span></span>
+<span><span class="co">#&gt; MIDA        0.0%    (1)  </span></span>
+<span><span class="co">#&gt; SCOS        10.6%  (737) </span></span>
+<span><span class="co">#&gt; SEUS        0.0%    (0)  </span></span>
+<span><span class="co">#&gt; SNE         30.3% (2101) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; country   jv(fml)      </span></span>
 <span><span class="co">#&gt; --------  -------------</span></span>
-<span><span class="co">#&gt; Canada    42.2% (3077) </span></span>
-<span><span class="co">#&gt; U.S.      57.8% (4223) </span></span>
+<span><span class="co">#&gt; Canada    13.2%  (917) </span></span>
+<span><span class="co">#&gt; U.S.      86.8% (6022) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; MOVEMENTS (km)</span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
+<span><span class="co">#&gt; =============================================================</span></span></code></pre>
+<p><img src="narwind_files/figure-html/model_summary-2.png" width="700"></p>
+<pre><code><span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    step                          migration                     </span></span>
-<span><span class="co">#&gt; --------  ----------------------------  ------------------------------</span></span>
-<span><span class="co">#&gt; jv(fml)   15.5 (± 16.9) [0.2 – 127.7]   5,647 (± 459) [4,603 – 6,674] </span></span>
+<span><span class="co">#&gt; cohort    step                       migration                     </span></span>
+<span><span class="co">#&gt; --------  -------------------------  ------------------------------</span></span>
+<span><span class="co">#&gt; jv(fml)   11.4 (± 12.1) [0 – 98.3]   4,033 (± 741) [1,522 – 5,675] </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; cohort    reached SEUS   reached GSL </span></span>
 <span><span class="co">#&gt; --------  -------------  ------------</span></span>
-<span><span class="co">#&gt; jv(fml)   100.0% (20)    75.0% (15)  </span></span>
+<span><span class="co">#&gt; jv(fml)   0.0% (0)       0.0% (0)    </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; HABITAT USE</span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; Warning: Using one column matrices in `filter()` was deprecated in dplyr 1.1.0.</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Please use one dimensional logical vectors instead.</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> The deprecated feature was likely used in the <span style="color: #0000BB;">dplyr</span> package.</span></span>
-<span><span class="co">#&gt;   Please report the issue at <span style="color: #0000BB; font-style: italic;">&lt;</span></span></span></code></pre>
-<p><img src="narwind_files/figure-html/model_summary-2.png" width="700"></p>
-<pre><code><span><span class="co">#&gt; +++++++++++ Number of animals visiting each region (N = 20) +++++++++++</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; +++++++++++ Number of animals visiting each region (N = 20) +++++++++++</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; region      jv(fml)     </span></span>
 <span><span class="co">#&gt; ----------  ------------</span></span>
-<span><span class="co">#&gt; BOF_lower   0.0% (0)    </span></span>
-<span><span class="co">#&gt; BOF_upper   0.0% (0)    </span></span>
-<span><span class="co">#&gt; CABOT       75.0% (15)  </span></span>
-<span><span class="co">#&gt; CCB         5.0% (1)    </span></span>
+<span><span class="co">#&gt; BOF_lower   25.0% (5)   </span></span>
+<span><span class="co">#&gt; BOF_upper   10.0% (2)   </span></span>
+<span><span class="co">#&gt; CABOT       0.0% (0)    </span></span>
+<span><span class="co">#&gt; CCB         40.0% (8)   </span></span>
 <span><span class="co">#&gt; GOM         100.0% (20) </span></span>
-<span><span class="co">#&gt; GSL         75.0% (15)  </span></span>
-<span><span class="co">#&gt; MIDA        100.0% (20) </span></span>
-<span><span class="co">#&gt; SCOS        95.0% (19)  </span></span>
-<span><span class="co">#&gt; SEUS        100.0% (20) </span></span>
+<span><span class="co">#&gt; GSL         0.0% (0)    </span></span>
+<span><span class="co">#&gt; MIDA        5.0% (1)    </span></span>
+<span><span class="co">#&gt; SCOS        90.0% (18)  </span></span>
+<span><span class="co">#&gt; SEUS        0.0% (0)    </span></span>
 <span><span class="co">#&gt; SNE         100.0% (20) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; +++++++++++ Days spent in each region +++++++++++</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region      jv(fml)                  </span></span>
-<span><span class="co">#&gt; ----------  -------------------------</span></span>
-<span><span class="co">#&gt; BOF_lower   0 (± 0) [0 – 0]          </span></span>
-<span><span class="co">#&gt; BOF_upper   0 (± 0) [0 – 0]          </span></span>
-<span><span class="co">#&gt; CABOT       24.1 (± 9.1) [18 – 56]   </span></span>
-<span><span class="co">#&gt; CCB         7 (± 0) [7 – 7]          </span></span>
-<span><span class="co">#&gt; GOM         58 (± 15.8) [30 – 85]    </span></span>
-<span><span class="co">#&gt; GSL         89.5 (± 36.7) [38 – 153] </span></span>
-<span><span class="co">#&gt; MIDA        26.5 (± 10.2) [16 – 59]  </span></span>
-<span><span class="co">#&gt; SCOS        72.3 (± 61.3) [36 – 210] </span></span>
-<span><span class="co">#&gt; SEUS        81.8 (± 38.8) [32 – 196] </span></span>
-<span><span class="co">#&gt; SNE         44.5 (± 20.5) [23 – 110] </span></span>
+<span><span class="co">#&gt; region      jv(fml)                   </span></span>
+<span><span class="co">#&gt; ----------  --------------------------</span></span>
+<span><span class="co">#&gt; BOF_lower   21.2 (± 18.3) [2 – 45]    </span></span>
+<span><span class="co">#&gt; BOF_upper   37 (± 15.6) [26 – 48]     </span></span>
+<span><span class="co">#&gt; CABOT       0 (± 0) [0 – 0]           </span></span>
+<span><span class="co">#&gt; CCB         28.4 (± 13.9) [11 – 49]   </span></span>
+<span><span class="co">#&gt; GOM         184.7 (± 68.5) [43 – 300] </span></span>
+<span><span class="co">#&gt; GSL         0 (± 0) [0 – 0]           </span></span>
+<span><span class="co">#&gt; MIDA        1 (± 0) [1 – 1]           </span></span>
+<span><span class="co">#&gt; SCOS        40.9 (± 28.3) [4 – 97]    </span></span>
+<span><span class="co">#&gt; SEUS        0 (± 0) [0 – 0]           </span></span>
+<span><span class="co">#&gt; SNE         105 (± 41.1) [39 – 177]   </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; +++++++++++ Total number of regions visited +++++++++++</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;  No.regions  jv(fml)    </span></span>
 <span><span class="co">#&gt; -----------  -----------</span></span>
-<span><span class="co">#&gt;           4  5.0%  (1)  </span></span>
-<span><span class="co">#&gt;           5  20.0%  (4) </span></span>
-<span><span class="co">#&gt;           7  70.0% (14) </span></span>
-<span><span class="co">#&gt;           8  5.0%  (1)  </span></span>
+<span><span class="co">#&gt;           3  50.0% (10) </span></span>
+<span><span class="co">#&gt;           4  35.0%  (7) </span></span>
+<span><span class="co">#&gt;           5  10.0%  (2) </span></span>
+<span><span class="co">#&gt;           6  5.0%  (1)  </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
@@ -544,31 +548,31 @@ model (traveling, resting, nursing, and feeding), by region.</li>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; region      travel (hrs)     rest (hrs)       nurse (hrs)   feed (hrs)     </span></span>
 <span><span class="co">#&gt; ----------  ---------------  ---------------  ------------  ---------------</span></span>
-<span><span class="co">#&gt; BOF_lower   0 (± 0)          0 (± 0)          0 (± 0)       0 (± 0)        </span></span>
-<span><span class="co">#&gt; BOF_upper   0 (± 0)          0 (± 0)          0 (± 0)       0 (± 0)        </span></span>
-<span><span class="co">#&gt; CABOT       8.49 (± 3.6)     9.82 (± 3.44)    0 (± 0)       10.76 (± 2.26) </span></span>
-<span><span class="co">#&gt; CCB         6.51 (± 3.56)    9.94 (± 3.67)    0 (± 0)       13.22 (± 0.79) </span></span>
-<span><span class="co">#&gt; GOM         8.34 (± 3.64)    9.77 (± 3.51)    0 (± 0)       11.55 (± 2.11) </span></span>
-<span><span class="co">#&gt; GSL         8.29 (± 3.66)    10.04 (± 3.4)    0 (± 0)       11.21 (± 1.87) </span></span>
-<span><span class="co">#&gt; MIDA        16.03 (± 3.41)   7.97 (± 3.41)    0 (± 0)       0 (± 0)        </span></span>
-<span><span class="co">#&gt; SCOS        12.68 (± 4.97)   6.78 (± 4.16)    0 (± 0)       8.6 (± 3.25)   </span></span>
-<span><span class="co">#&gt; SEUS        10.88 (± 1.68)   13.12 (± 1.68)   0 (± 0)       0 (± 0)        </span></span>
-<span><span class="co">#&gt; SNE         8.95 (± 3.86)    10.28 (± 3.62)   0 (± 0)       12.37 (± 2.06)</span></span></code></pre>
+<span><span class="co">#&gt; BOF_lower   8.09 (± 4.01)    9.87 (± 3.72)    0 (± 0)       11.55 (± 1.9)  </span></span>
+<span><span class="co">#&gt; BOF_upper   8.2 (± 3.17)     11.11 (± 3.12)   0 (± 0)       10.52 (± 1.14) </span></span>
+<span><span class="co">#&gt; CABOT       0 (± 0)          0 (± 0)          0 (± 0)       0 (± 0)        </span></span>
+<span><span class="co">#&gt; CCB         7.51 (± 3.57)    10 (± 3.29)      0 (± 0)       11.6 (± 1.7)   </span></span>
+<span><span class="co">#&gt; GOM         8.29 (± 3.87)    9.8 (± 3.53)     0 (± 0)       11.54 (± 2.13) </span></span>
+<span><span class="co">#&gt; GSL         0 (± 0)          0 (± 0)          0 (± 0)       0 (± 0)        </span></span>
+<span><span class="co">#&gt; MIDA        14.2 (± NA)      9.8 (± NA)       0 (± NA)      0 (± 0)        </span></span>
+<span><span class="co">#&gt; SCOS        12.96 (± 5.07)   6.41 (± 4.14)    0 (± 0)       8.85 (± 3.44)  </span></span>
+<span><span class="co">#&gt; SEUS        0 (± 0)          0 (± 0)          0 (± 0)       0 (± 0)        </span></span>
+<span><span class="co">#&gt; SNE         8.65 (± 3.84)    10.26 (± 3.54)   0 (± 0)       11.38 (± 2.05)</span></span></code></pre>
 <p><img src="narwind_files/figure-html/model_summary-3.png" width="700"></p>
 </div>
 <div class="section level3">
 <h3 id="plotting-outputs">Plotting outputs<a class="anchor" aria-label="anchor" href="#plotting-outputs"></a>
 </h3>
 <p>Lastly, maps of simulated whale tracks can be drawn using the
-<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> method. When <code>web</code> is set to
+<code><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot()</a></code> method. When <code>web</code> is set to
 <code>TRUE</code>, interactive web-based maps that can be zoomed and
 panned are produced using the <a href="https://plotly.com/ggplot2/" class="external-link"><code>ggplotly</code> R package</a>.
 The location (easting, northing) and ID of each animal are displayed on
 hover.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span></code></pre></div>
 <p><img src="narwind_files/figure-html/model_plot-1.png" width="576"></p>
-<p>The <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> method takes the following arguments:</p>
+<p>The <code><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot()</a></code> method takes the following arguments:</p>
 <table style="width:100%;" class="table">
 <colgroup>
 <col width="6%">

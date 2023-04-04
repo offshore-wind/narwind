@@ -66,8 +66,9 @@ The package contains proxy surfaces for all of these, allowing analyses to be ca
 
 The first step is to load the package. This is done using the `library` command, which prints a welcome message with basic information in the R console:
 
-```{r load}
+```{r pkg, include = FALSE}
 devtools::load_all()
+library(narwind)
 ```
 
 > **Note:** `narwind` is largely written in C++, i.e., a high-level, general-purpose programming language often used in high-performance applications. C++ is a compiled language, meaning that any source code must first be converted into machine-readable code before execution. This compilation process results in an executable file, which can be translated as R functions. This step is automatically performed in the background as part of the `library` call above.
@@ -77,7 +78,7 @@ devtools::load_all()
 The bioenergetic model is run by calling the `narw()` function. The number of simulated animals per cohort, `nsim`, is the only mandatory argument; all others are optional and set to default values.
 
 ```{r run_model0, include = FALSE}
-m <- narw(nsim = 20, cohort = 2, growth = FALSE, stressors = FALSE)
+m <- narw(nsim = 20, cohortID = 2)
 ```
 
 ```{r run_model, eval = FALSE}
