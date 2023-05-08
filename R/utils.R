@@ -270,7 +270,7 @@ meta <- function(seed = 215513,
 #'   assign("init.model", value = TRUE, envir = .GlobalEnv)
 #' }
 
-weighted_density <- function(){
+w_density <- function(target = "SEUS", option = 1){
   
   # Create raster from regions polygon
   reg <- targets::tar_read(regions)
@@ -283,191 +283,330 @@ weighted_density <- function(){
   rp <- raster::rasterize(reg, r, 'rank')
   rp <- raster::resample(rp, densr[[1]], method = "ngb")
   rp <- raster::mask(rp, supportp)
-
-  rp.SEUS <- rp.GSL <- rp.CA <- rp
-
-  cabot.xy <- sp::SpatialPoints(coords = cbind(1400, 1600), proj4string = narw_crs())
   
-  circular.d <- raster::distanceFromPoints(object = densr[[1]], xy = cabot.xy) |> 
-    raster::mask(mask = densr[[1]])
+  rp.SEUS <- rp.GSL <- rp
   
-  # Set value to 1 in SEUS
-  rp.SEUS[!rp.SEUS$layer == which(sort(reg$region) == "SEUS")] <- 0
-  rp.SEUS[rp.SEUS>0] <- 1
-
-  # Set value to 1 in GSL
-  rp.GSL[!rp.GSL$layer == which(sort(reg$region) == "GSL")] <- 0
-  rp.GSL[rp.GSL>0] <- 1
+  # cabot.xy <- sp::SpatialPoints(coords = cbind(1400, 1600), proj4string = narw_crs())
+  # 
+  # circular.d <- raster::distanceFromPoints(object = densr[[1]], xy = cabot.xy) |> 
+  #   raster::mask(mask = densr[[1]])
   
-  # Set value to 1 in SEUS
-  rp.CA[rp.CA$layer == which(sort(reg$region) == "GSL")] <- 99
-  rp.CA[rp.CA$layer == which(sort(reg$region) == "CABOT")] <- 99
-  rp.CA[rp.CA$layer == which(sort(reg$region) == "SCOS")] <- 99
-  rp.CA[rp.CA<99] <- 0
-  rp.CA[rp.CA==99] <- 1
+  if(target == "SEUS"){
+    
+    # Set value to 1 in SEUS
+    rp.SEUS[!rp.SEUS$layer == which(sort(reg$region) == "SEUS")] <- 0
+    rp.SEUS[rp.SEUS>0] <- 1
+    
+  } else if(target == "GSL"){
+    
+    # Set value to 1 in GSL
+    rp.GSL[!rp.GSL$layer == which(sort(reg$region) == "GSL")] <- 0
+    rp.GSL[rp.GSL>0] <- 1 
+    
+  }
+  
+  # # Set value to 1 in CABOT
+  # rp.CA[rp.CA$layer == which(sort(reg$region) == "GSL")] <- 99
+  # rp.CA[rp.CA$layer == which(sort(reg$region) == "CABOT")] <- 99
+  # rp.CA[rp.CA$layer == which(sort(reg$region) == "SCOS")] <- 99
+  # rp.CA[rp.CA<99] <- 0
+  # rp.CA[rp.CA==99] <- 1
   
   # Create latitudinal gradient
   r_y <- sp::coordinates(rp.GSL, na.rm = TRUE)
   r_y <- raster::rasterFromXYZ(cbind(r_y, r_y[, 2, drop = FALSE]))
   r_y <- raster::mask(r_y, densr[[1]])
-
+  
   r_north <- 1/(1+exp(-0.004*(r_y-1380)))
   r_south <- 1/(1+exp(0.004*(r_y-12)))
+  
   r_southbound <- 1/(1+exp(0.004*(r_y-500)))
   r_northbound <- 1/(1+exp(-0.004*(r_y-800)))
   
   # Breeding season in the SEUS (Nov through to February - Krystan et al., 2018)
   # Foraging season in the GSL (June though to Oct – Crowe et al., 2021)
-
+  
   wdens <- purrr::map(.x = seq_along(densr), .f = ~{
-
+    
     if(.x == 11){ # Migrating south in November
       
-      # OPTION 1
+      if(target == "SEUS"){
+        
+        # OPTION 1
+        
+        if(option == 1){
+          
+          # # Determine mass outside of SEUS
+          mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.SEUS)), na.rm = TRUE)
+          # Redistribute mass across range according to north-south gradient
+          d1 <- densr[[.x]] * rp.SEUS
+          d2 <- mout * r_south/sum(raster::getValues(r_south), na.rm = TRUE) # Sums to mout
+          d.out <- d1 + d2
+          
+        } else if (option == 2) {
+          
+          # OPTION 2
+          
+          # Clip density to SEUS
+          d1 <- densr[[.x]] * rp.SEUS
+          # Re-scale gradient outside of SEUS
+          d1[d1==0] <- NA
+          dv <- na.omit(apply(X = raster::as.matrix(d1), MARGIN = 1, FUN = mean, na.rm = TRUE))
+          d2 <- rescale_raster(x = r_south * (1-rp.SEUS), new.max = dv[1])
+          d2[d2==0] <- NA
+          d.out <- raster::merge(d1, d2)
+          
+        } else if (option == 3){
+          
+          # OPTION 3
+          pathGSL <- raster::shapefile("data/pathGSL.shp") |> sp::spTransform(CRSobj = narw_crs())
+          pts <- sp::spsample(pathGSL, n = 1000, type = "regular")
+          distances <- raster::distanceFromPoints(object = densr[[1]], xy = pts) |>
+            raster::mask(mask = densr[[1]])
+          dist.r <- (1/distances)^(1/4) # Fourth root
+          d.out <- rescale_raster(dist.r, new.min = raster::cellStats(dist.r, "min"),
+                                  new.max = raster::cellStats(dist.r*(1-rp.CA), "max")) + r_southbound
+          
+        }  
+        
+        as(d.out, "SpatialGridDataFrame")
+        
+      } else {
+        
+        dens[[.x]]  
+        
+      }
       
-      # # Determine mass outside of SEUS
-      # mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.SEUS)), na.rm = TRUE)
-      # # Redistribute mass across range according to north-south gradient
-      # d1 <- densr[[.x]] * rp.SEUS
-      # d2 <- mout * r_south/sum(raster::getValues(r_south), na.rm = TRUE) # Sums to mout
-      # d.out <- d1 + d2
-      
-      # OPTION 2
-      
-      # # Clip density to SEUS
-      # d1 <- densr[[.x]] * rp.SEUS
-      # # Re-scale gradient outside of SEUS
-      # d1[d1==0] <- NA
-      # dv <- na.omit(apply(X = as.matrix(d1), MARGIN = 1, FUN = mean, na.rm = TRUE))
-      # d2 <- rescale_raster(x = r_south * (1-rp.SEUS), new.max = dv[1])
-      # d2[d2==0] <- NA
-      # d.out <- raster::merge(d1, d2)
-      
-      # OPTION 3
-      pathGSL <- raster::shapefile("data/pathGSL.shp") |> sp::spTransform(CRSobj = narw_crs())
-      pts <- sp::spsample(pathGSL, n = 1000, type = "regular")
-      distances <- raster::distanceFromPoints(object = densr[[1]], xy = pts) |> 
-        raster::mask(mask = densr[[1]])
-      dist.r <- (1/distances)^(1/4) # Fourth root
-      d.out <- rescale_raster(dist.r, new.min = raster::cellStats(dist.r, "min"), 
-                               new.max = raster::cellStats(dist.r*(1-rp.CA), "max")) + r_southbound
-      
-      as(d.out, "SpatialGridDataFrame")
-
     } else if(.x == 6) { # Migrating north in June
-
-      # OPTION 1
       
-      # Determine mass outside of GSL
-      # mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.GSL)), na.rm = TRUE)
-      # Redistribute mass across range according to north-south gradient
-      # d1 <- densr[[.x]] * rp.GSL
-      # d2 <- mout * r_north/sum(raster::getValues(r_north), na.rm = TRUE) # sums to mout
-      # d.out <- d1 + d2
-      
-      # OPTION 2
-      
-      # # Clip density to GSL
-      # d1 <- densr[[.x]] * rp.GSL
-      # # Re-scale gradient outside of GSL
-      # d1[d1==0] <- NA
-      # dv <- na.omit(apply(X = as.matrix(d1), MARGIN = 1, FUN = mean, na.rm = TRUE))
-      # d2 <- rescale_raster(x = r_north * (1-rp.GSL), new.max = dv[1])
-      # d2[d2==0] <- NA
-      # d.out <- raster::merge(d1, d2)
-      
-      # OPTION 3
-      pathGSL <- raster::shapefile("data/pathGSL.shp") |> sp::spTransform(CRSobj = narw_crs()) |> rgeos::gBuffer(width = 50)
-      pts <- sp::spsample(pathGSL, n = 10000, type = "regular")
-      distances <- raster::distanceFromPoints(object = densr[[1]], xy = pts) |> raster::mask(mask = densr[[1]])
-      dist.r <- (1/distances)^(1/4) # Fourth root
-      d.out <- rescale_raster(dist.r, new.min = raster::cellStats(dist.r, "min"), 
-                              new.max = raster::cellStats(dist.r*rp.CA, "max")) + r_northbound
-
-      as(d.out, "SpatialGridDataFrame")
+      if(target == "GSL"){
+        
+        if(option == 1){
+          
+          # OPTION 1
+          
+          # Determine mass outside of GSL
+          mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.GSL)), na.rm = TRUE)
+          # Redistribute mass across range according to north-south gradient
+          d1 <- densr[[.x]] * rp.GSL
+          d2 <- mout * r_north/sum(raster::getValues(r_north), na.rm = TRUE) # sums to mout
+          d.out <- d1 + d2
+          
+        } else if (option == 2){
+          
+          # OPTION 2
+          
+          # Clip density to GSL
+          d1 <- densr[[.x]] * rp.GSL
+          # Re-scale gradient outside of GSL
+          d1[d1==0] <- NA
+          dv <- na.omit(apply(X = raster::as.matrix(d1), MARGIN = 1, FUN = mean, na.rm = TRUE))
+          d2 <- rescale_raster(x = r_north * (1-rp.GSL), new.max = dv[1])
+          d2[d2==0] <- NA
+          d.out <- raster::merge(d1, d2)
+          
+        } else if (option == 3){
+          
+          # OPTION 3
+          pathGSL <- raster::shapefile("data/pathGSL.shp") |> sp::spTransform(CRSobj = narw_crs()) |> rgeos::gBuffer(width = 50)
+          pts <- sp::spsample(pathGSL, n = 10000, type = "regular")
+          distances <- raster::distanceFromPoints(object = densr[[1]], xy = pts) |> raster::mask(mask = densr[[1]])
+          dist.r <- (1/distances)^(1/4) # Fourth root
+          d.out <- rescale_raster(dist.r, new.min = raster::cellStats(dist.r, "min"), 
+                                  new.max = raster::cellStats(dist.r*rp.CA, "max")) + r_northbound
+          
+        }
+        
+        as(d.out, "SpatialGridDataFrame")
+        
+      } else {
+        
+        dens[[.x]]  
+        
+      }
       
     } else if(.x %in% c(1:2, 12)) { # Breeding season in the SEUS
       
-      # Mass outside of SEUS
-      mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.SEUS)), na.rm = TRUE)
-
-      # Redistribute mass
-      d <- densr[[.x]] * rp.SEUS
-      d <- d + d*mout/sum(raster::getValues(d), na.rm = TRUE) + 1e-06
-      as(d, "SpatialGridDataFrame")
+      if(target == "SEUS"){
+        
+        # Mass outside of SEUS
+        mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.SEUS)), na.rm = TRUE)
+        
+        # Redistribute mass
+        d <- densr[[.x]] * rp.SEUS
+        d <- d + d*mout/sum(raster::getValues(d), na.rm = TRUE) + 1e-06
+        as(d, "SpatialGridDataFrame")
+        
+      } else {
+        
+        dens[[.x]]  
+        
+      }
       
     } else if(.x %in% c(7:10)) { # Foraging season in the GSL
       
-      # Mass outside of GSL
-      mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.GSL)), na.rm = TRUE)
+      if(target == "GSL"){
+        
+        # Mass outside of GSL
+        mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.GSL)), na.rm = TRUE)
+        
+        # Redistribute mass
+        d <- densr[[.x]] * rp.GSL
+        d <- d + d*mout/sum(raster::getValues(d), na.rm = TRUE) + 1e-06
+        as(d, "SpatialGridDataFrame")
+        
+      } else {
+        
+        dens[[.x]]  
+        
+      }
       
-      # Redistribute mass
-      d <- densr[[.x]] * rp.GSL
-      d <- d + d*mout/sum(raster::getValues(d), na.rm = TRUE) + 1e-06
-      as(d, "SpatialGridDataFrame")
-
     } else { # March through to May
-
+      
       dens[[.x]]
-
+      
     }
-
+    
   }) |> purrr::set_names(nm = month.abb)
-
+  
   return(wdens)
   
 }
 
-init_xy <- function(maps, maps.weighted, coords, cohort.id, nsim, northSEUS = -12, southGSL = 1400){
+warp <- function(p, coords, lower = 700, upper = 850, left = 500, right = 750){
   
-  if(cohort.id == 5) m <- maps.weighted else m <- maps
-  if(cohort.id > 0) m <- maps.weighted else m <- maps
+  inside <- which(coords[,2] > lower & coords[,2] < upper & coords[,1] > left & coords[,1] < right)
+  outside <- which(!1:nrow(coords) %in% inside)
+  N.outside <- sum(p[outside])
+  p[outside] <- 0
+  p[inside][p[inside] > 0] <- p[inside][p[inside] > 0] + (N.outside / length(p[inside][p[inside] > 0]))
+  return(p)
+}
+
+initiate_xy <- function(maplist,
+                         coords,
+                         migrate,
+                         init.month,
+                         nsim){
   
-  out <- do.call(rbind, lapply(seq_along(m), function(mo) {
+  out <- do.call(rbind, lapply(1:12, function(mo) {
     
-    p <- as.numeric(m[[mo]])
-    p[!is.finite(p)] <- 0
+    sampled.xy <- purrr::map(.x = maplist, .f = ~{
+      sample(x = 1:283077, size = nsim, replace = TRUE, prob = .x[[mo]])
+    })
     
-    # Foraging season in the GSL (June though to Oct – Crowe et al., 2021)
-    if(mo %in% c(7:10)){
-      notGSL <- which(coords[,2] < southGSL)
-      GSL <- which(coords[,2] >= southGSL)
-      N.notGSL <- sum(p[notGSL])
-      p[notGSL] <- 0
-      p[GSL][p[GSL] > 0] <- p[GSL][p[GSL] > 0] + (N.notGSL / length(p[GSL][p[GSL] > 0]))
-      
-      # Breeding season (Nov through to February - Krystan et al. 2018)
-    } else if (mo %in% c(1:2, 11:12)){
-      notSEUS <- which(coords[,2] > northSEUS)
-      SEUS <- which(coords[,2] <= northSEUS)
-      N.notSEUS <- sum(p[notSEUS])
-      p[notSEUS] <- 0
-      p[SEUS][p[SEUS] > 0] <- p[SEUS][p[SEUS] > 0] + (N.notSEUS / length(p[SEUS][p[SEUS] > 0]))
-      
-    } else if (mo == 5){
-      
-      area <- which(coords[,2] <= 1200)
-      notarea <- setdiff(seq_along(p), area)
-      N.notarea <- sum(p[notarea])
-      p[notarea] <- 0
-      p[area][p[area] > 0] <- p[area][p[area] > 0] + (N.notarea / length(p[area][p[area] > 0]))
-      
-    } else if (mo == 6){
-      
-      SCOS <- which(coords[,1] >= 1400 & coords[,2] <=1500)
-      notSCOS <- setdiff(seq_along(p), SCOS)
-      N.notSCOS <- sum(p[notSCOS])
-      p[notSCOS] <- 0
-      p[SCOS][p[SCOS] > 0] <- p[SCOS][p[SCOS] > 0] + (N.notSCOS / length(p[SCOS][p[SCOS] > 0]))
-      
-    } else {
-      p[p <= 0.01] <- 0
-    }
-    sample(x = 1:length(p), size = nsim, replace = TRUE, prob = p)
+    purrr::map_int(.x = 1:nsim, .f = ~ {
+      if (mo %in% c(1:2, 11:12) & migrate[.x, 1] == 1) {
+        sampled.xy[[1]][.x]
+      } else if (mo %in% c(6:9) & migrate[.x, 2] == 1) {
+        sampled.xy[[2]][.x]
+      } else if(mo == init.month){
+        sampled.xy[[3]][.x]
+      } else {
+        sampled.xy[[4]][.x]
+      }
+    })
+    
   }))
-  
+  row.names(out) <- month.abb
   return(out)
 }
+# 
+# 
+# init_xy <- function(maps, 
+#                     coords, 
+#                     cohort.id, 
+#                     nsim){
+#   
+#   out <- do.call(rbind, lapply(seq_along(maps), function(mo) {
+#     
+#     p <- as.numeric(maps[[mo]])
+#     p[!is.finite(p)] <- 0
+#     
+#     # Lactating females
+#     if(cohort.id == 5){
+#       
+#       # Breeding season (Nov through to February - Krystan et al. 2018)
+#       if(mo %in% c(1:2, 11:12)){
+#         p <- warp(p, coords, -5000, -300, -1000, 3000)
+#       } else {
+#         p <- warp(p, coords)
+#       }
+#       
+#     } else {
+#       
+#       if(mo %in% c(6:9)){
+#         # Initiate on feeding grounds in GSL
+#         p <- warp(p, coords, 1400, 5000, -1000, 3000)
+#       } else {
+#         p <- warp(p, coords)
+#       }
+#       
+#     }
+# 
+#     sample(x = 1:length(p), size = nsim, replace = TRUE, prob = p)
+#   }))
+#   row.names(out) <- month.abb
+#   return(out)
+# }
+
+# init_xy <- function(maps, 
+#                     # maps.weighted, 
+#                     coords, 
+#                     cohort.id, 
+#                     nsim, 
+#                     northSEUS = -12, 
+#                     southGSL = 1400){
+#   
+#   m <- maps
+#   # if(cohort.id == 5) m <- maps.weighted else m <- maps
+#   # if(cohort.id > 0) m <- maps.weighted else m <- maps
+#   
+#   out <- do.call(rbind, lapply(seq_along(m), function(mo) {
+#     
+#     p <- as.numeric(m[[mo]])
+#     p[!is.finite(p)] <- 0
+#     
+#     # Foraging season in the GSL (June though to Oct – Crowe et al., 2021)
+#     if(mo %in% c(7:10)){
+#       notGSL <- which(coords[,2] < southGSL)
+#       GSL <- which(coords[,2] >= southGSL)
+#       N.notGSL <- sum(p[notGSL])
+#       p[notGSL] <- 0
+#       p[GSL][p[GSL] > 0] <- p[GSL][p[GSL] > 0] + (N.notGSL / length(p[GSL][p[GSL] > 0]))
+#       
+#       # Breeding season (Nov through to February - Krystan et al. 2018)
+#     } else if (mo %in% c(1:2, 11:12)){
+#       notSEUS <- which(coords[,2] > northSEUS)
+#       SEUS <- which(coords[,2] <= northSEUS)
+#       N.notSEUS <- sum(p[notSEUS])
+#       p[notSEUS] <- 0
+#       p[SEUS][p[SEUS] > 0] <- p[SEUS][p[SEUS] > 0] + (N.notSEUS / length(p[SEUS][p[SEUS] > 0]))
+#       
+#     } else if (mo == 5){
+#       
+#       area <- which(coords[,2] <= 1200)
+#       notarea <- setdiff(seq_along(p), area)
+#       N.notarea <- sum(p[notarea])
+#       p[notarea] <- 0
+#       p[area][p[area] > 0] <- p[area][p[area] > 0] + (N.notarea / length(p[area][p[area] > 0]))
+#       
+#     } else if (mo == 6){
+#       
+#       SCOS <- which(coords[,1] >= 1400 & coords[,2] <=1500)
+#       notSCOS <- setdiff(seq_along(p), SCOS)
+#       N.notSCOS <- sum(p[notSCOS])
+#       p[notSCOS] <- 0
+#       p[SCOS][p[SCOS] > 0] <- p[SCOS][p[SCOS] > 0] + (N.notSCOS / length(p[SCOS][p[SCOS] > 0]))
+#       
+#     } else {
+#       p[p <= 0.01] <- 0
+#     }
+#     sample(x = 1:length(p), size = nsim, replace = TRUE, prob = p)
+#   }))
+#   
+#   return(out)
+# }
 
 # 
 # init_inds <- function(x, nsim, northSEUS = -12, southGSL = 1500, cohort.id){
@@ -563,17 +702,18 @@ transpose_array <- function(input, cohortID, dates) {
   return(out.array)
 }
 
-consolidate <- function(dtl, nsim, cnames, dates){
+consolidate <- function(dtl, nsim, cnames, dates, months){
   purrr::map2(.x = dtl,
               .y = cnames, 
               .f = ~{
                 dt <- data.table::data.table(day = rep(0:365, times = nsim), 
-                                               date = rep(dates, times = nsim),
-                                               whale = rep(1:nsim, each = 366))
+                                             date = rep(dates, times = nsim),
+                                             month = rep(months, times = nsim),
+                                             whale = rep(1:nsim, each = 366))
                 a <- cbind(array2dt(.x), dt)
                 a$region <- sort(regions$region)[a$region]
                 a$cohort_name <- .y
-                data.table::setcolorder(a, c((ncol(a)-3):(ncol(a)-1), 1:(ncol(a)-4))) 
+                data.table::setcolorder(a, c((ncol(a)-4):(ncol(a)-1), 1:(ncol(a)-5))) 
               })
 }
 
@@ -686,6 +826,697 @@ optim_feeding <- function(bounds = list(c(0,0.2)), nm = NULL, linecol = "black",
     lines(x, f(x, B = res[[.x]]$par[1], C = res[[.x]]$par[2], S = res[[.x]]$par[3]), lty = .x, col = linecol)
   })
   if(!is.null(nm)) legend("topright", legend = nm, lty = seq_along(bounds), col = linecol)
+  
+}
+
+# Function to add new individual
+new_calf <- function(arr, year, attrib){
+  
+  if(!ncol(arr) == length(mat.attribs)) stop("Cannot add new individual")
+  
+  newind <- array(data = NA, dim = c(dim(arr)[1:2], 1), dimnames = list(
+    paste0("yr ", 0:yrs), mat.attribs, paste0("whale ", dim(arr)[3] + 1)))
+  
+  newind[year,"alive", 1] <- 1
+  newind[year,"cohort", 1] <- 0
+  newind[year,"female", 1] <- rbinom(n = 1, size = 1, prob = 0.5) # 1:1 sex ratio at birth
+  newind[year, "age", 1] <- 0
+  
+  l.params <- agL(0)
+  newind[year,"length", 1] <- age2length(0, l.params)
+  newind[year:dim(arr)[1],"length_a", 1] <- l.params[,1]
+  newind[year:dim(arr)[1],"length_b", 1] <- l.params[,2]
+  newind[year:dim(arr)[1],"length_c", 1] <- l.params[,3]
+  
+  m.params <- mL(1)
+  mass <- length2mass(newind[year,"length", 1], m.params, FALSE)
+  newind[year:dim(arr)[1],"mass_a", 1] <- m.params[, 1]
+  newind[year:dim(arr)[1],"mass_b", 1] <- m.params[, 2]
+  newind[year,"tot_mass", 1] <- mass
+  
+  newind[year,"bc",] <- start_bcondition(0)
+  
+  newind[year,"lean_mass", 1] <- mass - (newind[year,"bc",] * mass)
+
+  newind[year,"trest",] <- 0
+  newind[year,"t2calf",] <- 0
+  newind[year,"min_bc",] <- 0
+  newind[year,"birth",] <- 0
+  newind[year,"p_surv",] <- 1
+  
+  #' ---------------------------
+  
+  return(abind::abind(arr, newind, along = 3))
+  
+}
+
+# Function to predict survival or body condition from body condition
+predict_m <- function(model, cohort = NULL, values, prediction = "surv"){
+  if(prediction %in% c("surv", "bc")) newdat <- data.frame(start_bc = values, cohort = cohort)
+  if(prediction == "gest") newdat <- data.frame(mass = values)
+  mgcv::predict.gam(object = model[[prediction]], newdata = newdat, newdata.guaranteed = TRUE, type = "response")
+}
+
+#' predictnarwsim <- function(obj,
+#'                             yrs = 35,
+#'                             n = 100) {
+#'   
+#'   # if(is.null(obj$gam)) stop("Insufficient data available. Cannot proceed with population projections.")
+#'   # if(!identical(cohortID, 1:6)) stop("Missing cohorts in input <obj>. Cannot proceed with population projections.")
+#'   # if(length(obj$gam$fit$surv$xlevels[[1]]) < 6 | length(obj$gam$fit$bc$xlevels[[1]]) < 6) stop("Missing factor levels in input <obj>. Cannot proceed with population projections.")
+#'   
+#'   # plogis("link" predictions + error)
+#'   
+#'   # Adapted from original code by Scott Creel
+#'   # https://www.montana.edu/screel/teaching/bioe-440r-521/course-outline/stoch_projection_new.R
+#'   # 
+#'   # Prediction intervals
+#'   # https://stat.ethz.ch/pipermail/r-help/2011-April/275632.html
+#'   
+#'   # Population estimate as per 2022 NARW report card is 340 (+/- 7).
+#'   
+#'   # test <- mgcv::predict.gam(mod$gam[[1]]$surv, newdata = data.frame(start_bc = seq(0,0.6, 0.01)), type = "link", se.fit = TRUE)
+#'   # plot(seq(0,0.6, 0.01), plogis(test$fit), type = "l")
+#'   # lines(seq(0,0.6, 0.01), plogis(Reduce("+", test)), lty = 2)
+#'   # lines(seq(0,0.6, 0.01), plogis(Reduce("-", test)), lty = 2)
+#'   # test2 <- mgcv::predict.gam(mod$gam[[1]]$surv, newdata = data.frame(start_bc = 0.2), type = "response")
+#'   # abline(v = 0.2)
+#'   # abline(h = tesct2)
+#'   
+#'   cohortID <- obj$param$cohortID
+#'   cohorts <- obj$param$cohorts |> dplyr::slice(1) |> 
+#'     dplyr::mutate(name = gsub(", female", "", name), abb = gsub(",f", "", abb)) |> 
+#'     dplyr::bind_rows(obj$param$cohorts) |> 
+#'     dplyr::mutate(name = gsub("male, female", "female", name), abb = gsub("m,f", "f", abb))
+#'   cohorts <- cohorts[c(1,3,5,2,4,6,7,8)]
+#'   
+#'   # Attributes to monitor during projection
+#'   mat.attribs <- c("alive", "cohort", "female", "age", "length", "length_a", "length_b", "length_c",
+#'                    "tot_mass", "lean_mass", "bc", "mass_a", "mass_b", "p_surv", "min_bc", "calving_int", "t2calf", "birth")
+#'   
+#'   # Current year
+#'   current.yr <- lubridate::year(lubridate::now())
+#'   
+#'   # Extract terminal functions
+#'   mod <- obj$gam$fit
+#'   mod[["gest"]] <- gam_gest
+#'   
+#'   #'------------------------------------------------------
+#'   # INITIALIZATION
+#'   #'------------------------------------------------------
+#'   
+#'   # Define initial population vector
+#'   N0 <- c(2, 5, 212, 2, 69, 1, 7, 61)
+#'   names(N0) <- cohorts[, name]
+#'   
+#'   # Create matrices and initialize them
+#'   # rows: years <yrs>
+#'   # columns: <attributes>
+#'   # layers: individuals <n>
+#'   # 4th dimension: replicate projection -> later converted to list
+#'   narw.indiv <- array(data = NA, c(yrs + 1, length(mat.attribs), sum(N0), n), 
+#'                       dimnames = list(paste0("yr ", 0:yrs), 
+#'                                       mat.attribs,
+#'                                       paste0("whale ", 1:sum(N0)),
+#'                                       paste0("prj ", 1:n)))
+#'   
+#'   cohort.vec <- do.call(c, sapply(X = 1:nrow(cohorts), FUN = function(x) rep(cohorts$id[x], each = N0[x])))
+#'   
+#'   # Alive and population cohort
+#'   narw.indiv[1,"alive",,] <- 1
+#'   narw.indiv[1,"cohort",,] <- rep(cohort.vec, n)
+#'   
+#'   # Sex
+#'   #  -- Calves (male)
+#'   narw.indiv[,"female", 1:N0[1], ] <- 0  
+#'   #  -- Calves (female)
+#'   fem <- which(cohort.vec == 0)
+#'   narw.indiv[,"female", fem[fem > N0[1]], ] <- 1   
+#'   #  -- Juveniles and adults
+#'   narw.indiv[,"female", which(cohort.vec %in% c(2,4,5,6)), ] <- 1
+#'   narw.indiv[,"female", which(cohort.vec %in% c(1,3)), ] <- 0
+#'   
+#'   # Age
+#'   ages <- start_age_vec(rep(cohort.vec, n))
+#'   narw.indiv[1,"age", , ] <- ages
+#'   
+#'   # Total body length
+#'   l.params <- agL_vec(ages)
+#'   lengths <- age2length_vec(ages, l.params)
+#'   narw.indiv[1,"length", , ] <- lengths
+#'   narw.indiv[,"length_a",,] <- rep(l.params[,1], each = yrs + 1)
+#'   narw.indiv[,"length_b",,] <- rep(l.params[,2], each = yrs + 1)
+#'   narw.indiv[,"length_c",,] <- rep(l.params[,3], each = yrs + 1)
+#'   
+#'   # Total mass
+#'   m.params <- mL(n*sum(N0))
+#'   mass <- length2mass_vec(lengths, m.params, FALSE)
+#'   narw.indiv[,"mass_a",,] <- rep(m.params[,1], each = yrs + 1)
+#'   narw.indiv[,"mass_b",,] <- rep(m.params[,2], each = yrs + 1)
+#'   narw.indiv[1,"tot_mass", , ] <- mass
+#'   
+#'   # Body conditon
+#'   narw.indiv[1,"bc",,] <- start_bcondition_vec(rep(cohort.vec, n))
+#'   
+#'   # lean mass
+#'   narw.indiv[1,"lean_mass", , ] <- mass - (narw.indiv[1,"bc",,] * mass)
+#'   
+#'   # Calving interval - mean of 5.3 years, up to apparent gaps of 13 years (Kraus et al. 2001)
+#'   # NARWC Report Card 2022: Average inter-birth interval of 7.7 yrs, median of 8, min/max (2/13)
+#'   # This corresponds to a Normal (7.7, 1.45)
+#'   # Mean age at first calving = 9.53 +/- 2.32 (Kraus et al. 2001)
+#'   # 
+#'   # Stewart et al. 2022 -- 
+#'   # The degree to which the energetic reserves of females are depleted during lactation may govern
+#'   # the length of the resting period between successful pregnancies (Miller et al. 2011, Marón et al. 2015).
+#'   narw.indiv[1,"calving_int",,] <- (rep(cohort.vec, n) == 6) * rnorm(sum(N0)*n, mean = 7.7, sd = 1.45)
+#'   narw.indiv[1,"t2calf",,] <- round(narw.indiv[1,"calving_int",,],0)
+#'   
+#'   narw.indiv[1,"min_bc",,] <- predict_m(model = mod,
+#'                                         values = as.vector(narw.indiv[1,"tot_mass",,]), 
+#'                                         prediction = "gest") * as.vector(narw.indiv[1, "cohort",, ] == 6)
+#'   narw.indiv[1,"birth",,] <- 0
+#'   narw.indiv[1,"p_surv",,] <- 1
+#'   
+#'   #' ---------------------------
+#'   # IMPORTANT 
+#'   #' ---------------------------
+#'   # Turn array into a list - otherwise cannot add new calves within projections
+#'   narw.indiv <- purrr::array_branch(narw.indiv, 4) 
+#'   
+#'   # Number of individuals in each cohort
+#'   narw.pop <- array(data = NA, c(n, yrs + 1, length(N0)), 
+#'                     dimnames = list(paste0("prj ", 1:n),
+#'                                     paste0("yr ", 0:yrs), 
+#'                                     cohorts$name))
+#'   narw.pop[,1,] <- rep(N0, each = n)
+#'   
+#'   # Total population size
+#'   tot.pop <- matrix(0, n, yrs + 1, dimnames = list(paste0("prj",1:n), paste0("yr ", 0:yrs)))
+#'   tot.pop[,1] <- sum(N0)
+#'   
+#'   #'------------------------------------------------------
+#'   # RUN PROJECTIONS
+#'   #'------------------------------------------------------
+#'   
+#'   # This uses nested loops. 
+#'   # The prj loop (outermost loop) replicates the projection <n> times.
+#'   # The i loop is next, and steps across all years of projection from an initial population vector.
+#'   
+#'   # Set up progress bar
+#'   pb <- progress::progress_bar$new(
+#'     format = "[:bar] :percent eta: :eta",
+#'     total = n, clear = FALSE, width = 80
+#'   )
+#'   
+#'   for(prj in 1:n){
+#'     
+#'     pb$tick() # Update progress bar
+#'     
+#'     #'------------------------------------------------------
+#'     # Loop over years
+#'     #'------------------------------------------------------
+#'     
+#'     for(i in 2:(yrs+1)){
+#'       
+#'       current.dat <- as.matrix(narw.indiv[[prj]][i-1, , ])
+#'       alive <- narw.indiv[[prj]][i-1, "alive", ]
+#'       
+#'       #' ----------------------------
+#'       # SURVIVAL
+#'       #' ----------------------------
+#'       # Predict survival probability based on body condition
+#'       ps <- alive * predict_m(model = mod, cohort = current.dat["cohort",], values = current.dat["bc",], prediction = "surv")
+#'       narw.indiv[[prj]][i, "p_surv", ] <- ps
+#'       
+#'       # Determine whether the animal survived
+#'       # Maximum longevity of 69 years
+#'       alive <- rbinom(n = dim(narw.indiv[[prj]])[3], size = 1, prob = ps) * (narw.indiv[[prj]][i-1, "age", ] <=69)
+#'       narw.indiv[[prj]][i, "alive", ] <- alive
+#'       
+#'       # Sex remains the same
+#'       narw.indiv[[prj]][i, "female", ] <- narw.indiv[[prj]][i-1, "female", ]
+#'       
+#'       #' ----------------------------
+#'       # GROWTH
+#'       #' ----------------------------
+#'       
+#'       # Increment age
+#'       narw.indiv[[prj]][i, "age", ] <- alive * narw.indiv[[prj]][i-1, "age", ] + 1
+#'       
+#'       # Increment length
+#'       narw.indiv[[prj]][i,"length", ] <- alive * age2length_vec(narw.indiv[[prj]][i, "age", ],
+#'                                                                 t(narw.indiv[[prj]][i, c("length_a", "length_b", "length_c"),]))
+#'       
+#'       # Increment lean mass
+#'       narw.indiv[[prj]][i,"lean_mass", ] <- alive * length2mass_vec(narw.indiv[[prj]][i, "length", ],
+#'                                                                     t(narw.indiv[[prj]][i, c("mass_a", "mass_b"),]), lean = TRUE)
+#'       
+#'       # Predict new body condition from current body condition
+#'       narw.indiv[[prj]][i, "bc", ] <- alive * predict_m(model = mod, cohort = current.dat["cohort",],
+#'                                                         values = current.dat["bc",], prediction = "bc")
+#'       
+#'       # Increment total mass
+#'       narw.indiv[[prj]][i,"tot_mass", ] <- alive * narw.indiv[[prj]][i,"lean_mass", ] / (1 - narw.indiv[[prj]][i,"bc", ])
+#'       
+#'       #' ----------------------------
+#'       # REPRODUCTION
+#'       #' ----------------------------
+#'       
+#'       narw.indiv[[prj]][i, "calving_int", ] <- alive * narw.indiv[[prj]][i-1, "calving_int", ]
+#'       narw.indiv[[prj]][i, "t2calf", ] <- ifelse(narw.indiv[[prj]][i-1, "t2calf", ] - 1 < 0, 0, narw.indiv[[prj]][i-1, "t2calf", ] - 1)
+#'       
+#'       # Minimum body condition needed to successfully bring fetus to term without starving
+#'       # No evidence of reproductive senescence in right whales - Hamilton et al. (1998)
+#'       narw.indiv[[prj]][i, "min_bc", ] <- alive * predict_m(model = mod, values = narw.indiv[[prj]][i, "tot_mass", ], 
+#'                                                             prediction = "gest") * (narw.indiv[[prj]][i-1, "cohort", ] == 6)
+#'       
+#'       # Birth of new calf
+#'       narw.indiv[[prj]][i, "birth", ] <- alive * (narw.indiv[[prj]][i, "bc", ] >= narw.indiv[[prj]][i, "min_bc", ]) * 
+#'         (narw.indiv[[prj]][i-1, "cohort", ] == 6) * (narw.indiv[[prj]][i-1, "birth", ] == 0)
+#'       
+#'       # Maturity - transitions between cohorts
+#'       narw.indiv[[prj]][i, "cohort", ] <- alive * increment_cohort(cohort = narw.indiv[[prj]][i-1, "cohort", ],
+#'                                                                    age = narw.indiv[[prj]][i, "age", ],
+#'                                                                    female = narw.indiv[[prj]][i, "female", ],
+#'                                                                    t2calf = narw.indiv[[prj]][i, "t2calf", ])
+#'       
+#'       # New births
+#'       # narw.indiv[[prj]] <- new_calf(narw.indiv[[prj]][,,], year = i, attrib = mat.attribs)
+#'       
+#'       # Number of animals in each cohort
+#'       # Calves (male)
+#'       narw.pop[prj, i, 1] <- sum((narw.indiv[[prj]][i, "cohort", ] == 0) *
+#'                                    (narw.indiv[[prj]][i, "female", ] == 0) *
+#'                                    (narw.indiv[[prj]][i, "alive", ] == 1))
+#'       
+#'       # Juveniles and adults (male)
+#'       narw.pop[prj, i, 2] <- sum((narw.indiv[[prj]][i, "cohort", ] == 1) * (narw.indiv[[prj]][i, "alive", ] == 1))
+#'       narw.pop[prj, i, 3] <- sum((narw.indiv[[prj]][i, "cohort", ] == 3) * (narw.indiv[[prj]][i, "alive", ] == 1))
+#'       
+#'       # Calves (female)
+#'       narw.pop[prj, i, 4] <- sum((narw.indiv[[prj]][i, "cohort", ] == 0) *
+#'                                    (narw.indiv[[prj]][i, "female", ] == 1) *
+#'                                    (narw.indiv[[prj]][i, "alive", ] == 1))
+#'       
+#'       # Juvenile and reproductive adults (female)
+#'       narw.pop[prj, i, 5] <- sum((narw.indiv[[prj]][i, "cohort", ] == 2) * (narw.indiv[[prj]][i, "alive", ] == 1))
+#'       narw.pop[prj, i, 6] <- sum((narw.indiv[[prj]][i, "cohort", ] == 4) * (narw.indiv[[prj]][i, "alive", ] == 1))
+#'       narw.pop[prj, i, 7] <- sum((narw.indiv[[prj]][i, "cohort", ] == 5) * (narw.indiv[[prj]][i, "alive", ] == 1))
+#'       narw.pop[prj, i, 8] <- sum((narw.indiv[[prj]][i, "cohort", ] == 6) * (narw.indiv[[prj]][i, "alive", ] == 1))
+#'       
+#'       # Total population size
+#'       tot.pop[prj, i] <- sum(narw.indiv[[prj]][i, "alive", ], na.rm = TRUE)
+#'       
+#'     } # End years
+#'   } # End projections
+#'   
+#'   # Compile outputs
+#'   narw.df <- purrr::map(.x = cohorts$name, .f = ~{
+#'     narw.pop[,,.x] |> 
+#'       tibble::as_tibble() |> 
+#'       tibble::rownames_to_column(var = "prj") |> 
+#'       tidyr::pivot_longer(!prj, names_to = "year", values_to = "N") |> 
+#'       dplyr::mutate(year = current.yr + as.numeric(gsub("yr ", "", year))) |> 
+#'       dplyr::mutate(cohort = stringr::str_to_sentence(.x))
+#'   }) |> do.call(what = rbind) |> data.table::data.table()
+#'   
+#'   tot.df <- tibble::as_tibble(tot.pop) |> 
+#'     tibble::rownames_to_column(var = "prj") |> 
+#'     tidyr::pivot_longer(!prj, names_to = "year", values_to = "N") |> 
+#'     dplyr::mutate(year = current.yr + as.numeric(gsub("yr ", "", year))) |> 
+#'     dplyr::mutate(cohort = "North Atlantic right whales") |> data.table::data.table()
+#'   
+#'   narw.conf <- narw.df[, list(mean = mean(N), lwr = quantile(N, 0.025), uppr = quantile(N, 0.975)), list(year, cohort)] |> 
+#'     dplyr::mutate(cohort = factor(cohort, levels = c("Calves (male)",
+#'                                                      "Calves (female)",
+#'                                                      "Juveniles (male)", 
+#'                                                      "Juveniles (female)", 
+#'                                                      "Adults (male)",
+#'                                                      "Adults (female, pregnant)",
+#'                                                      "Adults (female, lactating)",
+#'                                                      "Adults (female, resting)")))
+#'   
+#'   tot.conf <- tot.df[, list(mean = mean(N), lwr = quantile(N, 0.025), uppr = quantile(N, 0.975)), list(year, cohort)]|> 
+#'     dplyr::mutate(cohort = factor(cohort, levels = c("Calves (male)",
+#'                                                      "Calves (female)",
+#'                                                      "Juveniles (male)", 
+#'                                                      "Juveniles (female)", 
+#'                                                      "Adults (male)",
+#'                                                      "Adults (female, pregnant)",
+#'                                                      "Adults (female, lactating)",
+#'                                                      "Adults (female, resting)",
+#'                                                      "North Atlantic right whales")))
+#'   
+#'   p1 <- plot_projection(narw.df, narw.conf)
+#'   p2 <- plot_projection(tot.df, tot.conf)
+#'   
+#'   print(p1)
+#'   print(p2)
+#'   
+#'   # Find 95% confidence intervals on final population size
+#'   cat("Final population size:\n")
+#'   final.pop <- unname(tot.df[year == current.yr + yrs,  quantile(N, probs = c(0.5, 0.025, 0.975))])
+#'   cat("N = ", final.pop[1], " (95% CI: ", final.pop[2], "–", final.pop[3], ")\n", sep = "")
+#'   
+#'   return(list(ind = narw.indiv, df = rbind(narw.df, tot.df), ci = rbind(narw.conf, tot.conf)))
+#'   
+#' }
+
+# Stripped down version of predict function for TP splines (from <mgcv>)
+# predict_thinplate <- function(object, dat) {
+#   x <- array(0, 0)
+#   for (i in 1:object$dim)
+#   {
+#     xx <- dat[[object$term[i]]]
+#     xx <- xx - object$shift[i]
+#     if (i == 1) {
+#       n <- length(xx)
+#     } else
+#     if (length(xx) != n) stop("arguments of smooth not same dimension")
+#     if (length(xx) < 1) stop("no data to predict at")
+#     x <- c(x, xx)
+#   }
+# 
+#   by <- 0
+#   by.exists <- FALSE
+#   ## following used to be object$null.space.dim, but this is now *post constraint*
+#   M <- mgcv:::null.space.dimension(object$dim, object$p.order[1])
+# 
+#   ind <- 1:object$bs.dim
+# 
+#   if (is.null(object$drop.null)) object$drop.null <- 0 ## pre 1.7_19 compatibility
+# 
+#   if (object$drop.null > 0) object$bs.dim <- object$bs.dim + M
+# 
+#   X <- matrix(0, n, object$bs.dim)
+#   oo <- .C(mgcv:::C_predict_tprs, as.double(x), as.integer(object$dim), as.integer(n), as.integer(object$p.order[1]),
+#     as.integer(object$bs.dim), as.integer(M), as.double(object$Xu),
+#     as.integer(nrow(object$Xu)), as.double(object$UZ), as.double(by), as.integer(by.exists),
+#     X = as.double(X)
+#   )
+#   X <- matrix(oo$X, n, object$bs.dim)
+#   if (object$drop.null > 0) {
+#     if (FALSE) { ## not param
+#       X <- (X %*% object$P)[, ind] ## drop null space
+#     } else { ## original
+#       X <- X[, ind]
+#       X <- sweep(X, 2, object$cmX)
+#     }
+#   }
+#   X
+# } ## Predict.matrix.tprs.smooth
+
+# dh <- list(mass = 30000)
+# j <- attr(gam_gest$smooth[[1]], "nCons")
+# coefs <- coef(gam_gest)
+
+# Function to make predictions from GAM model linking body mass to the minimum body condition
+# required to successfully complete a pregnancy - stripped down version of mgcv::predict.gam 
+# predict_gest <- function(object, data.list, qrc) 
+# {
+#   # object = gam_gest$smooth[[1]]
+#   # pm <- mgcv:::Predict.matrix3(gam_gest$smooth[[1]], data)[["X"]]
+#   # dk <- mgcv:::ExtractData(object, data, NULL)
+#   
+#   pm <- predict_thinplate(object, data.list)
+#   # k <- ncol(pm)
+#   # t(qr.qty(qrc, t(pm))[(j + 1):k, , drop = FALSE])
+#   out <- t(qr.qty(qrc, t(pm)))
+#   out[,1] <- 1
+#   out
+# }
+
+predict_leslie <- function(obj,
+                            n = 100,
+                            yrs = 35) {
+  
+  gg.opts <- ggplot2::theme(axis.text = element_text(size = 10, color = "black"),
+                            axis.text.y = element_text(margin = margin(t = 0, r = 5, b = 0, l = 0)),
+                            axis.text.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+                            axis.title = element_text(size = 12),
+                            axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+                            axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
+                            strip.background = element_rect(fill = "grey20"),
+                            strip.text = element_text(colour = 'white', size = 12))
+  
+  
+  # Adapted from original code by Scott Creel
+  # https://www.montana.edu/screel/teaching/bioe-440r-521/course-outline/stoch_projection_new.R
+  
+  # Population estimate as per 2022 NARW report card is 340 (+/- 7).
+  # The percentage of the population estimated 
+  
+  # cohort.id <- obj$param$cohort.id
+  # cohort.ab <- obj$param$cohort.ab
+  current.yr <- lubridate::year(lubridate::now())
+  
+  cohorts <- c("Calves (male)",
+               "Juveniles (male)", 
+               "Adults (male)",
+               "Calves (female)",
+               "Juveniles (female)", 
+               "Adults (female, pregnant)",
+               "Adults (female, lactating)",
+               "Adults (female, resting)") |> 
+    tolower() |> abbreviate(minlength = 6) |> tibble::enframe() |> 
+    dplyr::rename(cohort = name, abbr = value)
+  
+  # Vector to store total population size for N replicate projections
+  narwpop <- purrr::set_names(x = cohorts$cohort) |> 
+    purrr::map(.f = ~matrix(0, n, yrs, dimnames = list(paste0("proj",1:n), paste0("yr ", 1:yrs))))
+  
+  totpop <- matrix(0, n, yrs, dimnames = list(paste0("proj",1:n), paste0("yr ", 1:yrs)))
+  
+  # 1: Calves (male)
+  # 2: Juveniles (male)
+  # 3: Adults (male)
+  # 4: Calves (female)
+  # 5: Juveniles (female)
+  # 6: Adults (female, pregnant)
+  # 7: Adults (female, lactating)
+  # 8: Adults (female, resting)
+  
+  p.fem <- 0.5 # Fraction of females at birth
+  p.birth <- 0.5 # Probability that a pregnant female will give birth to a calf (fecundity)
+  p.survival <- rep(0.8, nrow(cohorts)) # Probability of survival
+  names(p.survival) <- cohorts
+  p.recruit <- c(0.7, 0.7) # Male, female
+  tau_rp <- 0.7 # Transition prob from resting to pregnant
+  tau_pl <- 0.7 # Transition prob from pregnant to lactating
+  tau_lr <- 0.8 # Transition prob from lactating to resting
+  
+  popmat <- matrix(0, nrow(cohorts), nrow(cohorts))
+  popmat[1, 6] <- p.survival[6] * p.birth * (1 - p.fem)
+  
+  popmat[2, 1] <- p.survival[1]
+  popmat[2, 2] <- p.survival[2]
+  
+  popmat[3, 2] <- p.survival[2] * p.recruit[1]
+  popmat[3, 3] <- p.survival[3]
+  
+  popmat[4, 4] <- p.survival[6] * p.birth * p.fem
+  
+  popmat[5, 5] <- p.survival[4]
+  popmat[5, 6] <- p.survival[5] * (1 - p.recruit[2])
+  
+  popmat[6, 5] <- p.survival[5] * p.recruit[2]
+  popmat[6, 6] <- p.survival[6] * (1 - tau_pl)
+  popmat[6, 8] <- p.survival[8] * tau_rp
+  
+  popmat[7, 6] <- p.survival[6] * tau_pl
+  popmat[7, 7] <- p.survival[7] * (1 - tau_lr)
+  
+  popmat[8, 7] <- p.survival[7] * tau_lr
+  popmat[8, 8] <- p.survival[8] * (1 - tau_rp)
+  
+  
+  popmat <- matrix(popmat, nrow = nrow(cohorts), byrow = FALSE, dimnames = list(cohorts$abbr, cohorts$abbr))
+  popmat <- round(popmat, 5)
+  
+  # STOCHASTIC LESLIE PROJECTION
+  #' ----------------------------
+  # This uses 4 nested loops. 
+  # The p loop (outermost loop) replicates the projection <n> times.
+  # The y loop is next, and steps across all years of projection from an initial population vector.
+  # The i and j loops are innermost and draw stochastic parameters (body condition and survival)
+  
+  # Set up progress bar
+  pb <- progress::progress_bar$new(
+    format = "[:bar] :percent eta: :eta",
+    total = n, clear = FALSE, width = 80
+  )
+  
+  for(p in 1:n){
+    
+    pb$tick() # Update progress bar
+    
+    # Matrix of age-class values, with one row per time step. 
+    # The columns represent the numbers of individuals in each age class.
+    N.mat <- matrix(NA, nrow = yrs, ncol = nrow(cohorts), dimnames = list(paste("yr", 1:yrs), cohorts$abbr))
+    
+    # Initial population vector
+    # Sums to 340 (abundance estimate as of 2022).
+    N.mat[1,] <- c(7, 10, 163, 8, 10, 50, 15, 77)
+    
+    # Begin loop for projections
+    for(i in 2:yrs){ 		
+      
+      # Set up a temporary Leslie matrix for each iteration 
+      #  with the correct mean fecundities and survival rates
+      leslie.mat <- popmat 				
+      
+      # Randomly draw fecundities for each class
+      # Mean of Poisson is fecundity value
+      # for(j in 1:n.stages){
+      #   leslie.mat[1,j] <- ifelse(popmat[1,j] == 0, 0, popmat[1,j] + rnorm(1, 0, 0.01))
+      # }
+      
+      for(j in 1:nrow(cohorts)){
+        for(k in 1:nrow(cohorts)){
+          leslie.mat[k,j] <- ifelse(popmat[k,j] == 0, 0, popmat[k,j] + rnorm(1, 0, 0.01))
+        }
+      }
+      
+      # Randomly draw survival probabilities for each class.
+      # n.ind is number of individuals to calculate live/die for
+      # for(k in 1:(n.stages-1)){
+      #   n.ind <- N.mat[(i-1),k]
+      #   # Need ifelse statement to deal with the possibility that there are no individuals in that age class
+      #   leslie.mat[(k+1),k] <- ifelse(n.ind > 1, rbinom(1,size = round(n.ind), p = les.mat[(k+1),k])/n.ind,0)
+      # }
+      
+      # Matrix multiplication for next time-step.
+      N.mat[i,] <- leslie.mat %*% N.mat[(i-1),]          
+      
+    } # End i loop over time
+    
+    for(k in seq_along(narwpop)){
+      narwpop[[k]][p,] <- N.mat[,k]
+    }
+    totpop[p,] <- rowSums(N.mat)
+    
+  } # Ends p loop over replicate projections
+  
+  # Compile outputs
+  narw.df <- purrr::imap(.x = narwpop, .f = ~{
+    tibble::as_tibble(.x) |> 
+      tibble::rownames_to_column(var = "proj") |> 
+      tidyr::pivot_longer(!proj, names_to = "year", values_to = "N") |> 
+      dplyr::mutate(year = current.yr + as.numeric(gsub("yr ", "", year))) |> 
+      dplyr::mutate(cohort = stringr::str_to_sentence(.y))
+  }) |> do.call(what = rbind) |> data.table::data.table()
+  
+  tot.df <- tibble::as_tibble(totpop) |> 
+    tibble::rownames_to_column(var = "proj") |> 
+    tidyr::pivot_longer(!proj, names_to = "year", values_to = "N") |> 
+    dplyr::mutate(year = current.yr + as.numeric(gsub("yr ", "", year))) |> 
+    dplyr::mutate(cohort = "North Atlantic right whales") |> data.table::data.table()
+  
+  narw.conf <- narw.df[, list(mean = mean(N), lwr = quantile(N, 0.025), uppr = quantile(N, 0.975)), list(year, cohort)]
+  tot.conf <- tot.df[, list(mean = mean(N), lwr = quantile(N, 0.025), uppr = quantile(N, 0.975)), list(year, cohort)]
+  
+  # Generate plots
+  make_plot <- function(df, conf){
+    ggplot2::ggplot() +
+      # ggplot2::geom_path(data = df, aes(x = year, y = N, group = factor(proj)), colour = "lightgrey", linewidth = 0.2) +
+      ggplot2::geom_path(data = conf, aes(x = year, y = mean), colour = "#1565C0") +
+      ggplot2::geom_ribbon(data = conf, aes(x = year, y = mean, ymin = lwr, ymax = uppr), alpha = 0.25, fill = "#1565C0") +
+      ggplot2::facet_wrap(~cohort) + 
+      ggplot2::scale_x_continuous(breaks = pretty(seq(current.yr, current.yr + yrs))) +
+      ggplot2::scale_y_continuous(breaks = pretty(df$N), labels = scales::comma) +
+      xlab("") + ylab("Abundance") +
+      gg.opts
+  }
+  
+  p1 <- make_plot(tot.df, tot.conf)
+  p2 <- make_plot(narw.df, narw.conf)
+  
+  print(p1)
+  print(p2)
+  
+  # Find 95% confidence intervals on final population size
+  ci <- tot.df[year == current.yr + yrs,  quantile(N, probs = c(0.025, 0.975))]
+  
+  return(ci)
+  
+}
+
+
+reshape_array <- function(a, value, ..., .id = NULL) 
+{
+  qs <- rlang::quos(...)
+  if (missing(value)) {
+    evalue <- rlang::sym("var")
+  }
+  else {
+    evalue <- rlang::enquo(value)
+  }
+  len <- length(qs)
+  d <- dim(a)
+  if (len > 0) {
+    dimnames <- purrr::map(qs, rlang::quo_name) |> purrr::as_vector()
+  }
+  else {
+    dimnames <- paste0("dim_", 1:length(d))
+  }
+  l <- list()
+  for (i in 1:length(d)) {
+    l[[i]] <- 1:d[i]
+  }
+  names(l) <- dimnames
+  tidy <- expand.grid(l)
+  tidy[[rlang::quo_name(evalue)]] <- a[as.matrix(tidy)]
+  if (!is.null(.id)) 
+    tidy[[.id]] <- rlang::expr_name(a)
+  return(tidy)
+}
+
+gestation_threshold <- function(){
+  
+  set.seed(20230412)
+  
+  # Simulate pregnant females - set stressors and growth to 0 to ensure that animals do not die
+  # Note: Fetus growth is not tied to growth argument
+  mg <- narw(nsim = 1000, cohortID = 4, progress = 1, stressors = 0, growth = 0)
+  mdat <- mg$sim$`ad(f,p)`
+  
+  # Energy density of lipids -- (kJ / kg - converted to GJ/kg)
+  ED_lipids = 39300/1000000
+  
+  # Percent lipid breakdown during catabolism
+  lipid_cat = runif(1000, 0.53, 0.6)
+  
+  # Compile data
+  m_kj <- mdat[, list(mass = unique(mass), E_gest = sum(E_gest)/1000), whale]
+  m_kj[, kg:= E_gest/(ED_lipids*lipid_cat) + 0.05*mass]
+  m_kj[, min_bc:=kg/mass]
+  
+  gam_gest <- mgcv::gam(min_bc ~ s(mass), data = m_kj, method = "REML", family = Gamma(link = "log"))
+  
+  # Residual checks
+  gratia::appraise(gam_gest)
+  
+  # Extract fitted relationship
+  b0 <- coef(gam_gest)[1] # Intercept
+  gest.df <- gratia::smooth_estimates(gam_gest) |>
+    gratia::add_confint() |>
+    dplyr::mutate(across(tidyselect::all_of(c("est", "lower_ci", "upper_ci")), .fns = \(x) x + b0)) |>
+    gratia::transform_fun(fun = \(x) exp(x))
+  
+  # Create plot
+  p <- ggplot2::ggplot(data = gest.df) + 
+    geom_ribbon(aes(x = mass, ymin = lower_ci, ymax = upper_ci), alpha = 0.25) +
+    geom_line(aes(mass, est)) + 
+    xlab("Total mass (kg)") + ylab("Minimum body condition (%)") +
+    theme_narw() +
+    scale_x_continuous(breaks = pretty(range(m_kj$mass))) +
+    scale_y_continuous(breaks = pretty(range(m_kj$min_bc), n = 10)) +
+    geom_rug(data = m_kj, aes(x = mass), sides = "b")
+
+  print(p)
+  
+  return(gam_gest)
   
 }
 
@@ -1064,6 +1895,8 @@ spatial_support <- function(min_density = 0.001){
   largest_component <- which.max(table(filtered_support$Nhat))
   filtered_support$Nhat <- filtered_support$Nhat == largest_component
   filtered_support$Nhat[!is.finite(filtered_support$Nhat)] <- FALSE
+
+  rpts <- raster::shapefile(file.path(getwd(), "data/regions/r_pts.shp")) |> sp::spTransform(CRSobj = narw_crs())
   
   # ..........................................
   # Manually add support for Canada
@@ -1073,7 +1906,7 @@ spatial_support <- function(min_density = 0.001){
   regions.support <- targets::tar_read(regions)
   
   # Filter out Canada
-  regions.support <- regions.support[regions.support@data$region %in% c("GSL", "SCOS"),] 
+  regions.support <- regions.support[regions.support@data$region %in% c("GSL", "SCOS", "CABOT"),] 
   
   # Overlay regions onto current spatial support
   regions.raster <- raster::rasterize(
@@ -1083,8 +1916,20 @@ spatial_support <- function(min_density = 0.001){
                        origin = raster::origin(raster::raster(filtered_support))))
   
   regions.raster[!is.na(regions.raster)] <- 1
+  # regions.raster <- raster::mask(regions.raster, world, inverse = TRUE)
+  
+  # world.raster <- raster::rasterize(
+  #   x = world,
+  #   y = raster::raster(filtered_support))
+  # world.raster[!is.na(world.raster)] <- 1
+  
+  fr <- raster::raster(filtered_support)
+  fcn <- raster::cellFromXY(fr, coordinates(fr))
+  fr <- raster::setValues(fr, fcn)
+  which.cells <- raster::extract(fr, rpts)
   
   combined_support <- raster::merge(regions.raster, raster::raster(filtered_support))
+
   
   # ..........................................
   # Mask out land
@@ -1107,6 +1952,8 @@ spatial_support <- function(min_density = 0.001){
   cleaned_support <- merge(outlines.raster, combined_support)
   cleaned_support <- raster::crop(cleaned_support, raster::extent(filtered_support))
   cleaned_support[cleaned_support <= 0] <- 0
+  
+  cleaned_support[which.cells] <- 0
   
   # Convert to logical
   cleaned_support@data@values <- cleaned_support@data@values > 0
@@ -1176,7 +2023,7 @@ sum_Nhat <- function(df, reg = "GSL", Ntot = 336){
   
   df.out <- df |> 
     dplyr::group_by(region,month) |> 
-    dplyr::summarise(Nhat = round(sum(Nhat),0)) |> 
+    dplyr::summarise(Nhat = round(sum(Nhat),0), .groups = "keep") |> 
     dplyr::arrange(region) |> 
     dplyr::filter(!is.na(region)) |> 
     dplyr::mutate(perc = round(100* Nhat / Ntot, 1)) |> 
@@ -1188,9 +2035,9 @@ sum_Nhat <- function(df, reg = "GSL", Ntot = 336){
   #   dplyr::filter(region == reg) |> 
   #   dplyr::ungroup()
   
-  print(df.out)
+
   cat(paste0("Average: ", round(mean(df.out[df.out$perc>0,]$perc),1), "%"))
-  
+  return(df.out)
 }
 
 
@@ -1259,8 +2106,10 @@ plot_preds <- function(dat, month = NULL, do.facet = TRUE, plot.sightings = TRUE
   levels(dat$Ncol) <-  gsub(pattern = ",", replacement = " – ", levels(dat$Ncol))
   levels(dat$Ncol) <-  gsub(pattern = "\\[|\\]", replacement = "", levels(dat$Ncol))
   levels(dat$Ncol) <-  gsub(pattern = "\\(|\\)", replacement = "", levels(dat$Ncol))
-  
+
   r.dat <- raster::rasterFromXYZ(dat[, c("x", "y", "Nhat")], res = d.res, crs = narw_crs())
+
+
   x.lim <- raster::extent(r.dat)[1:2]
   y.lim <- raster::extent(r.dat)[3:4]
   
@@ -2095,6 +2944,61 @@ get_world <- function(sc = "medium"){
 
 # PLOTTING ------------------------------------------------------
 
+# Generate plots
+plot_projection <- function(df, conf, current.year){
+  
+  ggplot2::ggplot() +
+    # ggplot2::geom_path(data = df, aes(x = year, y = N, group = factor(proj)), colour = "lightgrey", linewidth = 0.2) +
+    ggplot2::geom_path(data = conf, aes(x = year, y = mean), colour = "#1565C0") +
+    ggplot2::geom_ribbon(data = conf, aes(x = year, y = mean, ymin = lwr, ymax = uppr), alpha = 0.25, fill = "#1565C0") +
+    ggplot2::facet_wrap(~cohort, scales = "free") + 
+    ggplot2::scale_x_continuous(breaks = pretty(df$year)) +
+    # ggplot2::scale_y_continuous(breaks = pretty(df$N), labels = scales::comma) +
+    xlab("") + ylab("Abundance") +
+    theme_narw()
+}
+
+growth_curve <- function(param, obj, cohortID, ylabel){
+
+  cohorts <- obj$param$cohorts
+  dat <- data.table(obj$sim[[cohorts[id==cohortID, abb]]])
+  ind.survived <- dat[day == 365 & alive == 1, whale,]
+  dat <- dat[whale %in% ind.survived]
+  n.ind <- length(ind.survived)
+  # n.ind <- obj$param$nsim
+  if(nrow(dat) > 0){
+
+  param_dat <- matrix(unlist(dat[day > 0 & cohort == cohortID, param, with = FALSE]),
+                      ncol = 365, 
+                      nrow = n.ind, byrow = TRUE)
+  param_dat[param_dat == 0] <- NA
+
+  param_median <- apply(param_dat, MARGIN = 2, FUN = function(x) median(x, na.rm = TRUE))
+  param_lower <- apply(param_dat, MARGIN = 2, FUN = function(x) quantile(x, 0.025, na.rm = TRUE))
+  param_upper <- apply(param_dat, MARGIN = 2, FUN = function(x) quantile(x, 0.975, na.rm = TRUE))
+  
+  param_df <- data.table::data.table(day = 1:365, median = param_median, lwr = param_lower, uppr = param_upper)
+  
+  y.range <- c(min(param_df$lwr), max(param_df$uppr))
+  
+  p <- ggplot2::ggplot(data = param_df) +
+    ggplot2::geom_ribbon(aes(x = day, ymin = lwr, ymax = uppr), alpha = 0.25, fill = "deepskyblue4") +
+    ggplot2::geom_path(aes(x = day, y = median), col = "deepskyblue4") + 
+    theme_narw() +
+    ylab(ylabel) + xlab("Day of the year") +
+    ggtitle(label = ifelse(grepl(pattern = "calf", param), cohorts[1,name], cohorts[id==cohortID,name])) +
+    ggplot2::scale_x_continuous(breaks = seq(5, 365, by = 40)) +
+    ggplot2::scale_y_continuous(
+      limits = ~ y.range,
+      breaks = ~ pretty(y.range, 10))
+  
+  } else {
+    p <- list(NULL)
+  }
+  return(p)
+}
+
+
 theme_narw <- function(vertical = FALSE){
   
   # font <- "Georgia"   # Assign font family up front
@@ -2175,23 +3079,6 @@ colour_breaks <- function(dat){
   colour.breaks <- c(colour.breaks, seq(max(colour.breaks), ceiling(max(dat$Nhat, na.rm = TRUE)), length.out = 5))
   colour.breaks <- round(colour.breaks[!duplicated(colour.breaks)],3)
   return(colour.breaks)
-}
-
-#' @export
-plot.xyinits <- function(obj, month = NULL) {
-  if(is.null(month)) month <- 1:12
-  for(k in 1:length(obj)){
-    if(!"xyinits" %in% class(obj)) stop("Input not recognized")
-    par(mfrow = c(3,4))
-    for(h in month){
-      sp:::plot.SpatialPolygons(world, col = "grey", axes = TRUE, main = month.name[h])
-      xpos <- sapply(obj[[k]][h, ], FUN = function(x) raster::xFromCell(raster::raster(density_narw$Feb), x))
-      ypos <- sapply(obj[[k]][h, ], FUN = function(x) raster::yFromCell(raster::raster(density_narw$Feb), x))
-      points(cbind(xpos, ypos), pch = 16, col = "orange")
-      # legend("topleft", legend = month.abb, col = pals::glasbey(12), pch = 16)
-    }
-  }
-  par(mfrow = c(1,1))
 }
 
 deg2radians_R <- function(angle){
@@ -2427,7 +3314,7 @@ save_object <- function(obj, tg = TRUE, internal = FALSE) {
   if (internal) {
     tmp_env <- new.env(hash = FALSE)
     load("R/sysdata.rda", envir = tmp_env)
-    if(tg) dat <- suppressWarnings(targets::tar_read(obj)) else dat <- get(obj, envir = .GlobalEnv)
+    if(tg) dat <- suppressWarnings(targets::tar_read_raw(obj)) else dat <- get(obj, envir = .GlobalEnv)
     tmp_env[[obj]] <- dat
     save(list = names(tmp_env), file = "R/sysdata.rda", envir = tmp_env)
     # usethis::use_data(daylight, density_support, doseresponse, entgl_d, params, regions, regions_m, support_poly, wL, world, internal = TRUE, overwrite = TRUE)
