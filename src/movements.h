@@ -5,7 +5,6 @@
 #include "geodesic.h"
 #include "bioenergetics.h"
 
-
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(cpp11)]]
 
@@ -25,6 +24,10 @@ double sigma_move(int r){
     return sigma_feed;
   }
 }
+
+// std::int64_t hashf(double x0, double y0, double x1, double y1){
+//   return 0;
+// }
 
 
 /**
@@ -85,10 +88,14 @@ public:
     weights.resize(m);
   }
   
-  void update(AnimalType & animal, EnvironmentType & environment, bool norm, int region,
+  void update(AnimalType & animal, 
+              EnvironmentType & environment, 
+              bool norm, 
+              int region,
               Eigen::MatrixXd support,
               Eigen::VectorXd limits, 
-              Eigen::VectorXd resolution) {
+              Eigen::VectorXd resolution){
+              // phmap::flat_hash_map<std::int64_t, int> hash) {
     double d, d_0, a, x0, y0, xn, yn;
     bool sampling = true;
     // Rcpp::NumericVector out (3);
@@ -122,7 +129,40 @@ public:
         y0 = animal.y + d_0 * std::sin(a);
         
       }
+      
+      while(environment(x0,y0, 'D')==0){
 
+        if(norm){
+
+          x0 = animal.x + R::rnorm(0, sigma_move(region));
+          y0 = animal.y + R::rnorm(0, sigma_move(region));
+
+        } else {
+
+          // Availability radius model of Michelot et al. (2019)
+          // runif run here in scalar mode - generates a single value
+          // The square root is needed to sample points uniformly within a circle using inverse transform sampling
+          // This is because the desired probability density function for point generation grows linearly with the
+          // circle's radius, i.e., PDF(x) = 2x for a unit circle.
+          // The corresponding CDF is the integral of this function, i.e., x2
+          // The inverse CDF is therefore sqrt()
+          // https://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly
+
+          d_0 = std::sqrt(R::runif(0,stepsize_sq));
+          a = R::runif(-M_PI,M_PI);
+
+          // Disc center
+          x0 = animal.x + d_0 * std::cos(a);
+          y0 = animal.y + d_0 * std::sin(a);
+
+        }
+      }
+
+      // if(environment(x0,y0, 'D')==0) std::cout << "Yes1" << std::endl;
+      
+      // int crossland = environment(x0, y0, 'D') > 0;
+      // std::cout<< crossland << std::endl;
+      
       // Sample m points in the circle, and compute their weights
       // Use asterisks to create pointers
       double *prop = proposals.data();
@@ -153,8 +193,23 @@ public:
         *(prop++) = yn;
         
         // Retrieve density value (weight) at new x,y
-        *(w++) = environment(xn, yn, 'D');
+        char lyr;
+        if(animal.seus == 1 & animal.gsl == 0){
+          lyr = 'S';
+        } else if(animal.seus == 0 & animal.gsl == 1){
+          lyr = 'G';
+        } else {
+          lyr = 'D';
+        }
         
+        // std::cout << "Layer is: " << lyr << std::endl;
+        // std::cout << environment(xn, yn, 'D') << std::endl;
+        // std::cout << environment(xn, yn, 'S') << std::endl;
+        // std::cout << environment(xn, yn, lyr) << std::endl;
+        // std::cout << "---------------" << std::endl;
+        
+        *(w++) = environment(xn, yn, lyr); 
+       
       }
       
       // Select one point
@@ -225,6 +280,7 @@ public:
               Eigen::MatrixXd support,
               Eigen::VectorXd limits, 
               Eigen::VectorXd resolution) {
+              // phmap::flat_hash_map<std::int64_t, int> hash) {
     
     // Rcpp::NumericVector out (3);
     // Rcpp::NumericVector latent_coords (3);
@@ -284,6 +340,26 @@ public:
         y0 = animal.y + d_0 * std::sin(a);
         
       }
+
+      while(latent_envs[environment.id](x0, y0, 'D')==0){
+        if(norm){
+          
+          x0 = animal.x + R::rnorm(0, sigma_move(region));
+          y0 = animal.y + R::rnorm(0, sigma_move(region)); 
+          
+        } else {
+          
+          d_0 = std::sqrt(R::runif(0,stepsize_sq));
+          a = R::runif(-M_PI,M_PI);
+          
+          // Disc center
+          x0 = animal.x + d_0 * std::cos(a);
+          y0 = animal.y + d_0 * std::sin(a);
+          
+        }
+      }
+      
+      // if(latent_envs[environment.id](x0, y0, 'D')==0) std::cout << "Yes2" << std::endl;
       
       // Sample m points in the circle, keep closest valid point
       for(std::size_t i=0; i<m; ++i) {
@@ -301,21 +377,37 @@ public:
           xn = x0 + d * std::cos(a);
           yn = y0 + d * std::sin(a);
         }
+
+        char lyr;
+        if(animal.seus == 1 & animal.gsl == 0){
+          lyr = 'S';
+        } else if(animal.seus == 0 & animal.gsl == 1){
+          lyr = 'G';
+        } else {
+          lyr = 'D';
+        }
         
 
-        
         // Only consider proposals with non-zero mass
-        if(latent_envs[environment.id](xn, yn, 'D') > 0) {
+        if(latent_envs[environment.id](xn, yn, lyr) > 0) {
           
-          // bool calc_geo = false;
+          bool calc_geo = false;
             
-            // if((x0 >= 685 & x0 <= 1420 & y0 >= 1070 & y0 <= 1865) ||
-            //    (x0 >= 520 & x0 <= 730 & y0 >= 825 & y0 <= 960)) calc_geo = true;
+            if((x0 >= 685 & x0 <= 1420 & y0 >= 1070 & y0 <= 1865) ||
+               (x0 >= 520 & x0 <= 730 & y0 >= 825 & y0 <= 960)) calc_geo = true;
             
-            // if(calc_geo){
-            //   dist_to_latent = geoD(support, xn, yn, active_latent.x, active_latent.y, limits, resolution);
-            // } else {
+            // std::int64_t h = create_hash(x0, y0, xn, yn);
+            
+            // if((x0 >= 520 & x0 <= 730 & y0 >= 825 & y0 <= 960)){
+            //   int dgeo = hash[1];
+            // }
+            
+            if(calc_geo){
+              dist_to_latent = geoD(support, xn, yn, active_latent.x, active_latent.y, limits, resolution);
+            } else {
               dist_to_latent = std::pow(xn - active_latent.x, 2) + std::pow(yn - active_latent.y, 2);
+            }
+              // int test = hash_lookup(1);
             // }
             
             // Keep track of the point that gets closest to latent
