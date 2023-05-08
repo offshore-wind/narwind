@@ -45,10 +45,11 @@ data_targets = list(
   # Compute spatial support and clip density rasters
   # ........................................................................
   
-  targets::tar_target(name = support_poly, command = support_as_polygon()),
   targets::tar_target(name = density_support, command = spatial_support()),
-  targets::tar_target(name = density_narw, command = spatial_support()),
-  targets::tar_target(name = density_weighted, command = weighted_density()),
+  targets::tar_target(name = support_poly, command = support_as_polygon()),
+  targets::tar_target(name = density_narw, command = clip_density()),
+  targets::tar_target(name = density_weighted_seus, command = w_density(target = "SEUS", option = 2)),
+  targets::tar_target(name = density_weighted_gsl, command = w_density(target = "GSL", option = 2)),
   
   # ........................................................................
   # Surfaces
@@ -66,6 +67,12 @@ data_targets = list(
   # ........................................................................
   
   targets::tar_target(name = doseresponse, command = get_doseresponse()),
+  
+  # ........................................................................
+  # Minimum body condition required to bring fetus to term 
+  # ........................................................................
+  
+  targets::tar_target(name = gam_gest, command = gestation_threshold()),
   
   # ........................................................................
   # Save data to package

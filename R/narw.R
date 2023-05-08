@@ -17,28 +17,47 @@
 #' }
 
 narw <- function(nsim = 1e3,
-                 cohortID = 1:6,
                  scenario = NULL,
-                 init.month = 2,
-                 step.size = 120,
-                 stressors = TRUE,
-                 growth = TRUE,
                  n.cores = NULL,
-                 n.prop = 50, # In line with sample sizes used in case studies from Michelot (2020)
-                 progress = TRUE){
+                 progress = TRUE,
+                 ...){
+  
+  # Function ellipsis –– optional arguments
+  args <- list(...)
+  
+  # Default values for optional arguments 
+  init.month <- 10 # Start simulation in October
+  cohortID <- 1:6
+  stressors <- TRUE
+  growth <- TRUE
+  
+  # Default values
+  if(length(args) > 0) {
+    
+    if("cohortID" %in% names(args)) cohortID <- args[["cohortID"]] 
+    if("stressors" %in% names(args)) stressors <- args[["stressors"]] 
+    if("growth" %in% names(args)) growth <- args[["growth"]] 
+    if("init.month" %in% names(args)) init.month <- args[["init.month"]]
+    
+  }
   
   # nsim = 10
   # cohortID = 5
   # scenario = NULL
   # init.month = 2
-  # step.size = 120
   # stressors = FALSE
   # growth = TRUE
   # n.cores = NULL
-  # n.prop = 50
   # progress = TRUE
 
-  if(!init.month %in% 1:12) stop("<init.month> must be an integer between 1 and 12")
+  # Step size for movement model
+  step.size = 120
+  
+  # Number of proposals when sampling new location
+  # In line with sample sizes used in case studies from Michelot (2020)
+  n.prop = 50
+  
+  # if(!init.month %in% 1:12) stop("<init.month> must be an integer between 1 and 12")
   # if(!"init.model" %in% ls(envir = .GlobalEnv)) stop("The model must first be initialized using <load_model>")
   if(any(!cohortID %in% 1:6)) stop("Unrecognized cohort")
   
@@ -118,8 +137,10 @@ narw <- function(nsim = 1e3,
   # ............................................................
   
   maps <- lapply(density_narw, raster::as.matrix)
-  maps.weighted <- lapply(density_weighted, raster::as.matrix)
   if(!all(sapply(maps, class)[1,] %in% "matrix")) stop("Cannot find input of class <matrix>.")
+  
+  maps.weighted.seus <- lapply(density_weighted_seus, raster::as.matrix)
+  maps.weighted.gsl <- lapply(density_weighted_gsl, raster::as.matrix)
   
   # ............................................................
   # Load prey, daylight, and stressor surfaces
@@ -127,8 +148,18 @@ narw <- function(nsim = 1e3,
   
   preymaps <- lapply(dummy_prey, raster::as.matrix)
   fishingmaps <- lapply(dummy_fishing, raster::as.matrix)
-  vesselmaps <- lapply(dummy_vessels, raster::as.matrix)
-  noisemaps <- lapply(dummy_noise, raster::as.matrix)
+
+  if(is.null(scenario)){
+    vesselmaps <- lapply(dummy_vessels, raster::as.matrix)
+    noisemaps <- lapply(dummy_noise, FUN = function(x) {
+      n <- raster::as.matrix(x)
+      n[!is.na(n)] <- 60
+      n})
+  } else {
+    vesselmaps <- lapply(dummy_vessels, raster::as.matrix)
+    noisemaps <- lapply(dummy_noise, raster::as.matrix)
+  }
+  
   daylightmaps <- lapply(daylight, raster::as.matrix)
   regionsmap <- raster::as.matrix(regions_m)
   
@@ -146,16 +177,57 @@ narw <- function(nsim = 1e3,
   # ............................................................
   
   # Define time steps and sequence of density maps for each day
-  start.date <- paste0(lubridate::year(Sys.Date()), stringr::str_pad(init.month, width = 2, pad = "0"), "01")
-  init.date <- paste0(lubridate::year(Sys.Date()), "-", stringr::str_pad(init.month, width = 2, pad = "0"), "-", "00")
+  # Use a non-leap year like 2021
+  start.date <- paste0(2021, stringr::str_pad(init.month, width = 2, pad = "0"), "01")
+  init.date <- paste0(2021, "-", stringr::str_pad(init.month, width = 2, pad = "0"), "-", "00")
   date_seq <- c(init.date, as.character(seq(from = lubridate::ymd(start.date), by = 'day', length.out = 365)))
   map_seq <- c(init.month, lubridate::month(date_seq[2:366]))
   
+  # Migratory destinations
+  migration.df <- purrr::map(.x = cohortID, 
+                             .f = ~{data.frame(seus = prob_migration(nsim, "SEUS", .x),
+                             gsl = prob_migration(nsim, "GSL", .x))}) |> purrr::set_names(nm = cohorts[id %in% cohortID, abb])
+  
+  init_maps <- purrr::map(.x = maps, .f = ~{
+    p <- as.numeric(.x)
+    p[!is.finite(p)] <- 0
+    p})
+  
+  init_maps.seus <- purrr::map(.x = init_maps, .f = ~warp(.x, coords, -5000, -300, -1000, 3000))
+  init_maps.gsl <- purrr::map(.x = init_maps, .f = ~warp(.x, coords, 1475, 5000, -1000, 1300))
+  init_maps.main <- purrr::map(.x = init_maps, .f = ~warp(.x, coords))
+  
   # Simulate initial locations for latent animals
   # Return cell ID for each animal (columns) x month (rows)
-  init.inds <- purrr::map(.x = cohortID, 
-    .f = ~init_xy(maps = maps, maps.weighted = maps.weighted, coords = coords, cohort.id = .x, nsim = nsim)) |> 
-    purrr::set_names(nm = cohorts[id %in% cohortID, abb])
+  init.inds <- purrr::map(
+    .x = names(migration.df),
+    .f = ~ initiate_xy(
+      maplist = list(init_maps.seus, init_maps.gsl, init_maps.main, init_maps),
+      coords = coords,
+      migrate = migration.df[[.x]],
+      init.month = init.month,
+      nsim = nsim
+    )
+  ) |> purrr::set_names(nm = cohorts[id %in% cohortID, abb])
+  
+  
+  # test_inits <- function(ind){
+  #   xinit = matrix(data = coords[init.inds[[1]], 'x'], nrow = nrow(init.inds[[1]]))
+  #   yinit = matrix(data = coords[init.inds[[1]], 'y'], nrow = nrow(init.inds[[1]]))
+  #   plot(regions)
+  #   plot(world, add = T, col = "grey")
+  #   points(xinit[,ind], yinit[,ind], pch = 16, col = c(rep("#cb4154", 2), rep("#4199cb", 3), rep("orange",4), "#41cbb8", rep("#cb4154", 2)))
+  #   legend("bottomright", legend=month.abb,
+  #          fill=c(rep("#cb4154", 2), rep("#4199cb", 3), rep("orange",4), "#41cbb8", rep("#cb4154", 2))) 
+  # }
+
+
+  # init.inds <- purrr::map(.x = cohortID, 
+  #   .f = ~init_xy(maps = maps, 
+  #                 coords = coords, 
+  #                 cohort.id = .x, 
+  #                 nsim = nsim)) |> 
+  #   purrr::set_names(nm = cohorts[id %in% cohortID, abb])
   
   # ............................................................
   # Run simulation
@@ -163,11 +235,11 @@ narw <- function(nsim = 1e3,
 
   if(length(cohortID) > 1){
     
-    Ncores <- parallel::detectCores(all.tests = FALSE, logical = TRUE)-1
+    Ncores <- parallel::detectCores(all.tests = FALSE, logical = TRUE)
     
     # Set number of cores to use
     if(is.null(n.cores)){
-      n.cores <- min(4, length(cohortID), Ncores)
+      if(length(cohortID) <= (Ncores - 2)) n.cores <- length(cohortID) else n.cores <- Ncores - 2
     } else {
       if(n.cores > Ncores)
         stop("Insufficient cores.")
@@ -203,7 +275,9 @@ narw <- function(nsim = 1e3,
     
     start.time <- Sys.time()
     
-    # # Compute estimates
+    hashID <- hashID
+    
+    # Compute estimates
     out <- foreach::foreach(i = seq_along(cohortID), 
                             .options.snow = opts,
                             .packages = c("Rcpp"), 
@@ -212,14 +286,19 @@ narw <- function(nsim = 1e3,
                               # Set environments
                               .GlobalEnv$coords <- coords
 
-                              # Rcpp::sourceCpp("src/simtools.cpp")
+                              Rcpp::sourceCpp("src/simtools.cpp") # Comment out for package use
 
-                              if(cohortID[i] == 5) d <- maps.weighted else d <- maps
-                              if(cohortID[i] >0) d <- maps.weighted else d <- maps
+                              # d <- maps
+                              # if(cohortID[i] == 5) d <- maps.weighted else d <- maps
+                              # if(cohortID[i] >0) d <- maps.weighted else d <- maps
                               
                               NARW_simulator(
                                 cohortID = cohortID[i],
-                                densities = d,
+                                seus = migration.df[[i]][,1],
+                                gsl = migration.df[[i]][,2],
+                                densities = maps,
+                                densities_seus = maps.weighted.seus,
+                                densities_gsl = maps.weighted.gsl,
                                 densitySeq = map_seq,
                                 latentDensitySeq = 1:12,
                                 prey = preymaps,
@@ -238,6 +317,8 @@ narw <- function(nsim = 1e3,
                                 resolution = map_resolution,
                                 stressors = stressors,
                                 growth = growth,
+                                cumgest = cumgest_preds,
+                                # hashID = hashID,
                                 progress = FALSE)} # End foreach loop
     
     names(out) <- cohorts[id %in% cohortID, abb]
@@ -248,8 +329,9 @@ narw <- function(nsim = 1e3,
     
     cat("Running simulations ...\n")
 
-    if(cohortID == 5) d <- maps.weighted else d <- maps
-    if(cohortID > 0) d <- maps.weighted else d <- maps
+    # d <- maps
+    # if(cohortID == 5) d <- maps.weighted else d <- maps
+    # if(cohortID > 0) d <- maps.weighted else d <- maps
     
     # Simulated animals begin at the position of their corresponding latent animal for the starting month
     # This can be checked by running the below code
@@ -260,7 +342,11 @@ narw <- function(nsim = 1e3,
     
     out <- list(NARW_simulator(
       cohortID = cohortID,
-      densities = d,
+      seus = migration.df[[1]][,1],
+      gsl = migration.df[[1]][,2],
+      densities = maps,
+      densities_seus = maps.weighted.seus,
+      densities_gsl = maps.weighted.gsl,
       densitySeq = map_seq,
       latentDensitySeq = seq_along(density_narw),
       prey = preymaps,
@@ -279,6 +365,8 @@ narw <- function(nsim = 1e3,
       resolution = map_resolution,
       stressors = stressors,
       growth = growth,
+      cumgest = cumgest_preds,
+      # hashID = hashID,
       progress = ifelse(progress, TRUE, FALSE)))
     
   }
@@ -312,38 +400,45 @@ narw <- function(nsim = 1e3,
    along = 2))
 
   outsim <- list()  
-  outsim[["sim"]] <- consolidate(out.dt, nsim, cohorts[id %in% cohortID, name], date_seq)
+  outsim[["sim"]] <- consolidate(out.dt, nsim, cohorts[id %in% cohortID, name], date_seq, map_seq)
   
   # ............................................................
   # Mortality and start/end body condition
   # ............................................................
 
   gam.dt <- purrr::map(.x = seq_along(cohortID), .f = ~ {
+  
+    dt_adjuv <- data.table::merge.data.table(
+    x = dplyr::left_join(
+      # Start body condition
+      x = outsim[["sim"]][[.x]][day == 0, list(cohort = unique(cohort), cohort_name = unique(cohort_name), start_bc = bc), whale],
+      # Alive on last day
+      y = outsim[["sim"]][[.x]][day == 365, list(end_bc = bc, alive, abort), whale],
+      by = "whale"
+    ),
+    y = outsim[["sim"]][[.x]][day > 0, .SD[ifelse(which.min(alive) == 2, 0, which.min(alive))],
+      .SDcols = c("date", "day", "cohort", "easting", "northing", "region", "bc", "strike"), whale], 
+    by = c("cohort", "whale"), all.x = TRUE
+  )
+
+  if (cohortID[.x] == 5) {
     
-    dt_adjuv <- data.table::merge.data.table(x = dplyr::left_join(
-      x = outsim[["sim"]][[.x]][day == 0, list(cohort = unique(cohortID), cohort_name = unique(cohort_name), start_bc = bc), whale],
-      y = outsim[["sim"]][[.x]][day == 365, list(end_bc = bc, alive), whale], by = "whale"
-    ), y = outsim[["sim"]][[.x]][day > 0, .SD[ifelse(which.min(alive) == 1, 0, which.min(alive))],
-                                 .SDcols = c("date", "day", "cohort", "easting", "northing", "region", "bc", "strike"), whale
-    ], by = c("cohort", "whale"), all.x = TRUE)
-    
-    if (cohortID[.x] == 5) {
-      dt_calves <- data.table::merge.data.table(
-        x = dplyr::left_join(
-          x = outsim[["sim"]][[.x]][day == 0, list(cohort = unique(cohort_calf), cohort_name = unique(cohort_name), start_bc = bc_calf), whale],
-          y = outsim[["sim"]][[.x]][day == 365, list(end_bc = bc_calf, alive_calf), whale], by = "whale"
-        ) |> dplyr::rename_with(~ tolower(gsub("_calf", "", .x, fixed = TRUE))),
-        y = outsim[["sim"]][[.x]][day > 0, .SD[ifelse(which.min(alive_calf) == 1, 0, which.min(alive_calf))],
-                                  .SDcols = c("date", "day", "cohort_calf", "easting", "northing", "region", "bc_calf", "strike"), whale
-        ] |>
-          dplyr::rename_with(~ tolower(gsub("_calf", "", .x, fixed = TRUE))), by = c("cohort", "whale"), all.x = TRUE
-      )
-    } else {
-      dt_calves <- data.table::data.table()
-    }
-    
-    dplyr::bind_rows(dt_adjuv, dt_calves) 
-  }) |> data.table::rbindlist()
+    dt_calves <- data.table::merge.data.table(
+      x = dplyr::left_join(
+        x = outsim[["sim"]][[.x]][day == 0, list(cohort = unique(cohort_calf), cohort_name = unique(cohort_name), start_bc = bc_calf), whale],
+        y = outsim[["sim"]][[.x]][day == 365, list(end_bc = bc_calf, alive_calf), whale], by = "whale"
+      ) |> dplyr::rename_with(~ tolower(gsub("_calf", "", .x, fixed = TRUE))),
+      y = outsim[["sim"]][[.x]][day > 0, .SD[ifelse(which.min(alive_calf) == 1, 0, which.min(alive_calf))],
+        .SDcols = c("date", "day", "cohort_calf", "easting", "northing", "region", "bc_calf", "strike"), whale
+      ] |>
+        dplyr::rename_with(~ tolower(gsub("_calf", "", .x, fixed = TRUE))), by = c("cohort", "whale"), all.x = TRUE
+    )
+  } else {
+    dt_calves <- data.table::data.table()
+  }
+
+  dplyr::bind_rows(dt_adjuv, dt_calves)
+}) |> data.table::rbindlist()
   
   # Add full cohort information
   gam.dt <- data.table::merge.data.table(x = gam.dt, y = cohorts, by.x = "cohort", by.y = "id", all.x = TRUE)
@@ -365,12 +460,20 @@ narw <- function(nsim = 1e3,
   #     dplyr::bind_rows(dt1, dt2)
   #   }) |> data.table::rbindlist()
 
-  # Only retain dead animals
+  # Dead animals
   locs.dead <- gam.dt[alive == 0]
   locs.dead[, cause_death:=ifelse(strike == 1, "strike", "starve")]
   data.table::setorder(locs.dead, whale, -cohort)
-  outsim[["dead"]] <- locs.dead
 
+  # Births
+  if (5 %in% cohortID) {
+    locs.birth <- purrr::map(.x = seq_along(cohortID), .f = ~ {
+      outsim[["sim"]][[.x]][day > 0, .SD[which.max(alive_calf)], .SDcols = c("date", "day", "cohort_calf", "easting", "northing", "region"), whale]
+    }) |> data.table::rbindlist() |> dplyr::mutate(event = 'birth')
+  } else {
+    locs.birth <- list(NULL)
+  }
+  
   # ............................................................
   # Fit GAM models
   # ............................................................
@@ -381,7 +484,7 @@ narw <- function(nsim = 1e3,
   
   surv.fit <- suppressWarnings(
     tryCatch(
-      {mgcv::gam(alive ~ factor(cohort) + s(start_bc, by = factor(cohort)),
+      {mgcv::gam(alive ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "tp", k = 3),
           data = gam.dt,
           method = "REML",
           family = binomial("logit"))},
@@ -391,10 +494,43 @@ narw <- function(nsim = 1e3,
   
   bc.fit <- suppressWarnings(
     tryCatch(
-      {mgcv::gam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort)),
+      {mgcv::gam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "tp", k = 3),
                  data = gam.dt[gam.dt$alive == 1, ],
                  method = "REML",
                  family = "Gamma")},
+      error = function(cond) {
+        return(NA)
+      }))
+  
+  # Spline interpolation of the fitted GAM relationships
+  mbc_preds <- splinefun(x = gam_gest$mod[,2], y = gam_gest$fitted.values)
+  
+  surv_preds <- suppressWarnings(
+    tryCatch(
+      {purrr::map(.x = unique(cohorts$id), 
+                  .f = ~{
+                    x <- seq(0,1,by = 0.01)
+                    p <- predict(object = surv.fit, 
+                                 newdata = data.frame(start_bc = x, cohort = .x), 
+                                 type = "response", 
+                                 newdata.guaranteed = TRUE)
+                    splinefun(x = x, y = p)}) |> 
+          purrr::set_names(nm = unique(cohorts$id))},
+      error = function(cond) {
+        return(NA)
+      }))
+  
+  bc_preds <- suppressWarnings(
+    tryCatch(
+      {purrr::map(.x = unique(cohorts$id), 
+                  .f = ~{
+                    x <- seq(0,1,by = 0.01)
+                    p <- predict(object =   bc.fit, 
+                                 newdata = data.frame(start_bc = x, cohort = .x), 
+                                 type = "response", 
+                                 newdata.guaranteed = TRUE)
+                    splinefun(x = x, y = p)}) |> 
+          purrr::set_names(nm = unique(cohorts$id))},
       error = function(cond) {
         return(NA)
       }))
@@ -437,13 +573,24 @@ narw <- function(nsim = 1e3,
   # Add parameters to list output
   # ............................................................
   
-  # outsim$gam <- list(fit = gamfit, dt = gam.dt)
-  outsim$gam <- list(fit = list(surv = surv.fit, bc = bc.fit), dat = gam.dt)
+  outsim$gam <- list(fit = list(surv = surv.fit, bc = bc.fit), 
+                     dat = gam.dt, 
+                     pred = list(min_bc = mbc_preds, bc = bc_preds, surv = surv_preds))
+  
+  outsim[["dead"]] <- locs.dead
+  outsim[["birth"]] <- locs.birth
+
   outsim$param <- list(nsim = nsim, 
                        cohortID = cohortID,
                        cohorts = cohorts)
-  outsim$init <- list(month = init.month, xy = init.inds)
+
+  outsim$init <- list(month = init.month, xy = init.inds, dest = migration.df)
   outsim$run <- run_time
+  if(is.null(scenario)){
+  outsim$scenario <- list(scenario)
+  } else {
+  outsim$scenario <- scenario
+  }
   
   class(outsim) <- c("narwsim", class(outsim))
   class(outsim$init$xy) <- c("xyinits", class(outsim$init$xy))
