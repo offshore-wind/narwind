@@ -53,8 +53,8 @@ print.narwsim <- function(obj,
       cat("\n +++ Adults +++\n\n")
     }
     print(sim_dt[, list(day,
-      cohort, alive, age, bc, length, length_a, length_b, length_c,
-      mass, leanmass, fatmass, mass_a, mass_b, mouth_r, mouth_a, mouth_w
+      cohort, gsl, seus, alive, age, bc, length, length_a, length_b, length_c,
+      mass, leanmass, fatmass, mass_a, mass_b, mouth_r, mouth_a, mouth_w, abort
     )])
 
     if (cohortID[k] == 5) {
