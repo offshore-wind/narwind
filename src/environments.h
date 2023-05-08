@@ -86,6 +86,12 @@ private:
   // Population density raster (in projected coordinates)
   const MatrixType &m_density;
 
+  // Population density raster - weighted
+  const MatrixType &m_density_seus;
+  
+  // Population density raster - weighted
+  const MatrixType &m_density_gsl;
+  
   // Prey field raster (in projected coordinates)
   const MatrixType &m_prey;
   
@@ -119,6 +125,8 @@ public:
   // passed to the <density> parameter during initialization is assigned to class member m_density
   Environment(
     const MatrixType & density,
+    const MatrixType & density_seus,
+    const MatrixType & density_gsl,
     const MatrixType & prey,
     const MatrixType & fishing,
     const MatrixType & vessels,
@@ -130,6 +138,8 @@ public:
     const std::size_t & mapid
   ) :
     m_density(density),
+    m_density_seus(density_seus),
+    m_density_gsl(density_gsl),
     m_prey(prey),
     m_fishing(fishing),
     m_vessel(vessels),
@@ -164,6 +174,14 @@ public:
     
     case 'D':
       d = m_density(i,j);
+      break;
+      
+    case 'S':
+      d = m_density_seus(i,j);
+      break;
+      
+    case 'G':
+      d = m_density_gsl(i,j);
       break;
 
     case 'P':
