@@ -22,11 +22,27 @@
 #' }
 
 plot.narwsim <- function(obj,
+                         inits = FALSE,
                          whaleID = NULL,
                          animate = FALSE,
                          web = FALSE,
-                         nmax = 100
+                         ...
 ){
+  
+  # Function ellipsis –– optional arguments
+  args <- list(...) # good
+  
+  # Default optional arguments
+  nmax <- 100
+  lwd <- 0.2
+  bymonth <- FALSE
+  
+  # Default values
+  if(length(args) > 0){
+    if("nmax" %in% names(args)) nmax <- args[["nmax"]]
+    if("lwd" %in% names(args)) lwd <- args[["lwd"]]
+    if("bymonth" %in% names(args)) bymonth <- args[["bymonth"]]
+  }
   
   # obj = m
   # whaleID = NULL
@@ -40,14 +56,46 @@ plot.narwsim <- function(obj,
   cohort.ab <- obj$param$cohorts[id %in% cohortID, abb]
   cohort.names <- obj$param$cohorts[id %in% cohortID, name]
   n.ind <- obj$param$nsim
+
+  if(inits){
+    if (is.null(whaleID)) {
+      for (k in 1:length(obj$init$xy)) {
+        if (!"xyinits" %in% class(obj$init$xy)) stop("Input not recognized")
+        par(mfrow = c(3, 4))
+        for (h in 1:12) {
+          sp:::plot.SpatialPolygons(world, col = "grey", axes = TRUE, main = month.name[h])
+          xpos <- sapply(obj$init$xy[[k]][h, ], FUN = function(x) raster::xFromCell(raster::raster(density_narw$Feb), x))
+          ypos <- sapply(obj$init$xy[[k]][h, ], FUN = function(x) raster::yFromCell(raster::raster(density_narw$Feb), x))
+          points(cbind(xpos, ypos), pch = 16, col = "orange")
+        }
+      }
+      par(mfrow = c(1, 1))
+    } else {
+      coords <- sp::coordinates(density_narw[[1]])
+      colnames(coords) <- c("x", "y")
+      month.colours <- c("#962938", "#be3447", "#296f96", "#348cbe", "#7db9db", "#b77700", "#ea9800", "#ffb01e", "#ffd104", "#41cbb8", "#d05566", "#db7d8a")
+      for (k in 1:length(obj$init$xy)) {
+        xinit <- matrix(data = coords[obj$init$xy[[k]], "x"], nrow = nrow(obj$init$xy[[k]]))
+        yinit <- matrix(data = coords[obj$init$xy[[k]], "y"], nrow = nrow(obj$init$xy[[k]]))
+        sp::plot(regions, main = paste0(cohort.names[k], " -- Individual # ", whaleID))
+        sp::plot(world, col = "grey", add = TRUE)
+        points(xinit[, whaleID], yinit[, whaleID], pch = 16, col = month.colours)
+        legend("bottomright", legend = month.abb, fill = month.colours)
+      }
+    }
+  } else {
+  
+  
   if(n.ind > nmax) {warning("Plotting only the first ", nmax, " tracks"); n.ind <- nmax}
   if(is.null(whaleID)) whaleID <- seq_len(n.ind)
 
   sim <- obj$sim
   locs.dead <- obj$dead
+  locs.birth <- obj$birth
   
   locations <- purrr::set_names(x = cohort.ab) |>
-    purrr::map(.f = ~sim[[.x]][day > 0, list(date, whale, easting, northing, region, cohort_name)])
+    purrr::map(.f = ~sim[[.x]][day > 0, list(date, month, whale, easting, northing, region, cohort_name)])
+  
   tracks <- data.table::rbindlist(locations)
 
   # ....................................
@@ -69,7 +117,7 @@ plot.narwsim <- function(obj,
   # Generate plots
   # ....................................
   
-  COLORS <- c('starve' = 'firebrick', 'strike' = 'deepskyblue4')
+  COLORS <- c('starve' = 'firebrick', 'strike' = 'deepskyblue4', 'birth' = "#15A471")
   SHAPES <- c('Calves' = 1, 'Juveniles' = 16, 'Adults' = 16)
   
   plot.list <- purrr::set_names(cohort.ab) |>
@@ -83,26 +131,48 @@ plot.narwsim <- function(obj,
     base_p <- gg.opts + ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", linewidth = 0.25) +
       theme_narw(vertical = TRUE)
 
-    # Produce plot
-    track_p <- 
-      base_p +
-      ggplot2::geom_path(data = tracks.cohort, 
-                         mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = 0.2) +
-      ggplot2::geom_point(data = locs.dead[cohort > 0 & whale %in% whaleID], aes(x = easting, y = northing, colour = factor(cause_death),
-                                                                                 shape = factor(class))) +
-      ggplot2::geom_point(data = locs.dead[cohort == 0 &  whale %in% whaleID], aes(x = easting, y = northing, colour = factor(cause_death),
-                                                                                   shape = factor(class))) +
-      ggplot2::scale_color_manual(values = COLORS) +
-      ggplot2::scale_shape_manual(values = SHAPES) +
-      ggplot2::theme(
-        legend.title = element_blank(),
-        legend.position = "bottom",
-        legend.text = element_text(size = 10),
-        legend.key = element_rect(fill = "transparent")) +
-      labs(color = NULL) +
-      ggplot2::coord_sf(expand = FALSE) +
-      ggplot2::facet_wrap(~cohort_name)
-
+    # Produce required plot(s)
+    if(bymonth) {
+      
+      track_p <- 
+        base_p +
+        ggplot2::geom_path(data = tracks.cohort, mapping = ggplot2::aes(x = easting, y = northing, group = whale, colour = factor(month)), 
+                                               alpha = 0.7, linewidth = lwd) +
+        ggplot2::scale_color_manual(values = pals::viridis(12), labels = month.abb) +
+        ggplot2::theme(
+          legend.title = element_blank(),
+          legend.position = "bottom",
+          legend.text = element_text(size = 10),
+          legend.key = element_rect(fill = "transparent")) +
+        labs(color = NULL) +
+        ggplot2::coord_sf(expand = FALSE) +
+        ggplot2::facet_wrap(~cohort_name)
+      
+    } else {
+      
+      track_p <- 
+        base_p +
+        ggplot2::geom_path(data = tracks.cohort, mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = lwd) +
+        ggplot2::geom_path(data = tracks.cohort, 
+                           mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = 0.2) +
+        ggplot2::geom_point(data = locs.dead[cohort > 0 & whale %in% whaleID & abb == .x],
+                            aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class))) +
+        ggplot2::geom_point(data = locs.dead[cohort == 0 &  whale %in% whaleID & abb == .x],
+                            aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class))) +
+        {if(!is.list(locs.birth)) ggplot2::geom_point(data = locs.birth[whale %in% whaleID], aes(x = easting, y = northing, colour = factor(event))) } +
+        ggplot2::scale_color_manual(values = COLORS) +
+        ggplot2::scale_shape_manual(values = SHAPES) +
+        ggplot2::theme(
+          legend.title = element_blank(),
+          legend.position = "bottom",
+          legend.text = element_text(size = 10),
+          legend.key = element_rect(fill = "transparent")) +
+        labs(color = NULL) +
+        ggplot2::coord_sf(expand = FALSE) +
+        ggplot2::facet_wrap(~cohort_name)
+      
+    }
+    
     track_p
   })
   
@@ -196,5 +266,5 @@ plot.narwsim <- function(obj,
       gsub(pattern = ":", replacement = "")
     moveVis::animate_frames(frames, out_file = paste0("NARW_animation_", stamp, ".gif"), overwrite = TRUE, display = FALSE)
   }
-  
+  }
 }
