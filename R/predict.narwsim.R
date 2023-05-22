@@ -11,23 +11,26 @@
 predict.narwsim <- function(obj,
                             yrs = 35,
                             n = 100,
-                            popr = 1,
-                            do.plot = FALSE,
-                            seed = 125897,
+                            # seed = 125897,
                             ...) {
   
-  set.seed(seed)
+  # set.seed(seed)
+  
+  if(sum(suppressWarnings(purrr::map_lgl(.x = obj$gam$pred, .f = ~any(is.na(.x)))) > 0)) 
+    stop("Insufficient sample size. Cannot make predictions.") 
   
   # Function ellipsis –– optional arguments
   args <- list(...)
   
   # Default values
   if(length(args) == 0){
-    spline <- TRUE
     progress <- TRUE
   } else {
-    if("spline" %in% names(args)) spline <- args[["spline"]] else spline <- TRUE
     if("progress" %in% names(args)) progress <- args[["progress"]] else progress <- TRUE
+  }
+  
+  if(yrs > 2000){
+    yrs <- yrs - lubridate::year(lubridate::now())
   }
   
   cat("Initializing ...\n")
@@ -62,8 +65,8 @@ predict.narwsim <- function(obj,
   cohorts <- cohorts[c(1,3,5,2,4,6,7,8)]
   
   # Attributes to monitor during projection
-  mat.attribs <- c("alive", "cohort", "female", "age", "length", "length_a", "length_b", "length_c",
-                   "tot_mass", "lean_mass", "bc", "mass_a", "mass_b", "p_surv", "min_bc", "trest", "t2calf", "birth")
+  mat.attribs <- c("alive", "cohort", "female", "age", "length", "tot_mass", "lean_mass", "bc",
+                   "p_surv", "min_bc", "rest", "time_rest", "birth", "reprod")
   
   # Current year
   current.yr <- lubridate::year(lubridate::now())
@@ -76,110 +79,32 @@ predict.narwsim <- function(obj,
   # GAM PARAMETERS
   #'------------------------------------------------------
   
-  mbc_preds <- obj$gam$pred$min_bc
+  mbc_preds <- obj$gam$pred$bc_gest
   bc_preds <- obj$gam$pred$bc
   surv_preds <- obj$gam$pred$surv
-
-  # plot(seq(0,1,by = 0.01), bc_preds[["5"]](seq(0,1,by = 0.01)), ylim = c(0,1))
-  # plot(seq(0,1,by = 0.01), surv_preds[["0"]](seq(0,1,by = 0.01)), ylim = c(0,1))
-  # plot(seq(0,1,by = 0.01), surv_preds[["4"]](seq(0,1,by = 0.01)), ylim = c(0,1))
-  # plot(seq(0,1,by = 0.01), surv_preds[["2"]](seq(0,1,by = 0.01)), ylim = c(0,1))
+  
+  #'------------------------------------------------------
+  # Abortion rate
+  #'------------------------------------------------------
+  
+  abort.rate <- sum(obj$abort[, abort])/obj$param$nsim
   
   #'------------------------------------------------------
   # INITIALIZATION
   #'------------------------------------------------------
   
   # Define initial population vector
-  N0 <- c(2, 5, 212, 2, 69, 1, 7, 61)
+  N0 <- c(0, 7, 212, 0, 71, 1, 7, 61)
   names(N0) <- cohorts[, name]
-  totn <- sum(N0)* (1 + popr)
   
-  # Create matrices and initialize them
-  # rows: years <yrs>
-  # columns: <attributes>
-  # layers: individuals <n>
-  # 4th dimension: replicate projection -> later converted to list
-  narw.indiv <- array(data = NA, c(yrs + 1, length(mat.attribs), totn, n), 
-                      dimnames = list(paste0("yr ", 0:yrs), 
-                                      mat.attribs,
-                                      paste0("whale ", 1:totn),
-                                      paste0("prj ", 1:n)))
+  cat("Setting up ...\n")
   
+  # Initial cohort vector
   cohort.vec <- do.call(c, sapply(X = 1:nrow(cohorts), FUN = function(x) rep(cohorts$id[x], each = N0[x])))
   
-  animals <- 1:sum(N0)
+  # Reproductive females - 4% never reproduce
+  reprod.fem <- rbinom(n = sum(N0), size = 1, prob = ifelse(cohort.vec == 6, (1 - 0.04), 1))
   
-  # Alive and population cohort
-  narw.indiv[1, "alive", animals, ] <- 1
-  narw.indiv[1, "cohort", animals, ] <- rep(cohort.vec, n)
-  
-  # Sex
-  #  -- Calves (male)
-  narw.indiv[, "female", 1:N0[1], ] <- 0
-  #  -- Calves (female)
-  fem <- which(cohort.vec == 0)
-  narw.indiv[, "female", fem[fem > N0[1]], ] <- 1
-  #  -- Juveniles and adults
-  narw.indiv[, "female", which(cohort.vec %in% c(2, 4, 5, 6)), ] <- 1
-  narw.indiv[, "female", which(cohort.vec %in% c(1, 3)), ] <- 0
-  
-  # Age
-  ages <- start_age_vec(rep(cohort.vec, n))
-  narw.indiv[1, "age", animals, ] <- ages
-  
-  # Total body length
-  l.params <- agL_vec(ages)
-  lengths <- age2length_vec(ages, l.params)
-  narw.indiv[1, "length", animals, ] <- lengths
-  
-  narw.indiv[, "length_a", animals, ] <- rep(l.params[, 1], each = yrs + 1)
-  narw.indiv[, "length_b", animals, ] <- rep(l.params[, 2], each = yrs + 1)
-  narw.indiv[, "length_c", animals, ] <- rep(l.params[, 3], each = yrs + 1)
-  
-  # Total mass
-  m.params <- mL(n * sum(N0))
-  mass <- length2mass_vec(lengths, m.params, FALSE)
-  narw.indiv[, "mass_a", animals, ] <- rep(m.params[, 1], each = yrs + 1)
-  narw.indiv[, "mass_b", animals, ] <- rep(m.params[, 2], each = yrs + 1)
-  narw.indiv[1, "tot_mass", animals, ] <- mass
-  
-  # Body conditon
-  narw.indiv[1, "bc", animals, ] <- start_bcondition_vec(rep(cohort.vec, n))
-  
-  # lean mass
-  narw.indiv[1, "lean_mass", animals, ] <- mass - (narw.indiv[1, "bc", animals, ] * mass)
-  
-  # Calving interval - mean of 5.3 years, up to apparent gaps of 13 years (Kraus et al. 2001)
-  # NARWC Report Card 2022: Average inter-birth interval of 7.7 yrs, median of 8, min/max (2/13)
-  # This corresponds to a Normal (7.7, 1.45)
-  # Mean age at first calving = 9.53 +/- 2.32 (Kraus et al. 2001)
-  # 
-  # Stewart et al. 2022 -- 
-  # The degree to which the energetic reserves of females are depleted during lactation may govern
-  # the length of the resting period between successful pregnancies (Miller et al. 2011, Marón et al. 2015).
-  t2calf <- (rep(cohort.vec, n) == 6) * random_int(sum(N0) * n)
-  narw.indiv[1, "t2calf", animals, ] <- t2calf
-  narw.indiv[1, "trest", animals, ] <- as.numeric(ifelse(t2calf == 0, 13, 1)) * (as.numeric(narw.indiv[1, "cohort", animals, ]) == 6)
-  
-  if (!spline) {
-    narw.indiv[1, "min_bc", animals, ] <- predict_m(
-      model = mod,
-      values = as.vector(narw.indiv[1, "tot_mass", animals, ]),
-      prediction = "gest"
-    ) * as.vector(narw.indiv[1, "cohort", animals, ] == 6)
-  } else {
-    narw.indiv[1, "min_bc", animals, ] <- mbc_preds(narw.indiv[1, "tot_mass", animals, ]) * (narw.indiv[1, "cohort", animals, ] == 6)
-  }
-
-  narw.indiv[1, "birth", animals, ] <- ifelse(narw.indiv[1, "trest", animals, ] == 13 & narw.indiv[1, "t2calf", animals, ] == 0, 1, 0)
-  narw.indiv[1, "p_surv", animals, ] <- 1
-  
-  #' ---------------------------
-  # IMPORTANT 
-  #' ---------------------------
-  # Turn array into a list
-  narw.indiv <- purrr::array_branch(narw.indiv, 4)
-
   # Number of individuals in each cohort
   narw.pop <- array(
     data = NA, c(n, yrs + 1, nrow(cohorts)),
@@ -190,10 +115,18 @@ predict.narwsim <- function(obj,
     )
   )
   narw.pop[, 1, ] <- rep(N0, each = n)
-
+  
   # Total population size
   tot.pop <- matrix(0, n, yrs + 1, dimnames = list(paste0("prj", 1:n), paste0("yr ", 0:yrs)))
   tot.pop[, 1] <- sum(N0)
+  
+  births <- array(
+    data = NA, c(yrs + 1, n),
+    dimnames = list(
+      paste0("yr ", 0:yrs),
+      paste0("prj ", 1:n)
+    )
+  )
   
   #'------------------------------------------------------
   # RUN PROJECTIONS
@@ -216,196 +149,253 @@ predict.narwsim <- function(obj,
     
     if(progress) pb$tick() # Update progress bar
     
-    animals <- 1:sum(N0)
+    # Create matrices and initialize them
+    # rows: years <yrs>
+    # columns: <attributes>
+    # layers: individuals <n>
+    # 4th dimension: replicate projection -> later converted to list
+    narw.indiv <- array(
+      data = NA, c(yrs + 1, length(mat.attribs), sum(N0)),
+      dimnames = list(
+        paste0("yr ", 0:yrs), mat.attribs,
+        paste0("whale ", 1:(sum(N0)))
+      )
+    )
     
+    # Alive and population cohort
+    narw.indiv[1, "alive", ] <- 1
+    narw.indiv[1, "cohort", ] <- cohort.vec
+    
+    # Sex
+    #  -- Calves (male)
+    narw.indiv[, "female", 1:N0[1]] <- 0
+    #  -- Calves (female)
+    fem <- which(cohort.vec == 0)
+    narw.indiv[, "female", fem[fem > N0[1]]] <- 1
+    #  -- Juveniles and adults
+    narw.indiv[, "female", which(cohort.vec %in% c(2, 4, 5, 6))] <- 1
+    narw.indiv[, "female", which(cohort.vec %in% c(1, 3))] <- 0
+    
+    # Age
+    ages <- start_age_vec(cohort.vec)
+    narw.indiv[1, "age", ] <- ages
+    
+    # Total body length
+    lengths <- age2length_vec(ages)
+    narw.indiv[1, "length", ] <- lengths
+    
+    mass <- length2mass_vec(lengths)
+    narw.indiv[1, "lean_mass", ] <- mass
+    
+    # Body conditon
+    bc <- start_bcondition_vec(cohort.vec)
+    narw.indiv[1, "bc", ] <- bc
+    
+    # Total mass
+    narw.indiv[1, "tot_mass", ] <- mass / (1-bc)
+    
+    # Calving interval - mean of 5.3 years, up to apparent gaps of 13 years (Kraus et al. 2001)
+    # NARWC Report Card 2022: Average inter-birth interval of 7.7 yrs, median of 8, min/max (2/13)
+    # This corresponds to a Normal (7.7, 1.45)
+    # Mean age at first calving = 9.53 +/- 2.32 (Kraus et al. 2001)
+    # 
+    # Stewart et al. 2022 -- 
+    # The degree to which the energetic reserves of females are depleted during lactation may govern
+    # the length of the resting period between successful pregnancies (Miller et al. 2011, Marón et al. 2015).
+
+    # Non-reproductive females
+    narw.indiv[1, "reprod", ] <- reprod.fem
+    
+    # Reserves needed to leave resting state and initiate pregnancy
+    narw.indiv[1, "min_bc", ] <- mbc_preds(narw.indiv[1, "tot_mass", ]) * (cohort.vec == 6)
+    
+    narw.indiv[1, "time_rest", ] <- (cohort.vec == 6)
+      
+    narw.indiv[1, "rest", ] <- 
+      ifelse(reprod.fem == 0, 1, (cohort.vec == 6) * (1 - (bc >= narw.indiv[1, "min_bc", ])))
+
+    # Calving events
+    narw.indiv[1, "birth", ] <- as.numeric(cohort.vec == 4)
+    
+    # Survival
+    narw.indiv[1, "p_surv", ] <- (surv_preds[["0"]](bc) * (cohort.vec == 0) +
+                                    surv_preds[["1"]](bc) * (cohort.vec == 1) +
+                                    surv_preds[["2"]](bc) * (cohort.vec == 2) +
+                                    surv_preds[["3"]](bc) * (cohort.vec == 3) +
+                                    surv_preds[["4"]](bc) * (cohort.vec == 4) +
+                                    surv_preds[["5"]](bc) * (cohort.vec == 5) +
+                                    surv_preds[["6"]](bc) * (cohort.vec == 6))
+
     #'------------------------------------------------------
     # Loop over years
     #'------------------------------------------------------
     
     for(i in 2:(yrs+1)){
       
-      current.dat <- as.matrix(narw.indiv[[prj]][i-1, , animals])
-      alive <- current.dat["alive", animals] * (current.dat["age", animals] <=69)
-      
-      #' ----------------------------
-      # SURVIVAL
-      #' ----------------------------
-      # Predict survival probability based on body condition
-      
-      if(!spline){
+      if(tot.pop[prj, i-1] > 0) {
+        
+        # alive <- narw.indiv[i-1, "alive", ] * (narw.indiv[i-1, "age", ] <=69)
+        
+        #' ----------------------------
+        # ALIVE
+        #' ----------------------------
+        # Determine whether the animal survived
+        # alive <- rbinom(n = length(ps), size = 1, prob = ps) * (narw.indiv[i-1, "age", ] <=69)
+        alive <- rbinom(n = dim(narw.indiv)[3], size = 1, prob = narw.indiv[i-1, "p_surv", ]) * (narw.indiv[i-1, "age", ] <=69)
+        narw.indiv[i, "alive", ] <- alive
+        
+        #' ----------------------------
+        # AGE & SEX
+        #' ----------------------------
+        
+        # Increment age
+        narw.indiv[i, "age", ] <- alive * (narw.indiv[i-1, "age", ] + 1)
+        
+        # Sex remains the same
+        narw.indiv[i, "female", ] <- narw.indiv[i-1, "female", ]
+        
+        #' ----------------------------
+        # COHORTS
+        #' ----------------------------
+        # Maturity - transitions between cohorts
+        narw.indiv[i, "cohort", ] <-
+          alive * increment_cohort(
+            cohort = narw.indiv[i-1, "cohort", ],
+            age = narw.indiv[i, "age", ],
+            female = narw.indiv[i, "female", ],
+            rest = narw.indiv[i-1, "rest", ],
+            abort = abort.rate
+          )
+        
+        #' ----------------------------
+        # GROWTH
+        #' ----------------------------
+        
+        # Increment length
+        narw.indiv[i, "length", ] <- alive * age2length_vec(narw.indiv[i, "age", ])
+        
+        # Increment lean mass
+        narw.indiv[i, "lean_mass", ] <- alive * length2mass_vec(narw.indiv[i, "length", ])
+        
+        # Predict new body condition from current body condition
+        narw.indiv[i, "bc", ] <-
+          alive * (bc_preds[["0"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 0) +
+                     bc_preds[["1"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 1) +
+                     bc_preds[["2"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 2) +
+                     bc_preds[["3"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 3) +
+                     bc_preds[["4"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 4) +
+                     bc_preds[["5"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 5) +
+                     bc_preds[["6"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 6))
+        
+        # Increment total mass
+        narw.indiv[i, "tot_mass", ] <- alive * narw.indiv[i, "lean_mass", ] / (1 - narw.indiv[i, "bc", ])
+        
+        #' ----------------------------
+        # REPRODUCTION
+        #' ----------------------------
+        
+        narw.indiv[i, "reprod", ] <- narw.indiv[i-1, "reprod", ]
+        
+        # Resting state
+        narw.indiv[i, "rest", ] <- ifelse(narw.indiv[i-1, "reprod", ] == 1,
+         alive * (narw.indiv[i, "cohort", ] == 6) * (1 - (narw.indiv[i, "bc", ] >= narw.indiv[i-1, "min_bc", ])), alive)
+                 
+        # Which animals are juvenile females that are ready to start reproducing
+        # juvenile.females.ofage <- 
+        #   (narw.indiv[i-1,"cohort", ] == 2) * (narw.indiv[i-1, "age", ] >= 9) * (narw.indiv[i-1, "bc", ] >= narw.indiv[i-1, "min_bc", ])
+        
+        # Time spent in resting phase
+        narw.indiv[i, "time_rest", ] <-
+          alive * (narw.indiv[i, "cohort", ] == 6) * 
+          narw.indiv[i, "rest", ] * (narw.indiv[i-1, "time_rest", ] + 1)
+        
+        # Minimum body condition needed to successfully bring fetus to term without starving
+        # No evidence of reproductive senescence in right whales - Hamilton et al. (1998)
+        narw.indiv[i, "min_bc", ] <-
+          alive * mbc_preds(narw.indiv[i, "tot_mass", ]) * (narw.indiv[i, "cohort", ] == 6) * narw.indiv[i, "rest", ]
+        
+        # Birth of new calf, conditional on the mother being alive and in pregnant state
+        narw.indiv[i, "birth", ] <- alive * (narw.indiv[i, "cohort", ] == 4)
+        new.births <- sum(narw.indiv[i, "birth", ])
+        births[i, prj] <- new.births
+        
+        if(new.births > 0){
+          
+          new.calves <- array(
+            data = NA, c(yrs + 1, length(mat.attribs), new.births),
+            dimnames = list(
+              paste0("yr ", 0:yrs), mat.attribs,
+              paste0("whale ", ((dim(narw.indiv)[3]+1):(dim(narw.indiv)[3] + new.births)))
+            )
+          )
+          
+          new.calves[i,,] <- add_calf(new.births, mat.attribs)
+          narw.indiv <- abind::abind(narw.indiv, new.calves, along = 3)
+        }
+        
+        #' ----------------------------
+        # SURVIVAL
+        #' ----------------------------
+        
+        # Predict survival probability based on body condition
+        ps <- narw.indiv[i, "alive", ] * 
+          (surv_preds[["0"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 0) +
+             surv_preds[["1"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 1) +
+             surv_preds[["2"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 2) +
+             surv_preds[["3"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 3) +
+             surv_preds[["4"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 4) +
+             surv_preds[["5"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 5) +
+             surv_preds[["6"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 6))
 
-        ps <- alive * predict_m(model = mod, cohort = current.dat["cohort",animals], 
-                                values = current.dat["bc",animals], prediction = "surv")
-
-      } else {
-
-        ps <- alive * (surv_preds[["0"]](current.dat["bc",animals]) * (current.dat["cohort",animals] == 0) +
-                         surv_preds[["1"]](current.dat["bc",animals]) * (current.dat["cohort",animals] == 1) +
-                         surv_preds[["2"]](current.dat["bc",animals]) * (current.dat["cohort",animals] == 2) +
-                         surv_preds[["3"]](current.dat["bc",animals]) * (current.dat["cohort",animals] == 3) +
-                         surv_preds[["4"]](current.dat["bc",animals]) * (current.dat["cohort",animals] == 4) +
-                         surv_preds[["5"]](current.dat["bc",animals]) * (current.dat["cohort",animals] == 5) +
-                         surv_preds[["6"]](current.dat["bc",animals]) * (current.dat["cohort",animals] == 6))
-      }
-
-      # ps <- 1
-      narw.indiv[[prj]][i, "p_surv", animals] <- ps
-      
-      # Determine whether the animal survived
-      alive <- rbinom(n = animals, size = 1, prob = ps) * (current.dat["age", animals] <=69)
-      narw.indiv[[prj]][i, "alive", animals] <- alive
-      
-      # Sex remains the same
-      narw.indiv[[prj]][i, "female", animals] <- current.dat["female", animals]
-      
-      #' ----------------------------
-      # GROWTH
-      #' ----------------------------
-      
-      # Increment age
-      narw.indiv[[prj]][i, "age", animals] <- alive * (current.dat["age", animals] + 1)
-      
-      # Increment length
-      newLp <- agL_vec(animals)
-      
-      narw.indiv[[prj]][i,"length_a", animals] <- 
-        ifelse(narw.indiv[[prj]][i, "age", animals] == 1, newLp[,1], current.dat["length_a", animals])
-      
-      narw.indiv[[prj]][i,"length_b", animals] <- 
-        ifelse(narw.indiv[[prj]][i, "age", animals] == 1, newLp[,2], current.dat["length_b", animals])
-      
-      narw.indiv[[prj]][i,"length_c", animals] <- 
-        ifelse(narw.indiv[[prj]][i, "age", animals] == 1, newLp[,3], current.dat["length_c", animals])
-
-      narw.indiv[[prj]][i, "length", animals] <-
-        alive * age2length_vec(
-          narw.indiv[[prj]][i, "age", animals],
-          t(narw.indiv[[prj]][i, c("length_a", "length_b", "length_c"), animals])
-        )
-      
-      # Increment lean mass
-     narw.indiv[[prj]][i, "lean_mass", animals] <- alive * length2mass_vec(narw.indiv[[prj]][i, "length", animals],
-      t(narw.indiv[[prj]][i, c("mass_a", "mass_b"), animals]), lean = TRUE)
-     
-      # Predict new body condition from current body condition
-      if (!spline) {
-        narw.indiv[[prj]][i, "bc", animals] <- alive * predict_m(
-          model = mod, cohort = current.dat["cohort", animals],
-          values = current.dat["bc", animals], prediction = "bc")
-      } else {
-        narw.indiv[[prj]][i, "bc", animals] <-
-          alive * (bc_preds[["0"]](current.dat["bc", animals]) * (current.dat["cohort", animals] == 0) +
-                     bc_preds[["1"]](current.dat["bc", animals]) * (current.dat["cohort", animals] == 1) +
-                     bc_preds[["2"]](current.dat["bc", animals]) * (current.dat["cohort", animals] == 2) +
-                     bc_preds[["3"]](current.dat["bc", animals]) * (current.dat["cohort", animals] == 3) +
-                     bc_preds[["4"]](current.dat["bc", animals]) * (current.dat["cohort", animals] == 4) +
-                     bc_preds[["5"]](current.dat["bc", animals]) * (current.dat["cohort", animals] == 5) +
-                     bc_preds[["6"]](current.dat["bc", animals]) * (current.dat["cohort", animals] == 6))
-      }
-      
-      # Increment total mass
-      narw.indiv[[prj]][i, "tot_mass", animals] <-
-        alive * narw.indiv[[prj]][i, "lean_mass", animals] / (1 - narw.indiv[[prj]][i, "bc", animals])
-      
-      #' ----------------------------
-      # REPRODUCTION
-      #' ----------------------------
-      
-      # Which animals are resting females?
-      rest.females <- (current.dat["cohort", animals] == 6)
-      
-      # Which animals are juvenile females that are ready to start reproducing
-      juvenile.females.ofage <- (current.dat["cohort", animals] == 2) * (current.dat["age", animals] >= 8)
-      
-      # Which animals calved in previous step?
-      prev.births <- current.dat["birth", animals]
-      
-      newt2calf <- ifelse(prev.births == 1, random_int(sum(prev.births), lwr = 1), 
-                          ifelse(current.dat["t2calf", animals] == 0, 0, 
-                                 current.dat["t2calf", animals] - 1))
-      
-      # Time spent in resting state - only incremented if calving event hasn't occurred, otherwise reset
-      narw.indiv[[prj]][i, "t2calf", animals] <- alive * rest.females * newt2calf
-      
-      # Years until next calving event
-      narw.indiv[[prj]][i, "trest", animals] <- 
-        alive * (rest.females | juvenile.females.ofage) * 
-        ifelse(narw.indiv[[prj]][i - 1, "trest", animals] == 13, 1, current.dat["trest", animals] + 1)
-      
-      # Minimum body condition needed to successfully bring fetus to term without starving
-      # No evidence of reproductive senescence in right whales - Hamilton et al. (1998)
-      
-      if (!spline) {
-        narw.indiv[[prj]][i, "min_bc", animals] <-
-          alive * predict_m(model = mod, values = narw.indiv[[prj]][i, "tot_mass", animals], prediction = "gest") * rest.females
-      } else {
-        narw.indiv[[prj]][i, "min_bc", animals] <-
-          alive * mbc_preds(narw.indiv[[prj]][i, "tot_mass", animals]) * rest.females
-      }
-      
-      # Birth of new calf, conditional on the mother being alive, in pregnant state
-      narw.indiv[[prj]][i, "birth", animals] <- alive * (current.dat["cohort", animals] == 4)
-      
-      # Maturity - transitions between cohorts
-      narw.indiv[[prj]][i, "cohort", animals] <-
-        alive * increment_cohort(
-          cohort = narw.indiv[[prj]][i - 1, "cohort", animals],
-          age = narw.indiv[[prj]][i, "age", animals],
-          female = narw.indiv[[prj]][i, "female", animals],
-          bc = narw.indiv[[prj]][i, "bc", animals],
-          min_bc = narw.indiv[[prj]][i, "min_bc", animals],
-          trest = narw.indiv[[prj]][i, "trest", animals],
-          t2calf = narw.indiv[[prj]][i, "t2calf", animals])
-      
-      new.births <- sum(narw.indiv[[prj]][i, "birth", animals])
-      
-      if(new.births > 0){
-        narw.indiv[[prj]][i, , (max(animals)+1):(max(animals)+new.births)] <- add_calf(n = new.births, attr = mat.attribs)
-        animals <- 1:(length(animals) + new.births)
-      }
-      
-      # Number of animals in each cohort
-      # Calves (male)
-      narw.pop[prj, i, 1] <- sum((narw.indiv[[prj]][i, "cohort", animals] == 0) *
-                                   (narw.indiv[[prj]][i, "female", animals] == 0) *
-                                   (narw.indiv[[prj]][i, "alive", animals] == 1))
-      
-      # Juveniles and adults (male)
-      narw.pop[prj, i, 2] <- sum((narw.indiv[[prj]][i, "cohort", animals] == 1) * (narw.indiv[[prj]][i, "alive", animals] == 1))
-      narw.pop[prj, i, 3] <- sum((narw.indiv[[prj]][i, "cohort", animals] == 3) * (narw.indiv[[prj]][i, "alive", animals] == 1))
-      
-      # Calves (female)
-      narw.pop[prj, i, 4] <- sum((narw.indiv[[prj]][i, "cohort", animals] == 0) *
-                                   (narw.indiv[[prj]][i, "female", animals] == 1) *
-                                   (narw.indiv[[prj]][i, "alive", animals] == 1))
-      
-      # Juvenile and reproductive adults (female)
-      narw.pop[prj, i, 5] <- sum((narw.indiv[[prj]][i, "cohort", animals] == 2) * (narw.indiv[[prj]][i, "alive", animals] == 1))
-      narw.pop[prj, i, 6] <- sum((narw.indiv[[prj]][i, "cohort", animals] == 4) * (narw.indiv[[prj]][i, "alive", animals] == 1))
-      narw.pop[prj, i, 7] <- sum((narw.indiv[[prj]][i, "cohort", animals] == 5) * (narw.indiv[[prj]][i, "alive", animals] == 1))
-      narw.pop[prj, i, 8] <- sum((narw.indiv[[prj]][i, "cohort", animals] == 6) * (narw.indiv[[prj]][i, "alive", animals] == 1))
-      
-      # Total population size
-      tot.pop[prj, i] <- sum(narw.indiv[[prj]][i, "alive", animals], na.rm = TRUE)
-      
+        narw.indiv[i, "p_surv", ] <- ps
+        
+        #' ----------------------------
+        # TOTALS
+        #' ----------------------------
+        
+        # Number of  in each cohort
+        # Calves (male)
+        narw.pop[prj, i, 1] <- sum((narw.indiv[i, "cohort", ] == 0) *
+                                     (narw.indiv[i, "female", ] == 0) *
+                                     (narw.indiv[i, "alive", ] == 1))
+        
+        # Juveniles and adults (male)
+        narw.pop[prj, i, 2] <- sum((narw.indiv[i, "cohort", ] == 1) * (narw.indiv[i, "alive", ] == 1))
+        narw.pop[prj, i, 3] <- sum((narw.indiv[i, "cohort", ] == 3) * (narw.indiv[i, "alive", ] == 1))
+        
+        # Calves (female)
+        narw.pop[prj, i, 4] <- sum((narw.indiv[i, "cohort", ] == 0) *
+                                     (narw.indiv[i, "female", ] == 1) *
+                                     (narw.indiv[i, "alive", ] == 1))
+        
+        # Juvenile and reproductive adults (female)
+        narw.pop[prj, i, 5] <- sum((narw.indiv[i, "cohort", ] == 2) * (narw.indiv[i, "alive", ] == 1))
+        narw.pop[prj, i, 6] <- sum((narw.indiv[i, "cohort", ] == 4) * (narw.indiv[i, "alive", ] == 1))
+        narw.pop[prj, i, 7] <- sum((narw.indiv[i, "cohort", ] == 5) * (narw.indiv[i, "alive", ] == 1))
+        narw.pop[prj, i, 8] <- sum((narw.indiv[i, "cohort", ] == 6) * (narw.indiv[i, "alive", ] == 1))
+        
+        # Total population size
+        tot.pop[prj, i] <- sum(narw.indiv[i, "alive", ], na.rm = TRUE)
+        
+      } # End totpop >0
     } # End years
   } # End projections
   
   end.time <- Sys.time()
   run_time <- hms::round_hms(hms::as_hms(difftime(time1 = end.time, time2 = start.time, units = "auto")), 1)
   
-  cat("Processing outputs ...\n")
+  # cat("Processing outputs ...\n")
   
-  narw.out <- purrr::map(.x = 1:n, .f = ~{
-    reshape_array(narw.indiv[[.x]], value, yr, attr, whale) |> 
-      dplyr::mutate(attr = mat.attribs[attr]) |> 
-      tidyr::pivot_wider(names_from = attr, values_from = value) |> 
-      dplyr::mutate(prj = .x) |> 
-      dplyr::relocate(prj, .before = yr)
-  }) |> do.call(what = rbind) |> 
-    data.table::data.table()
+  # narw.out <- purrr::map(.x = 1:n, .f = ~{
+  #   reshape_array(narw.indiv[[.x]], value, yr, attr, whale) |> 
+  #     dplyr::mutate(attr = mat.attribs[attr]) |> 
+  #     tidyr::pivot_wider(names_from = attr, values_from = value) |> 
+  #     dplyr::mutate(prj = .x) |> 
+  #     dplyr::relocate(prj, .before = yr)
+  # }) |> do.call(what = rbind) |> 
+  #   data.table::data.table()
   
-  narw.out <- narw.out[is.finite(rowSums(narw.out)),]
+  # narw.out <- narw.out[is.finite(rowSums(narw.out)),]
   
   narw.df <- purrr::map(.x = cohorts$name, .f = ~{
     narw.pop[,,.x] |> 
@@ -455,29 +445,10 @@ predict.narwsim <- function(obj,
   #   data.table::data.table()
   
   narw.conf <- narw.df[
-  , list(
-    mean = mean(N),
-    lwr = quantile(N, 0.025, na.rm = TRUE),
-    uppr = quantile(N, 0.975, na.rm = TRUE)
-  ),
-  list(year, cohort)
-] |>
-  dplyr::mutate(cohort = factor(cohort, levels = c(
-    "Calves (male)",
-    "Calves (female)",
-    "Juveniles (male)",
-    "Juveniles (female)",
-    "Adults (male)",
-    "Adults (female, pregnant)",
-    "Adults (female, lactating)",
-    "Adults (female, resting)"
-  )))
-  
-  tot.conf <- tot.df[
     , list(
-      mean = mean(N),
-      lwr = quantile(N, 0.025),
-      uppr = quantile(N, 0.975)
+      mean = mean(N, na.rm = TRUE),
+      lwr = quantile(N, 0.025, na.rm = TRUE),
+      uppr = quantile(N, 0.975, na.rm = TRUE)
     ),
     list(year, cohort)
   ] |>
@@ -489,29 +460,46 @@ predict.narwsim <- function(obj,
       "Adults (male)",
       "Adults (female, pregnant)",
       "Adults (female, lactating)",
+      "Adults (female, resting)"
+    )))
+  
+  tot.conf <- tot.df[
+    , list(
+      mean = mean(N, na.rm = TRUE),
+      lwr = quantile(N, 0.025, na.rm = TRUE),
+      uppr = quantile(N, 0.975, na.rm = TRUE)
+    ),
+    list(year, cohort)
+  ] |>dplyr::mutate(cohort = factor(cohort, levels = c(
+      "Calves (male)",
+      "Calves (female)",
+      "Juveniles (male)",
+      "Juveniles (female)",
+      "Adults (male)",
+      "Adults (female, pregnant)",
+      "Adults (female, lactating)",
       "Adults (female, resting)",
       "North Atlantic right whales"
     )))
   
-  p1 <- plot_projection(narw.df, narw.conf)
-  p2 <- plot_projection(tot.df, tot.conf)
-  
-  if(do.plot){
-    print(p1)
-    print(p2)
-  }
-  
   # Find 95% confidence intervals on final population size
   cat("Final population size:\n")
-  final.pop <- unname(tot.df[year == current.yr + yrs,  quantile(N, probs = c(0.5, 0.025, 0.975))])
+  final.pop <- unname(tot.df[year == current.yr + yrs,  quantile(N, probs = c(0.5, 0.025, 0.975), na.rm = TRUE)])
   cat("N = ", round(final.pop[1],0), " (95% CI: ", round(final.pop[2],0), "–", round(final.pop[3],0), ")\n", sep = "")
   
   cat(paste0("Time elapsed: ", run_time))
   cat("\n")
-
-  return(list(dat = narw.out,
-              out = list(df = rbind(narw.df, tot.df), 
-                         ci = rbind(narw.conf, tot.conf),
-                         plot = list(p1, p2))))
+  
+  outproj <- list(param = list(yrs = yrs,
+                               n = n),
+                  dat = list(ind = narw.indiv,
+                             birth = births,
+                             pop = narw.pop,
+                             tot = tot.pop),
+                  prj = list(proj = rbind(narw.df, tot.df), 
+                             mean = rbind(narw.conf, tot.conf)))
+  
+  class(outproj) <- c("narwproj", class(outproj))
+  return(outproj)
   
 }
