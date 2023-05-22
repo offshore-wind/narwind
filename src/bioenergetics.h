@@ -197,6 +197,31 @@ double rtnorm(double location,
    return out;
 }
 
+//' Random deviate from a truncated Normal distribution
+ //' 
+ //' @param location Location parameter
+ //' @param scale Scale parameter
+ //' @param L Lower bound
+ //' @param U Upper bound
+ // [[Rcpp::export]]
+ Rcpp::NumericVector rtnorm_vec(int n,
+                                double location,
+                                double scale,
+                                double L,
+                                double U) {
+   
+   Rcpp::NumericVector out(n);
+   Rcpp::NumericVector tot(n);
+   
+   for(int i = 0; i<n; i++){
+     tot[i] = R::pnorm(L, location, scale, TRUE, FALSE) + R::runif(0,1) * (R::pnorm(U, location, scale, TRUE, FALSE) - R::pnorm(L, location, scale, TRUE, FALSE));
+     out[i] = location + scale * R::qnorm(tot[i], 0, 1, TRUE, FALSE);
+   }
+
+   return out;
+ }
+
+
 //' Initialize age
 //' @name start_age
  //' @description Performs a random draw from a uniform distribution to initialize the age of simulated animals
@@ -223,11 +248,11 @@ Rcpp::NumericVector start_age_vec(Rcpp::NumericVector cohort){
   
   for(int i = 0; i < n; i++) {
     if(cohort[i] == 0){
-      a[i] = 1/365;
+      a[i] = 0;
     } else if(cohort[i] >= 1 && cohort[i] <= 2){
       a[i] = R::runif(1, 9);
     } else {
-      a[i] = R::runif(9, 69);
+      a[i] = R::runif(9, 68);
     }
   }
   return(a);
@@ -323,7 +348,7 @@ Rcpp::NumericVector start_age_vec(Rcpp::NumericVector cohort){
  //' @param shape2 Second shape parameter of the beta distribution
  // [[Rcpp::export]]
  
- long double start_bcondition(double cohort, int month = 10){
+ long double start_bcondition(double cohort, int month = 10, double max_bc = 0.6){
    
    long double bc;
    
@@ -334,19 +359,19 @@ Rcpp::NumericVector start_age_vec(Rcpp::NumericVector cohort){
      // Pregnant and lactating females
    } else if(cohort == 4 | cohort == 5){
      
-     if(month >= 7 & month <= 10){ // During the foraging season
-       bc = rtnorm(0.4, 0.05, 0.05, 1); 
+     if(month >= 6 & month <= 10){ // During the foraging season
+       bc = rtnorm(0.4, 0.05, 0.05, max_bc); 
      } else {
-       bc = rtnorm(0.3, 0.05, 0.05, 1); // Other time of year
+       bc = rtnorm(0.3, 0.05, 0.05, max_bc); // Other time of year
      }
      
      // All other individuals
    } else {
      
-     if(month >= 7 & month <= 10){ // During the foraging season
-       bc = rtnorm(0.35, 0.085, 0.05, 1); 
+     if(month >= 6 & month <= 10){ // During the foraging season
+       bc = rtnorm(0.35, 0.075, 0.05, max_bc); 
      } else {
-       bc = rtnorm(0.15, 0.085, 0.05, 1); // Other time of year
+       bc = rtnorm(0.15, 0.075, 0.05, max_bc); // Other time of year
      }
      
    }
@@ -362,7 +387,7 @@ Rcpp::NumericVector start_age_vec(Rcpp::NumericVector cohort){
  //' @param shape2 Second shape parameter of the beta distribution
  // [[Rcpp::export]]
 
-Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month = 10){
+Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month = 10, double max_bc = 0.6){
 
   int n = cohort.size();
   Rcpp::NumericVector bc(n);
@@ -371,24 +396,24 @@ Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month =
 
     // Calves
     if(cohort[i] == 0){
-      bc[i] = rtnorm(0.06, 0.01, 0.06, 1);
+      bc[i] = rtnorm(0.06, 0.01, 0.06, max_bc);
 
       // Pregnant and lactating females
     } else if(cohort[i] == 4 | cohort[i] == 5){
 
       if(month >= 7 & month <= 10){ // During the foraging season
-        bc[i] = rtnorm(0.4, 0.05, 0.05, INFINITY);
+        bc[i] = rtnorm(0.4, 0.05, 0.05, max_bc);
       } else {
-        bc[i] = rtnorm(0.3, 0.05, 0.05, INFINITY); // Other time of year
+        bc[i] = rtnorm(0.3, 0.05, 0.05, max_bc); // Other time of year
       }
 
       // All other individuals
     } else {
 
       if(month >= 7 & month <= 10){ // During the foraging season
-        bc[i] = rtnorm(0.35, 0.085, 0.05, INFINITY);
+        bc[i] = rtnorm(0.35, 0.075, 0.05, max_bc);
       } else {
-        bc[i] = rtnorm(0.15, 0.085, 0.05, INFINITY); // Other time of year
+        bc[i] = rtnorm(0.15, 0.075, 0.05, max_bc); // Other time of year
       }
     }
   }
@@ -396,6 +421,87 @@ Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month =
   return bc;
 }
 
+// ' Parameters of the length-at-age relationship
+// ' @description Generates vectors of coefficients from the Gompertz growth
+//  curve describing the change in length as a function of age relationship, as described in Fortune et al. (2021)
+// ' @return Matrix of coefficients
+// [[Rcpp::export]]
+Eigen::MatrixXd agL(double age, int n = 1, bool sd = false){
+  
+  double a, b, c; // Parameters of the Gompertz growth curves        
+  Eigen::MatrixXd out(n,3);
+  
+  for(int i = 0; i < n; i++){
+    
+    if(age <= 0.79){
+      if(sd){
+        a = R::rnorm(1067.19, 19.67);
+        b = R::rnorm(-0.93, 0.08);
+        c = R::rnorm(-3.11, 0.28);
+      } else {
+        a = 1067.19;
+        b = -0.93;
+        c = -3.11;
+      }
+    } else {
+      if(sd){
+        a = R::rnorm(1362.755, 22.88); 
+        b = R::rnorm(-0.37, 0.03); 
+        c = R::rnorm(-0.18, 0.03);
+      } else {
+        a = 1362.755;
+        b = -0.37;
+        c = -0.18;
+      }
+    }
+    
+    out(i,0) = a;
+    out(i,1) = b;
+    out(i,2) = c;
+    
+  }
+  return(out);
+}
+
+// [[Rcpp::export]]
+Eigen::MatrixXd agL_vec(Rcpp::NumericVector age, bool sd = false){
+  
+  int n = age.size();
+  Eigen::MatrixXd out(n,3);
+  
+  for(int i = 0; i < n; i++){
+    
+    double a, b, c; // Parameters of the Gompertz growth curves  
+    
+    if(age[i] <= 0.79){
+      if(sd){
+        a = R::rnorm(1067.19, 19.67);
+        b = R::rnorm(-0.93, 0.08);
+        c = R::rnorm(-3.11, 0.28);
+      } else {
+        a = 1067.19;
+        b = -0.93;
+        c = -3.11;
+      }
+    } else {
+      if(sd){
+        a = R::rnorm(1362.755, 22.88); 
+        b = R::rnorm(-0.37, 0.03); 
+        c = R::rnorm(-0.18, 0.03);
+      } else {
+        a = 1362.755;
+        b = -0.37;
+        c = -0.18;
+      }
+    }
+    
+    out(i,0) = a;
+    out(i,1) = b;
+    out(i,2) = c;
+    
+  }
+  return(out);
+}
 
 //' Age to length conversion
 //' @name age2length
@@ -409,23 +515,93 @@ Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month =
    return gompertz(0,0) * exp(gompertz(0,1)*exp(gompertz(0,2)*age)) / 100; // cm to m
  }
 
+// // [[Rcpp::export]]
+// Rcpp::NumericVector age2length_vec(Rcpp::NumericVector age, Eigen::MatrixXd gompertz){        
+//   int n = age.size();
+//   int nr = gompertz.rows();
+//   if(n != nr) Rcpp::stop("Arguments have different lengths");
+//   Rcpp::NumericVector a(n);
+//   
+//   for(int i = 0; i < n; i++) {
+//     a[i] = gompertz(i,0) * exp(gompertz(i,1)*exp(gompertz(i,2)*age[i])) / 100; // cm to m
+//   }
+//   return a;
+// }
+
 // [[Rcpp::export]]
-Rcpp::NumericVector age2length_vec(Rcpp::NumericVector age, Eigen::MatrixXd gompertz){        
+Rcpp::NumericVector age2length_vec(Rcpp::NumericVector age){        
   int n = age.size();
-  int nr = gompertz.rows();
-  if(n != nr) Rcpp::stop("Arguments have different lengths");
   Rcpp::NumericVector a(n);
-  
+  Eigen::MatrixXd gompertz = agL_vec(age);
   for(int i = 0; i < n; i++) {
     a[i] = gompertz(i,0) * exp(gompertz(i,1)*exp(gompertz(i,2)*age[i])) / 100; // cm to m
   }
   return a;
 }
 
+// // [[Rcpp::export]]
+// Rcpp::NumericVector age2length_vec(Rcpp::NumericVector age){        
+//   int n = age.size();
+//   Rcpp::NumericVector a(n);
+// 
+//   for(int i = 0; i < n; i++) {
+//     if(age[i] <= 0.79){
+//       a[i] = 1067.19 * exp(-0.93*exp(-3.11*age[i])) / 100; // cm to m
+//     } else {
+//       a[i] = 1362.755 * exp(-0.37*exp(-0.18*age[i])) / 100; // cm to m
+//     }
+//     
+//   }
+//   return a;
+// }
 
 // [[Rcpp::export]]
 Eigen::MatrixXd create_mat(){
   return Eigen::MatrixXd(2,1);
+}
+
+// ' Parameters of the mass-at-length relationship
+// ' @description Generates pairs of coefficients (intercept and slope) from the logarithmic mass-at-length relationship
+//   described in Fortune et al. (2021)
+// ' @return Matrix of coefficients
+// [[Rcpp::export]]
+Eigen::MatrixXd mL(int n = 1, bool sd = false){
+  
+  Eigen::MatrixXd out = Eigen::MatrixXd(n,2);
+  
+  if(sd){
+    
+    // Multivariate parameters of the mass-at-length function
+    // See growth_curves.R script
+    Eigen::MatrixXd mu = Eigen::MatrixXd(2,1);
+    Eigen::MatrixXd sigma = Eigen::MatrixXd(2,2);
+    
+    // Means
+    mu(0,0) = -4.834189;
+    mu(1,0) = 2.984353;
+    
+    // Variance-covariance matrix
+    sigma(0,0) = 0.21128304;
+    sigma(0,1) = -0.07515154;
+    sigma(1,0) = -0.07515154;
+    sigma(1,1) = 0.02686353;
+    
+    for (int i = 0; i < n; i++) {
+      Rcpp::NumericVector deviates = random_multivariate_normal(mu, sigma);
+      out(i,0) = deviates[0];
+      out(i,1) = deviates[1];
+    }
+  } else {
+    for (int i = 0; i < n; i++) {
+      // Atlantic and Pacific right whales
+      // out(i,0) = -5.096379;  
+      // out(i,1) = 3.079408;
+      // Atlantic only
+      out(i,0) = -4.834189;
+      out(i,1) = 2.984353;
+    }
+  }
+  return(out);
 }
 
 // ' Length to mass conversion
@@ -433,40 +609,48 @@ Eigen::MatrixXd create_mat(){
 // ' mass-at-length relationship of Fortune et al. (2021)
 // ' @param L Input body length (m)
 // ' @param param Parameters of the mass-at-length relationship, as returned by mL
-// ' @param lean If TRUE, returns lean mass only.
 // ' @return Estimated mass (kg)
 // [[Rcpp::export]]
 double length2mass(double L,
                    Eigen::MatrixXd param,
-                   bool lean){
+                   double lean = 0.5435686){
+  
+  // lean determined by find_lean(45000)
   
   double a = param(0,0);
   double b = param(0,1);
   double L_cm = L * 100;
-  double perc = 1;
-  if(lean) perc = 0.73;
-  return perc * std::pow(10, a)*std::pow(L_cm,b); // m to cm
+  return lean * std::pow(10, a)*std::pow(L_cm,b); // m to cm
 }
 
+// // [[Rcpp::export]]
+// Rcpp::NumericVector length2mass_vec(Rcpp::NumericVector L,
+//                        Eigen::MatrixXd param,
+//                        double lean = 0.5435686){
+//   
+//   int n = L.size();
+//   int nr = param.rows();
+//   if(n != nr) Rcpp::stop("Arguments have different lengths");
+//   Rcpp::NumericVector mass(n);
+//   
+//   for(int i = 0; i < n; i++) {
+//     mass[i] = lean * std::pow(10, param(i,0))*std::pow(L[i] * 100,param(i,1)); // m to cm
+//   }
+//   return(mass);
+// }
+
 // [[Rcpp::export]]
-Rcpp::NumericVector length2mass_vec(Rcpp::NumericVector L,
-                       Eigen::MatrixXd param,
-                       bool lean){
+Rcpp::NumericVector length2mass_vec(Rcpp::NumericVector L, double lean = 0.5435686){
   
+  // lean determined by find_lean(45000)
   int n = L.size();
-  int nr = param.rows();
-  if(n != nr) Rcpp::stop("Arguments have different lengths");
   Rcpp::NumericVector mass(n);
   
   for(int i = 0; i < n; i++) {
-    double perc = 1;
-    if(lean) perc = 0.73;
-    mass[i] = perc * std::pow(10, param(i,0))*std::pow(L[i] * 100,param(i,1)); // m to cm
+    mass[i] = lean * std::pow(10, -4.834189)*std::pow(L[i] * 100, 2.984353); // m to cm
   }
   return(mass);
 }
-
-
 // double length2mass(double L, 
 //                    double age,
 //                    bool lean){
@@ -520,97 +704,6 @@ Rcpp::NumericVector length2mass_vec(Rcpp::NumericVector L,
 //   // return perc * pow(10, a + b*std::log10(L*100));
 // }
 
-
-// ' Parameters of the length-at-age relationship
-// ' @description Generates vectors of coefficients from the Gompertz growth
-//  curve describing the change in length as a function of age relationship, as described in Fortune et al. (2021)
-// ' @return Matrix of coefficients
-// [[Rcpp::export]]
-Eigen::MatrixXd agL(double age, int n = 1){
-  
-  double a, b, c; // Parameters of the Gompertz growth curves        
-  Eigen::MatrixXd out(n,3);
-  
-  for(int i = 0; i < n; i++){
-    
-    if(age <= 0.79){
-      a = R::rnorm(1067.19, 19.67);
-      b = R::rnorm(-0.93, 0.08);
-      c = R::rnorm(-3.11, 0.28);
-    } else {
-      a = R::rnorm(1362.755, 22.88); 
-      b = R::rnorm(-0.37, 0.03); 
-      c = R::rnorm(-0.18, 0.03); 
-    }
-    
-    out(i,0) = a;
-    out(i,1) = b;
-    out(i,2) = c;
-    
-  }
-  return(out);
-}
-
-// [[Rcpp::export]]
-Eigen::MatrixXd agL_vec(Rcpp::NumericVector age){
-  
-  int n = age.size();
-  Eigen::MatrixXd out(n,3);
-  
-  for(int i = 0; i < n; i++){
-    
-    double a, b, c; // Parameters of the Gompertz growth curves  
-    
-    if(age[i] <= 0.79){
-      a = R::rnorm(1067.19, 19.67);
-      b = R::rnorm(-0.93, 0.08);
-      c = R::rnorm(-3.11, 0.28);
-    } else {
-      a = R::rnorm(1362.755, 22.88); 
-      b = R::rnorm(-0.37, 0.03); 
-      c = R::rnorm(-0.18, 0.03); 
-    }
-    
-    out(i,0) = a;
-    out(i,1) = b;
-    out(i,2) = c;
-    
-  }
-  return(out);
-}
-
-// ' Parameters of the mass-at-length relationship
-// ' @description Generates pairs of coefficients (intercept and slope) from the logarithmic mass-at-length relationship
-//   described in Fortune et al. (2021)
-// ' @return Matrix of coefficients
-// [[Rcpp::export]]
-Eigen::MatrixXd mL(int n = 1){
-  
-  Eigen::MatrixXd out = Eigen::MatrixXd(n,2);
-  
-  // Multivariate parameters of the mass-at-length function
-  // See growth_curves.R script
-  Eigen::MatrixXd mu = Eigen::MatrixXd(2,1);
-  Eigen::MatrixXd sigma = Eigen::MatrixXd(2,2);
-  
-  // Means
-  mu(0,0) = -4.834189;
-  mu(1,0) = 2.984353;
-  
-  // Variance-covariance matrix
-  sigma(0,0) = 0.21128304;
-  sigma(0,1) = -0.07515154;
-  sigma(1,0) = -0.07515154;
-  sigma(1,1) = 0.02686353;
-  
-  for (int i = 0; i < n; i++) {
-    Rcpp::NumericVector deviates = random_multivariate_normal(mu, sigma);
-    out(i,0) = deviates[0];
-    out(i,1) = deviates[1];
-  }
-  return(out);
-}
-
 // // [[Rcpp::export]]
 // int separation_duration(){
 //   // The returned value is automatically converted to an integer by defining a function of type <int>
@@ -621,62 +714,49 @@ Eigen::MatrixXd mL(int n = 1){
 Rcpp::NumericVector increment_cohort(Rcpp::NumericVector cohort, 
                                      Rcpp::NumericVector age, 
                                      Rcpp::NumericVector female,
-                                     Rcpp::NumericVector bc,
-                                     Rcpp::NumericVector min_bc,
-                                     Rcpp::NumericVector trest,
-                                     Rcpp::NumericVector t2calf){
+                                     Rcpp::NumericVector rest,
+                                     double abort){
   int nc = cohort.size();
   int na = age.size();
   int nf = female.size();
-  int nbc = bc.size();
-  int nm = min_bc.size();
-  int nb = t2calf.size();
-  int nt = trest.size();
+  int nr = rest.size();
   
   // Check that all vectors have the same size
-  std::array<int,7> sizes = {nc, na, nf, nb, nbc, nm, nt};
+  std::array<int,4> sizes = {nc, na, nf, nr};
   int allequal = std::equal(sizes.begin() + 1, sizes.end(), sizes.begin());
-  
   if(allequal == 0) Rcpp::stop("Arguments have different lengths");
   Rcpp::NumericVector coh(nc);
   
   for(int i = 0; i < nc; i++) {
     
-    // ----------------------
-    // Growth and maturity
-    // ----------------------
+      // ----------------------
+      // Growth and maturity
+      // ----------------------
 
-    if(cohort[i] == 0 & age[i] >= 1 & female[i] == 0){
-      // Calves (m) -> Juveniles (m)
+    if(cohort[i] == 0 & age[i] >= 1 & female[i] == 0){              // Calves (m) -> Juveniles (m)
       coh[i] = 1;
-    } else if (cohort[i] == 0 & age[i] >= 1 & female[i] == 1){
-      // Calves (f) -> Juveniles (f)
+    } else if (cohort[i] == 0 & age[i] >= 1 & female[i] == 1){      // Calves (f) -> Juveniles (f)
       coh[i] = 2;
-    } else if (cohort[i] == 1 & age[i] >= 9 & female[i] == 0){
-      // Juveniles (m) -> Adults (m)
+    } else if (cohort[i] == 1 & age[i] >= 9 & female[i] == 0){      // Juveniles (m) -> Adults (m)
       coh[i] = 3;
-    } else if (cohort[i] == 2 & age[i] >= 9 & female[i] == 1){
-      // Juveniles (f) -> Adults, resting (f)
+    } else if (cohort[i] == 2 & age[i] >= 9 & female[i] == 1){      // Juveniles (f) -> Adults, resting (f)
       coh[i] = 6;
       
       // ----------------------
       // Transitions between reproductive states
       // ----------------------
       
-    } else if (cohort[i] == 5) {
-      // Lactating (f) -> Resting (f)
+    } else if (cohort[i] == 5) {                                    // Lactating (f) -> Resting (f)
       coh[i] = 6;
-    } else if(cohort[i] == 6 & t2calf[i] == 0){
-      if(bc[i] > min_bc[i] | trest[i] == 13){
-        // Resting (f) -> Pregnant (f)
-        coh[i] = 4;
-      } else {
-        // Resting (f) -> Resting (f)
+    } else if(cohort[i] == 6 & rest[i] == 0){                       // Resting (f) -> Pregnant (f)
+      coh[i] = 4;
+    } else if(cohort[i] == 4){                                      // Pregnant (f) -> Lactating (f)
+      int has_aborted = R::rbinom(1, abort);
+      if(has_aborted){
         coh[i] = 6;
+      } else {
+        coh[i] = 5;
       }
-    } else if(cohort[i] == 4){
-      // Pregnant (f) -> Lactating (f)
-      coh[i] = 5;
     } else {
       coh[i] = cohort[i];
     }
@@ -748,6 +828,21 @@ Rcpp::NumericVector increment_cohort(Rcpp::NumericVector cohort,
  double scale_effort(double x, double A, double D, double B, double C, double S){
    return A + (D-A) / std::pow(1 + std::exp(B*(C-x)), S);
  }
+
+// [[Rcpp::export]]
+
+Rcpp::NumericVector scale_effort_vec(Rcpp::NumericVector x, 
+                                     double A, double D, double B, double C, double S){
+  
+  int n = x.size();
+  Rcpp::NumericVector out(n);
+  for(int i = 0; i<n; i++){
+    out(i) = A + (D-A) / std::pow(1 + std::exp(B*(C-x(i))), S);
+  }
+  return out;
+}
+
+
 
 //' Convert degrees to radians
  //' @name deg2radians
@@ -1148,12 +1243,41 @@ Rcpp::NumericVector increment_cohort(Rcpp::NumericVector cohort,
  //' @param D_protein Efficiency of deposition of protein (\%)
  // [[Rcpp::export]]
  
- double growth_cost(double delta_m, double prop_blubber, double prop_water, double P_lipid_blubber,
+ double growth_cost_old(double delta_m, double prop_blubber, double prop_water, double P_lipid_blubber,
                     double rho_lipid, double rho_protein, double D_lipid, double D_protein){
    
    return delta_m * ((prop_blubber * P_lipid_blubber * rho_lipid * D_lipid) + 
                      ((1 - prop_blubber) * (1 - prop_water) * rho_protein * D_protein));
  }
+
+
+
+// [[Rcpp::export]]
+
+double growth_cost(double mass_increment,
+                   double EDens_lipids, 
+                   double EDens_protein,
+                   double lipid_in_blubber,
+                   double lipid_in_muscle,
+                   double lipid_in_viscera,
+                   double lipid_in_bones,
+                   double protein_in_blubber,
+                   double protein_in_muscle,
+                   double protein_in_viscera,
+                   double protein_in_bones,
+                   double prop_blubber,
+                   double prop_muscle,
+                   double prop_viscera,
+                   double prop_bones){
+  
+  double cost_blubber = EDens_lipids * lipid_in_blubber + EDens_protein * protein_in_blubber;
+  double cost_muscle = EDens_lipids * lipid_in_muscle + EDens_protein * protein_in_muscle;
+  double cost_viscera = EDens_lipids * lipid_in_viscera + EDens_protein * protein_in_viscera;
+  double cost_bones = EDens_lipids * lipid_in_bones + EDens_protein * protein_in_bones;
+  
+  return mass_increment * (cost_blubber * prop_blubber + cost_muscle * prop_muscle + cost_viscera * prop_viscera + cost_bones * prop_bones);
+}
+
 
 // newind[year,"alive", 1] <- 1
 // newind[year,"cohort", 1] <- 0
@@ -1184,6 +1308,7 @@ Rcpp::NumericVector increment_cohort(Rcpp::NumericVector cohort,
 
 // [[Rcpp::export]]
 Rcpp::NumericMatrix add_calf(int n, Rcpp::StringVector attr){
+  
   int nattr = attr.size();
   Rcpp::NumericMatrix out(nattr,n);
   
@@ -1191,36 +1316,68 @@ Rcpp::NumericMatrix add_calf(int n, Rcpp::StringVector attr){
   alive = alive + 1;
   
   out(2,Rcpp::_) = Rcpp::rbinom(n, 1, 0.5); // Sex
-  // Rcpp::NumericMatrix::Row female = out.row(2);
-  // female = Rcpp::rbinom(n, 1, 0.5);
-  
-  Eigen::MatrixXd lparams = agL_vec(n);
-  // Rcpp::NumericMatrix::Row length = out.row(4);
-  Rcpp::NumericVector L = age2length_vec(out.row(3), lparams);
+
+  Rcpp::NumericVector L = age2length_vec(out.row(3));
   out(4,Rcpp::_) = L;
   
-  Eigen::MatrixXd mparams = mL(n);
-  Rcpp::NumericVector M = length2mass_vec(L, mparams, false);
-  out(8,Rcpp::_) = M; // Total mass
+  Rcpp::NumericVector M = length2mass_vec(L);
+  out(6,Rcpp::_) = M; // Lean_mass
   
   Rcpp::NumericVector BC = start_bcondition_vec(out(3,Rcpp::_));
-  out(10,Rcpp::_) = BC; // Body condition
+  out(7,Rcpp::_) = BC; // Body condition
   
-  Rcpp::NumericMatrix::Row psurv = out.row(13);
+  out(5,Rcpp::_) = M / (1-BC); // Total mass
+  
+  Rcpp::NumericMatrix::Row psurv = out.row(8);
   psurv = psurv + 1;
   
-  for(int i = 0; i < n; i++){
-    for(int j = 0; j < 3; j++){
-      out(5+j, i) = lparams(i,j); // age to length parameters
-    }
-    out(9,i) = M(i) - (BC(i) * M(i)); // lean mass
-    for(int k = 0; k < 2; k++){
-      out(11+k, i) = mparams(i,k); // length to mass parameters
-    }
-  }
+  Rcpp::NumericMatrix::Row reprod = out.row(13); // Reproductive females
+  reprod = reprod + 1;
+  
+  Rcpp::rownames(out) = attr;
   
   return(out);
 }
+
+// 
+// Rcpp::NumericMatrix add_calf(int n, Rcpp::StringVector attr){
+//   int nattr = attr.size();
+//   Rcpp::NumericMatrix out(nattr,n);
+//   
+//   Rcpp::NumericMatrix::Row alive = out.row(0);
+//   alive = alive + 1;
+//   
+//   out(2,Rcpp::_) = Rcpp::rbinom(n, 1, 0.5); // Sex
+//   // Rcpp::NumericMatrix::Row female = out.row(2);
+//   // female = Rcpp::rbinom(n, 1, 0.5);
+//   
+//   Eigen::MatrixXd lparams = agL_vec(n);
+//   // Rcpp::NumericMatrix::Row length = out.row(4);
+//   Rcpp::NumericVector L = age2length_vec(out.row(3));
+//   out(4,Rcpp::_) = L;
+//   
+//   Eigen::MatrixXd mparams = mL(n);
+//   Rcpp::NumericVector M = length2mass_vec(L);
+//   out(8,Rcpp::_) = M; // Total mass
+//   
+//   Rcpp::NumericVector BC = start_bcondition_vec(out(3,Rcpp::_));
+//   out(10,Rcpp::_) = BC; // Body condition
+//   
+//   Rcpp::NumericMatrix::Row psurv = out.row(13);
+//   psurv = psurv + 1;
+//   
+//   for(int i = 0; i < n; i++){
+//     for(int j = 0; j < 3; j++){
+//       out(5+j, i) = lparams(i,j); // age to length parameters
+//     }
+//     out(9,i) = M(i) - (BC(i) * M(i)); // lean mass
+//     for(int k = 0; k < 2; k++){
+//       out(11+k, i) = mparams(i,k); // length to mass parameters
+//     }
+//   }
+//   
+//   return(out);
+// }
 
 
 // //' Tissue deposition
@@ -1265,5 +1422,19 @@ Rcpp::NumericMatrix add_calf(int n, Rcpp::StringVector attr){
 //    
 //    return M + fat_growth + lean_growth;
 //  }
+// [[Rcpp::export]]
 
+double findminval(double num1, double num2){
+  if (num1 < num2){
+    return num1;
+  } else {
+    return num2;
+  }
+}
+// [[Rcpp::export]]
+
+double pbirth(double now, double enter, int timespan = 60){
+  return (now - enter)/timespan;
+}
+  
 #endif
