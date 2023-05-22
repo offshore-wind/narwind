@@ -11,9 +11,13 @@
 // Standard deviations of the Normal half-step function
 double sigma_move(int r){
   
-  double sigma_travel = 19.28;
-  double sigma_feed = 3.5;
-  double sigma_nurse = 3.05;
+  // double sigma_travel = 19.28;
+  // double sigma_feed = 3.5;
+  // double sigma_nurse = 3.05;
+  
+  double sigma_travel = 20.33374; // estRayleighParams(80, 150)
+  double sigma_feed = 3.807328; // estRayleighParams(6.5, 30)
+  double sigma_nurse = 10.49833; // estRayleighParams(30, 80)
   
   // Travel
   if(r == 7 | r == 8){ // MIDA and SCOS
