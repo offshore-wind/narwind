@@ -42,6 +42,7 @@ print.narwsim <- function(obj,
     cat("--------------------------\n")
     cat("Locations \n")
     cat("--------------------------\n")
+    cat("\n")
     print(sim_dt[, list(day, date, easting, northing, region)])
     cat("\n")
 
@@ -84,13 +85,17 @@ print.narwsim <- function(obj,
     cat("--------------------------\n")
     cat("Stressors \n")
     cat("--------------------------\n")
-    print(sim_dt[, list(day, is_entgl, entgl_head, severity, entgl_d, entgl_start, entgl_end, strike, noise_resp, noise_lvl, dB_thresh)])
+    cat("\n")
+    print(sim_dt[, list(day, gear_risk, is_entgl, entgl_head, entgl_sev, entgl_d, entgl_start, entgl_end, 
+                        is_entgl_calf, entgl_head_calf, entgl_sev_calf, entgl_d_calf, entgl_start_calf, entgl_end_calf,
+                        strike_risk, strike, strike_calf, noise_resp, noise_lvl, dB_thresh)])
     cat("\n")
 
     cat("--------------------------\n")
     cat("Activity budgets \n")
     cat("--------------------------\n")
-    print(sim_dt[, list(day, d_travel, swimspeed, t_travel, t_feed, t_nurse, t_rest, n_zero, t_sum, t_remain)])
+    cat("\n")
+    print(sim_dt[, list(day, d_travel, swimspeed, t_travel, t_feed, t_nurse, t_rest, t_sum, t_remain)])
     cat("\n")
 
     cat("--------------------------\n")
@@ -99,21 +104,41 @@ print.narwsim <- function(obj,
 
     if (cohortID[k] == 5) {
       cat("\n +++ Adults +++\n\n")
-      print(sim_dt[, list(day, E_tot, E_in, E_out, delta_fat, DE_lip, ED_lip, lip_anab, lip_catab)])
+      print(sim_dt[, list(day, delta_fat, ED_lip, lip_anab, lip_catab)])
       cat("\n")
       cat("\n +++ Calves +++\n\n")
-      print(sim_dt[, list(day, E_tot_calf, E_in_calf, E_out_calf, delta_fat_calf, DE_lip, ED_lip, lip_anab, lip_catab)])
+      print(sim_dt[, list(day, delta_fat_calf, ED_lip, lip_anab, lip_catab)])
     } else {
-      print(sim_dt[, list(day, E_tot, E_in, E_out, delta_fat, DE_lip, ED_lip, lip_anab, lip_catab)])
+      cat("\n")
+      print(sim_dt[, list(day, delta_fat, ED_lip, lip_anab, lip_catab)])
     }
     cat("\n")
 
     cat("--------------------------\n")
-    cat("Energy intake \n")
+    cat("Energy balance \n")
     cat("--------------------------\n")
     
     if (cohortID[k] == 5) {
       cat("\n +++ Adults +++\n\n")
+      print(sim_dt[, list(day, E_tot, E_in, E_out)])
+      cat("\n")
+      cat("\n +++ Calves +++\n\n")
+      print(sim_dt[, list(day, E_tot_calf, E_in_calf, E_out_calf)])
+    } else {
+      cat("\n")
+      print(sim_dt[, list(day, E_tot, E_in, E_out)])
+    }
+    cat("\n")
+    
+    
+    cat("--------------------------\n")
+    cat("Energy intake \n")
+    cat("--------------------------\n")
+
+    if (cohortID[k] == 5) {
+      cat("\n +++ Adults +++\n\n")
+    } else{
+      cat("\n")
     }
     print(sim_dt[, list(day,
       feed, preyconc, minprey, gape, feedspeed, captEff, impedance, daylight,
@@ -131,17 +156,19 @@ print.narwsim <- function(obj,
     cat("\n")
 
     cat("--------------------------\n")
-    cat("Energy costs \n")
+    cat("Energetic costs \n")
     cat("--------------------------\n")
 
     if (cohortID[k] == 5) {
       cat("\n +++ Adults +++\n\n")
+    } else {
+      cat("\n")
     }
-    print(sim_dt[, list(day, rmr, LC, stroke, E_growth)])
+    print(sim_dt[, list(day, E_out, rmr, LC, stroke, E_growth)])
     
     if (cohortID[k] == 5) {
       cat("\n +++ Calves +++\n\n")
-      print(sim_dt[, list(day, rmr_calf, LC_calf, E_growth_calf, delta_m_calf)])
+      print(sim_dt[, list(day, E_out_calf, rmr_calf, LC_calf, E_growth_calf, delta_m_calf)])
     }
     
     
@@ -151,6 +178,7 @@ print.narwsim <- function(obj,
       cat("--------------------------\n")
       cat("Gestation\n")
       cat("--------------------------\n")
+      cat("\n")
       print(sim_dt[, list(day,
         E_gest, fgrowth, placenta, hic, delta_m,
         fetus_l, fetus_m, birth_l, birth_m, muscle_m, viscera_m, bones_m, blubber_m,
@@ -163,6 +191,7 @@ print.narwsim <- function(obj,
       cat("--------------------------\n")
       cat("Lactation\n")
       cat("--------------------------\n")
+      cat("\n")
       print(sim_dt[, list(day, E_lac)])
     }
 
