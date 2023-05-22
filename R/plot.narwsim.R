@@ -9,6 +9,7 @@
 #' @param web If TRUE, returns a plotly graph
 #' @import ggplot2
 #' @import patchwork
+#' @import ggnewscale
 #'
 #' @export
 #' 
@@ -22,7 +23,7 @@
 #' }
 
 plot.narwsim <- function(obj,
-                         inits = FALSE,
+                         what = "map",
                          whaleID = NULL,
                          animate = FALSE,
                          web = FALSE,
@@ -36,13 +37,20 @@ plot.narwsim <- function(obj,
   nmax <- 100
   lwd <- 0.2
   bymonth <- FALSE
+  bywhale <- FALSE
+  cohortID <- obj$param$cohortID
   
   # Default values
   if(length(args) > 0){
     if("nmax" %in% names(args)) nmax <- args[["nmax"]]
     if("lwd" %in% names(args)) lwd <- args[["lwd"]]
     if("bymonth" %in% names(args)) bymonth <- args[["bymonth"]]
+    if("bywhale" %in% names(args)) bywhale <- args[["bywhale"]]
+    if("cohortID" %in% names(args)) cohortID <- args[["cohortID"]]
   }
+  
+  if(bymonth & bywhale) stop("<bymonth> and <bywhale> cannot both be set to TRUE")
+  if(!what %in% c("inits", "map", "prob")) stop("Unrecognized input to <what> argument")
   
   # obj = m
   # whaleID = NULL
@@ -52,12 +60,13 @@ plot.narwsim <- function(obj,
   
   if(!"narwsim" %in% class(obj)) stop("Input must be an object of class <narwsim>")
   
-  cohortID <- obj$param$cohortID
-  cohort.ab <- obj$param$cohorts[id %in% cohortID, abb]
-  cohort.names <- obj$param$cohorts[id %in% cohortID, name]
+  cohorts <- obj$param$cohorts
+  cohort.ab <- cohorts[id %in% cohortID, abb]
+  cohort.names <- cohorts[id %in% cohortID, name]
   n.ind <- obj$param$nsim
 
-  if(inits){
+  if(what == "inits"){
+    
     if (is.null(whaleID)) {
       for (k in 1:length(obj$init$xy)) {
         if (!"xyinits" %in% class(obj$init$xy)) stop("Input not recognized")
@@ -83,8 +92,43 @@ plot.narwsim <- function(obj,
         legend("bottomright", legend = month.abb, fill = month.colours)
       }
     }
-  } else {
-  
+    
+  } else if (what == "prob") {
+    
+    cohorts <- obj$param$cohorts
+    
+    x_axis <- seq(0,1,0.01)
+    
+    bc_preds <- obj$gam$pred$bc
+    surv_preds <- obj$gam$pred$surv
+    
+    if(5 %in% cohortID) which.cohorts <- c(0, cohortID) else which.cohorts <- cohortID
+    
+    pred.df <- tibble::tibble(cohort = factor(do.call(c, purrr::map(.x = which.cohorts, .f = ~rep(.x, each = length(x_axis))))),
+                              start_bc = rep(x_axis, length(which.cohorts)))
+    
+    pred.df$surv <- apply(X = pred.df, MARGIN = 1, FUN = function(x) surv_preds[[as.character(x[1])]](x[2]))
+    pred.df$bc <- apply(X = pred.df, MARGIN = 1, FUN = function(x) bc_preds[[as.character(x[1])]](x[2]))
+    
+    pred.df <- pred.df |> tidyr::pivot_longer(!c(cohort, start_bc), names_to = "variable", values_to = "value")
+    
+
+    to_string <- ggplot2::as_labeller(c('bc' = "Body condition", 'surv' = "Survival"))
+    linecol <- c("black", "#f46a9b", "#ef9b20", "#edbf33", "#87bc45", "#27aeef", "#b33dc6")
+    
+    
+    ggplot2::ggplot(data = pred.df) +
+      ggplot2::geom_line(aes(x = start_bc, y = value, col = cohort), linewidth = 0.65) +
+      theme_narw() +
+      xlab("Body condition") +
+      ylab("Probability") +
+      ggplot2::scale_y_continuous(limits = c(0,1), breaks = seq(0,1,0.1)) +
+      ggplot2::scale_color_manual(values = linecol, labels = cohorts$name) +
+      ggplot2::facet_wrap(~variable, scales = "free", labeller = to_string) +
+      ggplot2::theme(legend.position = "right",
+                     legend.title = ggplot2::element_blank())
+    
+  } else if (what == "map") {
   
   if(n.ind > nmax) {warning("Plotting only the first ", nmax, " tracks"); n.ind <- nmax}
   if(is.null(whaleID)) whaleID <- seq_len(n.ind)
@@ -120,12 +164,18 @@ plot.narwsim <- function(obj,
   COLORS <- c('starve' = 'firebrick', 'strike' = 'deepskyblue4', 'birth' = "#15A471")
   SHAPES <- c('Calves' = 1, 'Juveniles' = 16, 'Adults' = 16)
   
-  plot.list <- purrr::set_names(cohort.ab) |>
-  purrr::map2(.y = cohort.names, .f = ~ {
-    
+  plot.list <- purrr::set_names(cohortID) |>
+  purrr::map(.f = ~ {
+
     # Extract movement tracks
-    tracks.cohort <- tracks[whale %in% whaleID & cohort_name == .y]
-    if(any(cohortID == 5)) tracks$cohort_name <- paste0(tracks$cohort_name, " + calves")
+    tracks.cohort <- tracks[whale %in% whaleID & cohort_name == cohorts[id == .x, name]]
+    
+    if(.x == 5){
+      new.name <- paste0(unique(tracks.cohort$cohort_name), " + calves")
+      # tracks[cohort_name == .y, cohort_name:= new.name]
+      tracks.cohort$cohort_name <- new.name
+      locs.dead[cohort %in% c(0,5), cohort_name:= new.name]
+    }
 
     # Plot base map (land)
     base_p <- gg.opts + ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", linewidth = 0.25) +
@@ -151,15 +201,29 @@ plot.narwsim <- function(obj,
     } else {
       
       track_p <- 
+        
         base_p +
-        ggplot2::geom_path(data = tracks.cohort, mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = lwd) +
-        ggplot2::geom_path(data = tracks.cohort, 
-                           mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = 0.2) +
-        ggplot2::geom_point(data = locs.dead[cohort > 0 & whale %in% whaleID & abb == .x],
+        
+        {if(bywhale) ggplot2::geom_path(data = tracks.cohort,
+                mapping = ggplot2::aes(x = easting, y = northing, group = whale, 
+                                       col = factor(whale)), alpha = 0.7, linewidth = lwd) } +
+        
+        {if(bywhale) ggplot2::scale_color_manual(values = pals::tol(length(whaleID)))} +
+        
+        {if(bywhale) ggnewscale::new_scale_colour() } +
+        
+        {if(!bywhale) ggplot2::geom_path(data = tracks.cohort,
+                           mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = lwd) }+
+        
+        ggplot2::geom_point(data = locs.dead[cohort > 0 & whale %in% whaleID & abb %in% cohorts[id == .x, abb]],
                             aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class))) +
-        ggplot2::geom_point(data = locs.dead[cohort == 0 &  whale %in% whaleID & abb == .x],
+        
+        {if(.x == 5 & !is.null(locs.birth[[1]])) 
+          ggplot2::geom_point(data = locs.birth[whale %in% whaleID], aes(x = easting, y = northing, colour = factor(event))) } +
+        
+        ggplot2::geom_point(data = locs.dead[cohort == 0 & whale %in% whaleID& abb %in% cohorts[id == .x, abb]],
                             aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class))) +
-        {if(!is.list(locs.birth)) ggplot2::geom_point(data = locs.birth[whale %in% whaleID], aes(x = easting, y = northing, colour = factor(event))) } +
+        
         ggplot2::scale_color_manual(values = COLORS) +
         ggplot2::scale_shape_manual(values = SHAPES) +
         ggplot2::theme(
@@ -180,7 +244,7 @@ plot.narwsim <- function(obj,
     web_p <- purrr::map(.x = plot.list, .f = ~plotly::ggplotly(.x))
     purrr::walk(web_p, print)
   } else {
-    print(patchwork::wrap_plots(plot.list))
+    print(patchwork::wrap_plots(plot.list) + patchwork::plot_layout(guides = "collect"))
   }
   
   if(animate){
