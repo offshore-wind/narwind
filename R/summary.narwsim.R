@@ -108,9 +108,8 @@ summary.narwsim <- function(obj, do.plot = FALSE){
     cat("\n+++++++++++ Births +++++++++++\n") 
 
     cat("\n")
-    dob <- obj$birth[, .(mean_DOB = mean(lubridate::as_date(date)),
-                              min_DOB = min(lubridate::as_date(date)),
-                              max_DOB = max(lubridate::as_date(date)))]
+
+    dob <- obj$birth[, .(mean_DOB = mean(date), min_DOB = min(date), max_DOB = max(date))]
     cat("Mean:", lubridate::day(dob$mean_DOB), as.character(lubridate::month(dob$mean_DOB, label = TRUE, abbr = TRUE)), "\n")
     cat("Range:", lubridate::day(dob$min_DOB), as.character(lubridate::month(dob$min_DOB, label = TRUE, abbr = TRUE)), "–",
         lubridate::day(dob$max_DOB), as.character(lubridate::month(dob$max_DOB, label = TRUE, abbr = TRUE)),  "\n")
