@@ -4,17 +4,7 @@
 \alias{narw}
 \title{Run the bioenergetic model}
 \usage{
-narw(
-  nsim = 1000,
-  cohortID = 1:6,
-  scenario = NULL,
-  step.size = 120,
-  stressors = TRUE,
-  growth = TRUE,
-  n.cores = NULL,
-  n.prop = 50,
-  progress = TRUE
-)
+narw(nsim = 1000, scenario = NULL, n.cores = NULL, progress = TRUE, ...)
 }
 \arguments{
 \item{nsim}{Number of simulated animals}

@@ -58,7 +58,7 @@ data_targets = list(
   targets::tar_target(name = dummy_prey, command = proxy_prey()),
   targets::tar_target(name = dummy_noise, command = proxy_noise()),
   targets::tar_target(name = dummy_vessels, command = proxy_vessels(pmax = 0.25)),
-  targets::tar_target(name = dummy_fishing, command = proxy_fishing()),
+  targets::tar_target(name = fishing_layer, command = entgl_surface()),
   targets::tar_target(name = daylight, command = get_daylight()),
   targets::tar_target(name = entgl_d, command = get_entglD()),
   

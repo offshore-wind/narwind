@@ -4,7 +4,7 @@
 \alias{summary.narwsim}
 \title{Summary}
 \usage{
-\method{summary}{narwsim}(obj)
+\method{summary}{narwsim}(obj, do.plot = FALSE)
 }
 \description{
 Summary information
@@ -16,6 +16,12 @@ library(narwind)
 animals <- run_model(10)
 plot(animals)
 }
+---------------------------------------
+---------------------------------------
+---------------------------------------
+---------------------------------------
+---------------------------------------
+---------------------------------------
 }
 \author{
 Phil J. Bouchet
