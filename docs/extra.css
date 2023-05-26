@@ -7,6 +7,12 @@ padding: 20px;}
 
 .citation {color: #106194;}
 
+.caption{width: 850px;}
+
+.copyright{
+    display: none;
+}
+
 code {
     padding: 2px 4px;
     font-size: 90%;
@@ -59,13 +65,16 @@ blockquote {
     background-color: #fffbe8;
 }
 
-body {font-size: 15px;}
+body {font-size: 15px;
+    line-height: 150%;
+    margin-bottom: 2.5rem;}
 
 a, a:hover {color: #106194;
     text-decoration: none;}
 
 .table {width: auto;
-    font-size: 13px;}
+    font-size: 15px;
+    line-height: 150%;}
 
 pre{background-color: #f8f8f8;}
 
