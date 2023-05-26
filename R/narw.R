@@ -54,6 +54,8 @@ narw <- function(nsim = 1e3,
   # n.cores = NULL
   # progress = TRUE
 
+  cohortID <- cohortID[cohortID > 0]
+  
   # Step size for movement model
   step.size = 120
   
@@ -413,33 +415,35 @@ narw <- function(nsim = 1e3,
 
   gam.dt <- purrr::map(.x = seq_along(cohortID), .f = ~ {
 
-    dt_adjuv <- data.table::merge.data.table(
-    x = dplyr::left_join(
-      # Start body condition
-      x = outsim[["sim"]][[.x]][day == 0, list(cohort = cohort, cohort_name = cohort_name, start_bc = bc), whale],
-      # Alive on last day
-      y = outsim[["sim"]][[.x]][day == 365, list(end_bc = bc, alive, abort), whale],
-      by = "whale"
-    ),
-    # Location of death
-    y = outsim[["sim"]][[.x]][, .SD[ifelse(which.min(alive) == 2, 0, which.min(alive))],
-      .SDcols = c("date", "day", "cohort", "easting", "northing", "region", "strike", "starve"), whale], 
-    by = c("cohort", "whale"), all.x = TRUE
-  )
+   outsim[["sim"]][[.x]][, death:= `if`(all(alive==0), 1, max(which(alive==1))), whale]
+    
+   dt_adjuv <- purrr::reduce(list(
+     # Starting condition
+     outsim[["sim"]][[.x]][day == 0, list(cohort = cohort, cohort_name = cohort_name, start_bc = bc), whale],
+     # Finishing conditions
+     outsim[["sim"]][[.x]][day == 365, list(end_bc = bc, alive, abort, strike, starve), whale],
+     # Date, day, region and coordinates of when death occurred
+     outsim[["sim"]][[.x]][, .SD[death], .SDcols = c("date", "day", "easting", "northing", "region"), whale] |> dplyr::distinct()
+    ), dplyr::left_join, by = "whale") |> 
+     dplyr::mutate(born = 1)
 
   if (cohortID[.x] == 5) {
     
-    dt_calves <- data.table::merge.data.table(
-      x = dplyr::left_join(
-        x = outsim[["sim"]][[.x]][which.max(born), list(cohort = cohort_calf, cohort_name = cohort_name, start_bc = bc_calf), whale],
-        y = outsim[["sim"]][[.x]][day == 365, list(end_bc = bc_calf, alive_calf), whale], 
-        by = "whale") |> 
-        dplyr::rename_with(~ tolower(gsub("_calf", "", .x, fixed = TRUE))),
-      y =  outsim[["sim"]][[.x]][day > 0, .SD[ifelse(which.min(alive_calf) == 1, which.max(born), which.min(alive_calf))],
-           .SDcols = c("date", "day", "cohort_calf", "easting", "northing", "region", "strike_calf", "starve_calf"), whale] |>
-        dplyr::rename_with(~ tolower(gsub("_calf", "", .x, fixed = TRUE))), by = c("cohort", "whale"), 
-      all.x = TRUE
-    )
+    outsim[["sim"]][[.x]][, dob:= `if`(all(born==0), 1, min(which(born==1))), whale]
+    outsim[["sim"]][[.x]][, death_calf:= `if`(all(alive_calf==0), dob, max(which(alive_calf==1))), whale]
+    
+    dt_calves <- purrr::reduce(list(
+      # Starting condition
+      outsim[["sim"]][[.x]][, .SD[dob], .SDcols = c("cohort_calf", "cohort_name", "bc_calf", "born"), whale] |>
+        dplyr::distinct() |> 
+        dplyr::rename(start_bc = bc_calf, cohort = cohort_calf),
+      # Finishing conditions
+      outsim[["sim"]][[.x]][day == 365, list(end_bc = bc, alive, abort, strike, starve), whale],
+      # Date, day, region and coordinates of when death occurred
+      outsim[["sim"]][[.x]][, .SD[death_calf], .SDcols = c("date", "day", "easting", "northing", "region"), whale] |> dplyr::distinct()
+    ), dplyr::left_join, by = "whale") |> 
+      dplyr::relocate(born, .after = dplyr::last_col())
+    
   } else {
     dt_calves <- data.table::data.table()
   }
@@ -450,24 +454,29 @@ narw <- function(nsim = 1e3,
   gam.dt <- data.table::merge.data.table(x = gam.dt, y = cohorts, by.x = "cohort", by.y = "id", all.x = TRUE)
   data.table::setcolorder(gam.dt,
   c("cohort", "cohort_name", "name", "class", "abb", "whale", "alive", "start_bc", "end_bc", "starve", "strike", "date", "day", "easting", "northing", "region"))
-
   gam.dt[cohort == 0, cohort_name:= "Calves (male, female)"]
+  gam.dt[,cause_death:= ifelse(strike == 1, "strike", ifelse(starve == 1, "starve", "NA"))]
   
-  # Dead animals
-  locs.dead <- gam.dt[alive == 0]
-  locs.dead[, cause_death:=ifelse(strike == 1, "strike", "starve")]
+  # ............................................................
+  # Deaths
+  # ............................................................
+  
+  locs.dead <- gam.dt[alive == 0 & born == 1]
   data.table::setorder(locs.dead, -cohort, whale)
 
   # ............................................................
   # Births
   # ............................................................
 
+  outsim[["sim"]][[cohorts[id == 5, abb]]][, max(born), whale]
+  
   if (5 %in% cohortID) {
-    locs.birth <-
-      outsim[["sim"]][[cohorts[id == 5, abb]]][day > 0, .SD[ifelse(which.max(born) == 1, 0, which.max(born))],
-        .SDcols = c("date", "day", "cohort_calf", "easting", "northing", "region"), whale
-      ] |>
-      dplyr::mutate(event = "birth", date = lubridate::as_date(date))
+   locs.birth <- gam.dt[cohort == 0 & born == 1]
+  #   locs.birth <-
+  #     outsim[["sim"]][[cohorts[id == 5, abb]]][day > 0, .SD[ifelse(which.max(born) == 1, 0, which.max(born))],
+  #       .SDcols = c("date", "day", "cohort_calf", "easting", "northing", "region"), whale
+  #     ] |>
+  #     dplyr::mutate(event = "birth", date = lubridate::as_date(date))
     if (nrow(locs.birth) == 0) locs.birth <- list(NULL)
   } else {
     locs.birth <- list(NULL)
