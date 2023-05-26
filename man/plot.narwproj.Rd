@@ -4,7 +4,7 @@
 \alias{plot.narwproj}
 \title{Plot}
 \usage{
-\method{plot}{narwproj}(obj)
+\method{plot}{narwproj}(obj, cohort = FALSE, scales = "free")
 }
 \arguments{
 \item{obj}{Object returned by run_model}

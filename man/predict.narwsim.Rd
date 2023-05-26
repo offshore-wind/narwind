@@ -4,14 +4,14 @@
 \alias{predict.narwsim}
 \title{Forecast NARW abundance}
 \usage{
-\method{predict}{narwsim}(obj, yrs = 35, n = 100, ...)
+\method{predict}{narwsim}(obj, n = 100, yrs = 35, ...)
 }
 \arguments{
 \item{obj}{Object returned by narw()}
 
-\item{yrs}{Number of years for the projection}
-
 \item{n}{Number of replicate projections}
+
+\item{yrs}{Number of years for the projection}
 }
 \description{
 Forecast NARW abundance
@@ -29,6 +29,12 @@ Phil J. Bouchet
 ------------------------------------------------------
 ------------------------------------------------------
 ------------------------------------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
 ----------------------------
 ----------------------------
 ----------------------------

@@ -4,7 +4,7 @@
 \alias{print.narwsim}
 \title{Overview of model results}
 \usage{
-\method{print}{narwsim}(obj, rows = 4, whale.id = 1)
+\method{print}{narwsim}(obj, ...)
 }
 \arguments{
 \item{obj}{Object returned by run_model}
