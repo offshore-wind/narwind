@@ -31,7 +31,7 @@ plot.narwsim <- function(obj,
 ){
   
   # Function ellipsis –– optional arguments
-  args <- list(...) # good
+  args <- list(...)
   
   # Default optional arguments
   nmax <- 100
@@ -39,6 +39,7 @@ plot.narwsim <- function(obj,
   bymonth <- FALSE
   bywhale <- FALSE
   cohortID <- obj$param$cohortID
+  whaleID <- 1:obj$param$nsim
   
   # Default values
   if(length(args) > 0){
@@ -47,6 +48,7 @@ plot.narwsim <- function(obj,
     if("bymonth" %in% names(args)) bymonth <- args[["bymonth"]]
     if("bywhale" %in% names(args)) bywhale <- args[["bywhale"]]
     if("cohortID" %in% names(args)) cohortID <- args[["cohortID"]]
+    if("whaleID" %in% names(args)) whaleID <- args[["whaleID"]]
   }
   
   if(bymonth & bywhale) stop("<bymonth> and <bywhale> cannot both be set to TRUE")
@@ -186,17 +188,19 @@ plot.narwsim <- function(obj,
       
       track_p <- 
         base_p +
-        ggplot2::geom_path(data = tracks.cohort, mapping = ggplot2::aes(x = easting, y = northing, group = whale, colour = factor(month)), 
+        ggplot2::geom_path(data = tracks.cohort, 
+                           mapping = ggplot2::aes(x = easting, y = northing, group = whale, colour = factor(month)), 
                                                alpha = 0.7, linewidth = lwd) +
         ggplot2::scale_color_manual(values = pals::viridis(12), labels = month.abb) +
-        ggplot2::theme(
-          legend.title = element_blank(),
-          legend.position = "bottom",
-          legend.text = element_text(size = 10),
-          legend.key = element_rect(fill = "transparent")) +
         labs(color = NULL) +
         ggplot2::coord_sf(expand = FALSE) +
-        ggplot2::facet_wrap(~cohort_name)
+        ggplot2::facet_wrap(~cohort_name) +
+        ggplot2::theme(
+          legend.title = element_blank(),
+          legend.position = c(1000, -500),
+          legend.background = element_rect(fill = "white", colour = NA),
+          legend.text = element_text(size = 10),
+          legend.key = element_rect(fill = "transparent")) 
       
     } else {
       
@@ -208,9 +212,9 @@ plot.narwsim <- function(obj,
                 mapping = ggplot2::aes(x = easting, y = northing, group = whale, 
                                        col = factor(whale)), alpha = 0.7, linewidth = lwd) } +
         
-        {if(bywhale) ggplot2::scale_color_manual(values = pals::tol(length(whaleID)))} +
+        {if(bywhale & length(whaleID) <= 10) ggplot2::scale_color_manual(values = whaleID)} +
         
-        {if(bywhale) ggnewscale::new_scale_colour() } +
+        {if(bywhale & length(whaleID) <= 10) ggnewscale::new_scale_colour() } +
         
         {if(!bywhale) ggplot2::geom_path(data = tracks.cohort,
                            mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = lwd) }+
@@ -226,14 +230,27 @@ plot.narwsim <- function(obj,
         
         ggplot2::scale_color_manual(values = COLORS) +
         ggplot2::scale_shape_manual(values = SHAPES) +
+        
+        # {if(bywhale & length(whaleID) > 10) 
+        #   ggplot2::theme(
+        #   legend.title = element_blank(),
+        #   legend.position = "none",
+        #   legend.background = element_rect(fill = "white", colour = NA),
+        #   legend.text = element_text(size = 10),
+        #   legend.key = element_rect(fill = "transparent"))} +
+        # 
         ggplot2::theme(
           legend.title = element_blank(),
-          legend.position = "bottom",
+          legend.position = c(1000, -500),
+          legend.background = element_rect(fill = "white", colour = NA),
           legend.text = element_text(size = 10),
-          legend.key = element_rect(fill = "transparent")) +
+          legend.key = element_rect(fill = "transparent"))  +
+        
         labs(color = NULL) +
         ggplot2::coord_sf(expand = FALSE) +
-        ggplot2::facet_wrap(~cohort_name)
+        ggplot2::facet_wrap(~cohort_name) +
+        
+        ggplot2::theme(plot.margin = unit(c(-0.30,0,0,0), "null"))
       
     }
     

@@ -9,15 +9,15 @@
 #' @author Phil J. Bouchet
 #'
 predict.narwsim <- function(obj,
-                            yrs = 35,
                             n = 100,
-                            # seed = 125897,
+                            # scenario,
+                            yrs = 35,
                             ...) {
-  
-  # set.seed(seed)
-  
+
   if(sum(suppressWarnings(purrr::map_lgl(.x = obj$gam$pred, .f = ~any(is.na(.x)))) > 0)) 
     stop("Insufficient sample size. Cannot make predictions.") 
+  
+  if(length(obj$param$cohortID) < 6) stop("Missing cohorts. Cannot make predictions.")
   
   # Function ellipsis –– optional arguments
   args <- list(...)
@@ -145,6 +145,8 @@ predict.narwsim <- function(obj,
   cat("Running projections ...\n")
   start.time <- Sys.time()
   
+  narw.individuals <- vector(mode = "list", length = n)
+  
   for(prj in 1:n){
     
     if(progress) pb$tick() # Update progress bar
@@ -241,7 +243,8 @@ predict.narwsim <- function(obj,
         #' ----------------------------
         # Determine whether the animal survived
         # alive <- rbinom(n = length(ps), size = 1, prob = ps) * (narw.indiv[i-1, "age", ] <=69)
-        alive <- rbinom(n = dim(narw.indiv)[3], size = 1, prob = narw.indiv[i-1, "p_surv", ]) * (narw.indiv[i-1, "age", ] <=69)
+        alive <- rbinom(n = dim(narw.indiv)[3], size = 1, 
+                        prob = (narw.indiv[i-1, "alive", ] * narw.indiv[i-1, "p_surv", ])) * (narw.indiv[i-1, "age", ] <=69)
         narw.indiv[i, "alive", ] <- alive
         
         #' ----------------------------
@@ -294,11 +297,12 @@ predict.narwsim <- function(obj,
         # REPRODUCTION
         #' ----------------------------
         
-        narw.indiv[i, "reprod", ] <- narw.indiv[i-1, "reprod", ]
+        narw.indiv[i, "reprod", ] <- alive * narw.indiv[i-1, "reprod", ]
         
         # Resting state
-        narw.indiv[i, "rest", ] <- ifelse(narw.indiv[i-1, "reprod", ] == 1,
-         alive * (narw.indiv[i, "cohort", ] == 6) * (1 - (narw.indiv[i, "bc", ] >= narw.indiv[i-1, "min_bc", ])), alive)
+        narw.indiv[i, "rest", ] <-
+          (narw.indiv[i, "reprod", ] == 1) * alive * (narw.indiv[i, "cohort", ] == 6) *
+          (1 - (narw.indiv[i, "bc", ] >= narw.indiv[i-1, "min_bc", ]))
                  
         # Which animals are juvenile females that are ready to start reproducing
         # juvenile.females.ofage <- 
@@ -312,7 +316,8 @@ predict.narwsim <- function(obj,
         # Minimum body condition needed to successfully bring fetus to term without starving
         # No evidence of reproductive senescence in right whales - Hamilton et al. (1998)
         narw.indiv[i, "min_bc", ] <-
-          alive * mbc_preds(narw.indiv[i, "tot_mass", ]) * (narw.indiv[i, "cohort", ] == 6) * narw.indiv[i, "rest", ]
+          alive * mbc_preds(narw.indiv[i, "tot_mass", ]) * (narw.indiv[i, "cohort", ] == 6) 
+        # * narw.indiv[i, "rest", ]
         
         # Birth of new calf, conditional on the mother being alive and in pregnant state
         narw.indiv[i, "birth", ] <- alive * (narw.indiv[i, "cohort", ] == 4)
@@ -338,7 +343,7 @@ predict.narwsim <- function(obj,
         #' ----------------------------
         
         # Predict survival probability based on body condition
-        ps <- narw.indiv[i, "alive", ] * 
+        ps <- narw.indiv[i, "alive", ] *
           (surv_preds[["0"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 0) +
              surv_preds[["1"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 1) +
              surv_preds[["2"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 2) +
@@ -346,6 +351,8 @@ predict.narwsim <- function(obj,
              surv_preds[["4"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 4) +
              surv_preds[["5"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 5) +
              surv_preds[["6"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 6))
+        
+          # 0.95 * narw.indiv[i, "alive", ]
 
         narw.indiv[i, "p_surv", ] <- ps
         
@@ -379,6 +386,9 @@ predict.narwsim <- function(obj,
         
       } # End totpop >0
     } # End years
+    
+    narw.individuals[[prj]] <- narw.indiv
+    
   } # End projections
   
   end.time <- Sys.time()
@@ -411,38 +421,6 @@ predict.narwsim <- function(obj,
     tidyr::pivot_longer(!prj, names_to = "year", values_to = "N") |> 
     dplyr::mutate(year = current.yr + as.numeric(gsub("yr ", "", year))) |> 
     dplyr::mutate(cohort = "North Atlantic right whales") |> data.table::data.table()
-  
-  # births.df <- purrr::map(.x = 1:n, .f = ~{
-  #   m <- matrix(rowSums(narw.indiv[[.x]][2:(yrs+1),"birth",], na.rm = TRUE), ncol = 1)
-  #   colnames(m) <- .x
-  #   m
-  # }) |> do.call(what = cbind) |> 
-  #   tibble::as_tibble() |> 
-  #   tibble::rownames_to_column(var = "year") |> 
-  #   dplyr::mutate(year = as.numeric(year)) |> 
-  #   tidyr::pivot_longer(!year, names_to = "prj", values_to = "birth") |> 
-  #   dplyr::select(prj, year, birth) |> 
-  #   dplyr::arrange(prj, year) |> 
-  #   data.table::data.table()
-  # 
-  # deaths.df <- purrr::map(.x = 1:n, .f = ~{
-  #   m <- matrix(apply(X = narw.indiv[[.x]][2:(yrs+1),"alive",],
-  #                     MARGIN = 1,
-  #                     FUN = function(x) {
-  #     r <- x[!is.na(x)]
-  #     r <- sum(r == 0)
-  #     r
-  #     }), ncol = 1)
-  #   colnames(m) <- .x
-  #   m
-  # }) |> do.call(what = cbind) |>
-  #   tibble::as_tibble() |>
-  #   tibble::rownames_to_column(var = "year") |>
-  #   dplyr::mutate(year = as.numeric(year)) |>
-  #   tidyr::pivot_longer(!year, names_to = "prj", values_to = "death") |>
-  #   dplyr::select(prj, year, death) |>
-  #   dplyr::arrange(prj, year) |>
-  #   data.table::data.table()
   
   narw.conf <- narw.df[
     , list(
@@ -492,11 +470,12 @@ predict.narwsim <- function(obj,
   
   outproj <- list(param = list(yrs = yrs,
                                n = n),
-                  dat = list(ind = narw.indiv,
+                  dat = list(ind = narw.individuals,
                              birth = births,
                              pop = narw.pop,
                              tot = tot.pop),
-                  prj = list(proj = rbind(narw.df, tot.df), 
+                  prj = list(final = c(round(final.pop[1],0), round(final.pop[2],0), round(final.pop[3],0)),
+                             proj = rbind(narw.df, tot.df) |> dplyr::mutate(prj = as.numeric(prj)), 
                              mean = rbind(narw.conf, tot.conf)))
   
   class(outproj) <- c("narwproj", class(outproj))

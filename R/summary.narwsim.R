@@ -13,9 +13,27 @@
 #' plot(animals)
 #' }
 
-summary.narwsim <- function(obj, do.plot = FALSE){
+summary.narwsim <- function(obj, 
+                            what = "all", 
+                            plot = FALSE,
+                            ...){
   
   options(pillar.sigfig = 7)
+  
+  # Function ellipsis –– optional arguments
+  args <- list(...)
+  
+  # Default optional arguments
+  cohortID <- obj$param$cohortID
+  whaleID <- 1:obj$param$nsim
+  
+  # Default values
+  if(length(args) > 0){
+    if("cohortID" %in% names(args)) cohortID <- args[["cohortID"]]
+    if("whaleID" %in% names(args)) whaleID <- args[["whaleID"]]
+  }
+  
+ # Preamble ---------------------------------------------------------------
   
   if(!"narwsim" %in% class(obj)) stop("Input must be of class <narwsim>")
   
@@ -37,137 +55,216 @@ summary.narwsim <- function(obj, do.plot = FALSE){
   cat("SCOS: Scotian Shelf\n")
   cat("SEUS: South-east United States\n")
   cat("SNE: Southern New England\n\n")
-  
+
   n.ind <- obj$param$nsim
   cohorts <- obj$param$cohorts
-  cohortID <- obj$param$cohortID
+
   cohort.ab <- cohorts[id %in% cohortID, abb]
   cohort.names <- cohorts[id %in% cohortID, name]
   init.month <- obj$init$month
-  sim <- obj$sim
+  
+  sim <- purrr::map(.x = obj$sim[cohort.ab],
+                    .f = ~.x[whale %in% whaleID & cohort %in% cohortID, ]) |> 
+    purrr::set_names(nm = cohort.ab)
 
+  gamdat <- obj$gam$dat[whale %in% whaleID,]
+  dead.df <- obj$dead[whale %in% whaleID,]
+  
+  if(5 %in% cohortID){
+    gamdat <- gamdat[cohort %in% c(0,cohortID),]
+    dead.df <- dead.df[cohort %in% c(0,cohortID),]
+  } else {
+    gamdat <- gamdat[cohort %in% cohortID,]
+    dead.df <- dead.df[cohort %in% cohortID,]
+  }
+  
   cat("=============================================================\n")
   cat("SIMULATIONS\n")
   cat("=============================================================\n\n")
   
   cat("No. animals:", format(n.ind, big.mark = ","), "\n\n")
-  cat("Cohort(s):\n")
-  for (h in cohort.names) cat(h, "\n")
+  cat("Cohort(s)\n")
+  cat("----------\n")
+  for (h in cohortID) cat(cohorts[id==h, abb], ": ", cohorts[id==h, name], "\n", sep = "")
   cat("\n")
   cat("Simulation start:", month.name[init.month], "\n")
   cat("\n")
   
   # cat("% SEUS:", sum(sim[[1]][day > 0, list(sum(unique(seus))), whale][, 2]) / n.ind, "\n\n")
-  
-  cat("=============================================================\n")
-  cat("HEALTH\n")
-  cat("=============================================================\n")
 
-  cat("\n+++++++++++ Mortality +++++++++++")
-  
-  n.dead <- obj$gam$dat[, list(alive = sum(alive == 1), dead = n.ind - sum(alive == 1)), name] |>
-    format_dt(direction = "row") |> dplyr::rename(cohort = name)
-  
-  # n.dead <- m$gam$dat[, list(dead = .N, alive = n.ind - .N), name]
-  # if(nrow(n.dead)) n.dead <- n.dead |> format_dt(direction = "row") |> dplyr::rename(cohort = name)
-  
-  print(knitr::kable(n.dead, format = "simple"))
-  
-  n.dead.region <- obj$gam$dat[, list(strike = sum(strike), starve = sum(bc<0.05)), list(name, region)] |> 
-    dplyr::mutate(strike = dplyr::coalesce(strike, 0),
-                  starve = dplyr::coalesce(starve, 0),
-                  region = dplyr::coalesce(region, "region")) |> 
-    # dplyr::mutate(region = ifelse(is.na(as.numeric(region)), "region", NA)) |> 
-    tidyr::pivot_longer(!c(name, region), names_to = "cause_death", values_to = "count") |> 
-    tidyr::pivot_wider(names_from = region, values_from = count) |> 
-    format_dt(direction = "row") |> dplyr::rename(cohort = name)
-  
-  # n.dead.region <- locs.dead[, list(strike = sum(strike), starve = sum(bc<0.05)), list(name, region)] |> 
-  #   tidyr::pivot_longer(!c(name, region), names_to = "cause_death", values_to = "count") |> 
-  #   tidyr::pivot_wider(names_from = region, values_from = count) |> 
-  #   format_dt(direction = "row") |> dplyr::rename(cohort = name)
-  
-  if(nrow(n.dead.region)> 0){
-    purrr::walk(.x = split(n.dead.region, f = n.dead.region$cohort), .f = ~knitr::kable(.x, format = "simple") |> print())
-  }
-  cat("\n")
-  
-  if(4 %in% cohortID){
+  # Health ---------------------------------------------------------------
     
-    cat("\n+++++++++++ Pregnancies +++++++++++\n") 
+  if("health" %in% what | what == "all"){
     
+    cat("=============================================================\n")
+    cat("HEALTH\n")
+    cat("=============================================================\n")
+    
+    cat("\n+++++++++++ Mortality +++++++++++")
+    
+    n.dead <- gamdat[whale %in% whaleID & cohort %in% cohortID,
+                          list(born = sum(born == 1),
+                               alive = sum(alive == 1)), name] |>
+      dplyr::mutate(dead = born - alive) |> 
+      dplyr::select(-born) |> 
+      format_dt(direction = "row") |> 
+      dplyr::rename(cohort = name)
+    
+    print(knitr::kable(n.dead, format = "simple"))
+    
+    n.dead.region <- dead.df[, list(strike = sum(strike), 
+                                     starve = sum(starve)),
+                                 list(abb, region)] |> 
+      dplyr::mutate(strike = dplyr::coalesce(strike, 0),
+                    starve = dplyr::coalesce(starve, 0),
+                    region = dplyr::coalesce(region, "region")) |> 
+      tidyr::pivot_longer(!c(abb, region), names_to = "cause_death", values_to = "count") |> 
+      tidyr::pivot_wider(names_from = abb, values_from = count) |> 
+      dplyr::arrange(cause_death, region)
+    
+    if(nrow(n.dead.region)> 0){
+      
+      n.dead.region <- split(n.dead.region, f = factor(n.dead.region$cause_death)) |> 
+        purrr::map(.f = ~format_dt(.x, direction = "col"))
+      
+      
+      purrr::walk(.x = n.dead.region,
+                  .f = ~ print(knitr::kable(.x, format = "simple")))
+      
+      # purrr::walk(.x = split(n.dead.region, f = n.dead.region$cohort),
+      #             .f = ~{
+      #               # if(vignette){
+      #               #   print(knitr::kable(.x[, 1:7], format = "simple"))
+      #               #   print(knitr::kable(.x[, c(1:2, 8:ncol(.x))], format = "simple"))
+      #               # } else {
+      #               print(knitr::kable(.x, format = "simple"))
+      #               # }
+      #               })
+    }
     cat("\n")
-    cat("Abortion rate: ", 100 * as.numeric(obj$gam$dat[alive == 1, .(abort = sum(abort))] / sum(obj$gam$dat$alive == 1)), 
-        "% (n = ", sum(obj$gam$dat$alive == 1), ")\n", sep = "")
-  }
-  
-  
-  
-  if(5 %in% cohortID){
-   
-    cat("\n+++++++++++ Births +++++++++++\n") 
+    
+    if(4 %in% cohortID){
+      
+      cat("\n+++++++++++ Pregnancies +++++++++++\n") 
+      
+      cat("\n")
+      cat("Abortion rate: ", 100 * as.numeric(obj$abort[whale %in% whaleID, .(abort = sum(abort))]) / nrow(obj$abort), 
+          "% (", as.numeric(obj$abort[whale %in% whaleID, .(abort = sum(abort))]), ")\n", sep = "")
+    }
+    
+    if (5 %in% cohortID) {
+      
+      cat("\n+++++++++++ Births +++++++++++\n\n")
 
-    cat("\n")
+      if(!is.null(obj$birth[[1]])){
+        
+        birth.df <- obj$birth[whale %in% whaleID, ]
+        n.births <- nrow(birth.df)
+        cat("No. births:", paste0(n.births, " (", 100 * nrow(birth.df) / n.ind, "%)\n"))
+        
+        dob <- birth.df[, .(mean_DOB = mean(date), min_DOB = min(date), max_DOB = max(date))]
+        
+        cat("Mean:", lubridate::day(dob$mean_DOB), 
+            as.character(lubridate::month(dob$mean_DOB, label = TRUE, abbr = TRUE)), "\n")
+        cat("Range:", lubridate::day(dob$min_DOB), 
+            as.character(lubridate::month(dob$min_DOB, label = TRUE, abbr = TRUE)), "–",
+            lubridate::day(dob$max_DOB), 
+            as.character(lubridate::month(dob$max_DOB, label = TRUE, abbr = TRUE)), "\n")
+        cat("\n")
+      } else {
+        
+        cat("No. births: 0% (0)\n\n")
+        
+      }
+    }
+    
+    ## Body condition ---------------------------------------------------------------
+    
+    # .....................................................
+    # BODY CONDITION
+    # .....................................................
+    
+    if(plot){
+      
+      bodycondition.df <- purrr::map(.x = sim, .f = ~{
+        cc <- unique(.x$cohort)
+        if(cc[cc>0] == 5){
+          dplyr::select(.x, whale, day, bc, bc_calf, cohort, cohort_name) |> 
+            tidyr::pivot_longer(!c("whale", "day", "cohort", "cohort_name"), names_to = "animal", values_to = "bc")
+        } else {
+          dplyr::select(.x, whale, day, bc, cohort, cohort_name) |> 
+            tidyr::pivot_longer(!c("whale", "day", "cohort", "cohort_name"), names_to = "animal", values_to = "bc")
+        }}) |> 
+        do.call(what = rbind) |> 
+        dplyr::mutate(animal = gsub("bc_calf", "Calves", animal)) |> 
+        dplyr::mutate(animal = gsub("bc", "Adults", animal))
+      
+      bodycondition.plot <- 
+        purrr::map(.x = cohortID, .f = ~{
+          ggplot2::ggplot(data = bodycondition.df |> dplyr::filter(cohort == .x),
+                          aes(x = day, y = bc, group = whale)) +
+            ggplot2::geom_path(col = "grey70") +
+            {if(!.x == 5) ggplot2::facet_wrap(vars(cohort_name), scales = 'free') } +
+            {if(.x == 5) ggplot2::facet_grid(vars(animal), vars(cohort_name), scales = 'free') } +
+            theme_narw() +
+            ylab("Body condition") +
+            xlab("Day") +
+            ggplot2::scale_x_continuous(breaks = pretty(0:365, n = 10)) +
+            ggplot2::scale_y_continuous(
+              limits = ~ c(0, ceiling(max(.x))),
+              breaks = ~ pretty(.x, 5),
+              expand = c(0, 0)) +
+            ggplot2::geom_hline(yintercept = 0.05, col = "#cb4154")
+        })
+      
+      if(length(cohortID) == 1){
+        plot(bodycondition.plot[[1]])
+      } else {
+        patchwork::wrap_plots(bodycondition.plot, 
+                              nrow = ifelse(length(cohortID) == 2, 1, 2), 
+                              ncol = ifelse(length(cohortID) == 2, 1, 3))
+      }
 
-    dob <- obj$birth[, .(mean_DOB = mean(date), min_DOB = min(date), max_DOB = max(date))]
-    cat("Mean:", lubridate::day(dob$mean_DOB), as.character(lubridate::month(dob$mean_DOB, label = TRUE, abbr = TRUE)), "\n")
-    cat("Range:", lubridate::day(dob$min_DOB), as.character(lubridate::month(dob$min_DOB, label = TRUE, abbr = TRUE)), "–",
-        lubridate::day(dob$max_DOB), as.character(lubridate::month(dob$max_DOB, label = TRUE, abbr = TRUE)),  "\n")
-
-  }
-  
-  
-  # Body condition
-  
-  if(do.plot){
-  
-  bodyc.plot <- purrr::map(.x = sim, .f = ~{
-    cc <- unique(.x$cohort)
-    if(cc[cc>0] == 5){
-      dplyr::select(.x, whale, day, bc, bc_calf, cohort_name) |> 
-        tidyr::pivot_longer(!c("whale", "day", "cohort_name"), names_to = "animal", values_to = "bc")
-    } else {
-      dplyr::select(.x, whale, day, bc, cohort_name) |> 
-        tidyr::pivot_longer(!c("whale", "day", "cohort_name"), names_to = "animal", values_to = "bc")
-    }}) |> 
-    do.call(what = rbind) |> 
-    dplyr::mutate(animal = gsub("bc_calf", "0–1 yr", animal)) |> 
-    dplyr::mutate(animal = gsub("bc", "1–69 yrs", animal)) |> 
-    ggplot2::ggplot(data = , aes(x = day, y = bc, group = whale)) +
-    ggplot2::geom_path(col = "grey70") +
-    ggplot2::facet_grid(vars(animal), vars(cohort_name), scales = 'free') +
-    theme_narw() +
-    ylab("Body condition") +
-    xlab("Day of the year") +
-    ggplot2::scale_x_continuous(breaks = seq(5, 365, by = 25)) +
-    ggplot2::scale_y_continuous(
-      limits = ~ c(0, ceiling(max(.x))),
-      breaks = ~ pretty(.x, 10),
-      expand = c(0, 0)) +
-    ggplot2::geom_hline(yintercept = 0.05, col = "#cb4154")
-  
-  print(bodyc.plot)
-
-  
-  # Growth in length
-
-  body_growth_l <- purrr::map(.x = cohortID, .f = ~ growth_curve(param = "length", obj = obj, cohortID = .x, ylabel = "Body length (m)"))
-  
-  if (4 %in% cohortID) body_growth_l <- 
-    append(body_growth_l, list(growth_curve(param = "fetus_l", obj = obj, cohortID = 4, ylabel = "Fetus length (m)")))
-  
-  if (5 %in% cohortID) body_growth_l <- 
-    append(body_growth_l, list(growth_curve(param = "length_calf", obj = obj, cohortID = 5, ylabel = "Calf length (m)")))
-  
-  growth.plot <- patchwork::wrap_plots(body_growth_l)
-  print(growth.plot)
-  }
+      # Growth ---------------------------------------------------------------
+      
+      # .....................................................
+      # GROWTH
+      # .....................................................
+      
+      body_growth_l <-
+       purrr::map(
+         .x = cohortID,
+         .f = ~ growth_curve(param = "length", 
+                             obj = obj, 
+                             cohortID = .x, 
+                             ylabel = "Body length (m)")
+       )
+      
+      if (4 %in% cohortID) {
+        body_growth_l <-
+          append(body_growth_l, 
+                 list(growth_curve(param = "fetus_l", 
+                                   obj = obj, 
+                                   cohortID = 4, 
+                                   ylabel = "Body length (m)")))
+      }
+      
+      if (5 %in% cohortID) {
+        body_growth_l <-
+          append(body_growth_l, 
+                 list(growth_curve(param = "length_calf", 
+                                   obj = obj, 
+                                   cohortID = 5, 
+                                   ylabel = "Body length (m)")))
+      }
+      
+      growth.plot <- patchwork::wrap_plots(body_growth_l)
+      print(growth.plot)
+      
+      } # End plot = TRUE
+  } # End what == health
   
   cat("\n")
-  
-  cat("=============================================================\n")
-  cat("LOCATIONS\n")
-  cat("=============================================================")
   
   move.out <- purrr::set_names(cohort.ab) |> 
     purrr::map(.f = ~{
@@ -177,6 +274,14 @@ summary.narwsim <- function(obj, do.plot = FALSE){
       all.d$cohort <- .x
       all.d[]
     })
+  
+  # Movements ---------------------------------------------------------------
+  
+  if("movements" %in% what | what == "all"){
+  
+  cat("=============================================================\n")
+  cat("LOCATIONS\n")
+  cat("=============================================================")
   
   locs.by.area <- purrr::map(.x = cohort.ab, .f = ~
     dplyr::right_join(move.out[[.x]][, .N, region],
@@ -207,7 +312,7 @@ summary.narwsim <- function(obj, do.plot = FALSE){
   cat("MOVEMENTS (km)\n")
   cat("=============================================================\n")
   
-  if(do.plot){
+  if(plot){
   par(mfrow = c(1,2))
   purrr::walk(.x = seq_along(move.out), .f = ~{
     
@@ -276,7 +381,7 @@ summary.narwsim <- function(obj, do.plot = FALSE){
       dplyr::mutate(cohort = .x)) |>
     do.call(what = rbind) |>
     dplyr::relocate(cohort, .before = min) |>
-    dplyr::mutate(step = paste0(mean, " (± ", sd, ") [", min, " – ", max, "]")) |>
+    dplyr::mutate(step = paste0(mean, " (±", sd, ") [", min, "–", max, "]")) |>
     dplyr::select(-min, -max, -mean, -sd)
 
   #'---------------------------------------
@@ -291,13 +396,19 @@ summary.narwsim <- function(obj, do.plot = FALSE){
       dplyr::mutate(cohort = .x)) |>
     do.call(what = rbind) |>
     dplyr::relocate(cohort, .before = min) |>
-    dplyr::mutate(migration = paste0(mean, " (± ", sd, ") [", min, " – ", max, "]")) |>
+    dplyr::mutate(migration = paste0(mean, " (±", sd, ") [", min, "–", max, "]")) |>
     dplyr::select(-min, -max, -mean, -sd)
  
   cat("\n+++++++++++ Step lengths and migration distances +++++++++++")
   print(knitr::kable(dplyr::left_join(step.df, migr.df, by = "cohort"), format = "simple"))
 
   cat("\n")
+  
+  }
+  
+  # Habitat use ---------------------------------------------------------------
+  
+  if("habitatuse" %in% what | what == "all"){
   
   cat("=============================================================\n")
   cat("HABITAT USE\n")
@@ -327,7 +438,7 @@ summary.narwsim <- function(obj, do.plot = FALSE){
       dplyr::mutate(dplyr::across(tidyselect::where(is.numeric), ~dplyr::coalesce(.x, 0))) |> 
       dplyr::mutate(cohort = .x)
     }) |> do.call(what = rbind) |>  
-      dplyr::mutate(days = paste0(mean, " (± ", sd, ") [", min, " – ", max, "]")) |>
+      dplyr::mutate(days = paste0(mean, " (±", sd, ") [", min, "–", max, "]")) |>
       dplyr::select(-min, -max, -mean, -sd) |> 
       tidyr::pivot_wider(names_from = cohort, values_from = days)
 
@@ -339,6 +450,7 @@ summary.narwsim <- function(obj, do.plot = FALSE){
   }) |> data.table::rbindlist() |> 
     dplyr::rename(No.regions = nreg) |> 
     tidyr::pivot_wider(names_from = cohort, values_from = n) |> 
+    dplyr::arrange(No.regions) |> 
     format_dt()
   
   # reg.per.ind.df <- purrr::map(.x = cohort.ab, .f = ~{
@@ -365,7 +477,13 @@ summary.narwsim <- function(obj, do.plot = FALSE){
   cat("+++++++++++ Total number of regions visited +++++++++++")
   print(knitr::kable(reg.per.ind.df, format = "simple"))
  
-  cat("\n\n")
+  }
+  
+  # Behavior ---------------------------------------------------------------
+  
+  if("behavior" %in% what | what == "all"){
+  
+  cat("\n")
   cat("=============================================================\n")
   cat("ACTIVITY BUDGETS\n")
   cat("=============================================================\n")
@@ -377,29 +495,36 @@ summary.narwsim <- function(obj, do.plot = FALSE){
     tibble::enframe() |>
     tidyr::unnest(cols = c(value)) |>
     dplyr::rename(cohort = name, total_hrs = value)
-  cat("Total:", mean(tot.hrs$total_hrs), "hrs\n")
-  if (mean(tot.hrs$total_hrs) < 24) warning("Inconsistent time allocation in activity budgets")
+
+  if(sum(do.call(c, purrr::map(.x = sim, .f = ~c(unlist(.x[, .(t_travel, t_rest, t_nurse, t_feed)]))))>24) > 0){
+    warning("Inconsistent time allocation in activity budgets")
+  } 
   
    activity.df <- purrr::set_names(cohort.ab) |>
     purrr::map(.f = ~ sim[[.x]][alive == 1, list(cohort = .x, region, alive, t_travel, t_feed, t_rest, t_nurse, feed)]) |> 
      do.call(what = rbind)
       
    activ.summary.other <- activity.df[,list(
-     `travel (hrs)` = paste0(round(mean(t_travel), 2), " (± ", round(sd(t_travel), 2), ")"),
-     `rest (hrs)` = paste0(round(mean(t_rest), 2), " (± ", round(sd(t_rest), 2), ")"),
-     `nurse (hrs)` = paste0(round(mean(t_nurse), 2), " (± ", round(sd(t_nurse), 2), ")")
+     `travel (hrs)` = paste0(round(mean(t_travel), 2), " (±", round(sd(t_travel), 2), ")"),
+     `rest (hrs)` = paste0(round(mean(t_rest), 2), " (±", round(sd(t_rest), 2), ")"),
+     `nurse (hrs)` = paste0(round(mean(t_nurse), 2), " (±", round(sd(t_nurse), 2), ")")
    ), list(cohort, region)]
    
    activ.summary.feed <- activity.df[feed == 1,
-     list(`feed (hrs)` = paste0(round(mean(t_feed), 2), " (± ", round(sd(t_feed), 2), ")")), list(cohort, region)]
+     list(`feed (hrs)` = paste0(round(mean(t_feed), 2), " (±", round(sd(t_feed), 2), ")")), list(cohort, region)]
    
    dt <- expand.grid(cohort.ab, sort(regions$region)) |> 
      dplyr::rename(cohort = Var1, region = Var2) |> 
      data.table::as.data.table()
    
-   activ.summary <- dplyr::left_join(activ.summary.other, activ.summary.feed, by = c("cohort", "region")) |> 
-     dplyr::left_join(x = dt, by = c("cohort", "region")) |>
+   activ.summary <- purrr::reduce(list(
+     activ.summary.other,
+     activ.summary.feed, dt
+   ), dplyr::left_join, by = c("cohort", "region")) |>
      dplyr::mutate_at(vars(matches("hrs")), ~ dplyr::coalesce(.x, "0 (± 0)"))
+   
+     # dplyr::left_join(activ.summary.other, activ.summary.feed, by = c("cohort", "region")) |> 
+     # dplyr::left_join(x = dt, by = c("cohort", "region")) |>
 
   purrr::walk2(.x = cohort.ab, .y = cohort.names, .f = ~{
    cat("\n+++++++++++ ", .y, " +++++++++++")
@@ -429,7 +554,7 @@ summary.narwsim <- function(obj, do.plot = FALSE){
   
   activ.out <- rbind(activ.feed, activ.other)
   
-  if(do.plot){
+  if(plot){
   for(k in cohort.ab){
   tmp <- activ.out |> dplyr::mutate(cohort = k)
   p <- ggplot2::ggplot(tmp, aes(x = factor(region), y = hrs)) + 
@@ -443,4 +568,526 @@ summary.narwsim <- function(obj, do.plot = FALSE){
   } 
   }
   
+  }
+ 
+
+  # Stressors ---------------------------------------------------------------
+  
+  if("stressors" %in% what | what == "all"){
+    
+    cat("\n")
+    cat("=============================================================\n")
+    cat("STRESSORS\n")
+    cat("=============================================================\n")
+
+    ## Entanglements ---------------------------------------------------------------
+    
+    #'---------------------------------------
+    # Entanglement rates
+    #'---------------------------------------
+    
+    entgl.rate <- purrr::set_names(cohort.ab) |>
+      purrr::map(.f = ~ sim[[.x]][
+        day > 0,
+        list(entangled = max(is_entgl),
+               n_events = length(unique(entgl_d[entgl_d>0]))), 
+        whale]) |>
+      tibble::enframe() |>
+      tidyr::unnest(cols = c(value)) |>
+      dplyr::rename(cohort = name) |> 
+      data.table::as.data.table()
+    
+    if(5 %in% cohortID){
+    entgl.rate.calf <- 
+      sim[[cohorts[id==5,abb]]][day > 0,
+        list(entangled = max(is_entgl_calf),
+             n_events = length(unique(entgl_d_calf[entgl_d_calf>0])),
+             born = max(born)), 
+        whale] |> 
+      dplyr::mutate(cohort = "c(m,f)") |> 
+      dplyr::relocate(cohort, .before = "whale") |> 
+      dplyr::filter(born == 1) |> 
+      dplyr::select(-born)
+    
+    entgl.rate <- data.table::rbindlist(list(entgl.rate, entgl.rate.calf))
+    
+    }
+  
+    entgl.overall <- suppressWarnings(entgl.rate |> 
+      janitor::tabyl(var1 = entangled)) |> 
+      dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
+      dplyr::select(entangled, rate) |> 
+      dplyr::mutate(entangled = ifelse(entangled == 0, "no", "yes"))
+    
+    entgl.overall.calf <- suppressWarnings(entgl.rate.calf |> 
+      janitor::tabyl(var1 = entangled)) |> 
+      dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
+      dplyr::select(entangled, rate) |> 
+      dplyr::mutate(entangled = ifelse(entangled == 0, "no", "yes"))
+    
+    #'---------------------------------------
+    # Entanglement rates by cohort
+    #'---------------------------------------
+    
+    entgl.bycohort <- suppressWarnings(entgl.rate |> 
+      janitor::tabyl(var1 = cohort, var2 = entangled)) |> 
+      format_dt(direction = "row") |> 
+      dplyr::rename_at(dplyr::vars(starts_with("0")), ~"not entangled") |> 
+      dplyr::rename_at(dplyr::vars(starts_with("1")), ~"entangled") 
+
+    #'---------------------------------------
+    # Rope position
+    #'---------------------------------------
+    
+    entgl.head <- suppressWarnings(purrr::set_names(cohort.ab) |>
+      purrr::map(.f = ~ sim[[.x]][
+        day > 0 & is_entgl == 1,
+        list(anterior = max(entgl_head)), whale]) |>
+      tibble::enframe() |>
+      tidyr::unnest(cols = c(value)) |>
+      dplyr::rename(cohort = name) |> 
+      data.table::as.data.table())
+    
+    if(5 %in% cohortID){
+      
+      entgl.head.calf <- suppressWarnings(sim[[cohorts[id==5,abb]]][
+          day > 0 & is_entgl_calf == 1,
+          list(anterior = max(entgl_head_calf), born = max(born)), whale] |> 
+        dplyr::mutate(cohort = "c(m,f)") |> 
+        dplyr::relocate(cohort, .before = "whale") |> 
+        dplyr::filter(born == 1) |> 
+        dplyr::select(-born))
+      
+      entgl.head <- data.table::rbindlist(list(entgl.head, entgl.head.calf))
+    }
+    
+    head.overall <- suppressWarnings(entgl.head |> 
+      janitor::tabyl(var1 = anterior)) |> 
+      dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
+      dplyr::rename(position = anterior) |> 
+      dplyr::select(position, rate) |> 
+      dplyr::mutate(position = ifelse(position == 0, "body", "head"))
+    
+    head.overall.calf <- suppressWarnings(entgl.head.calf |>
+      janitor::tabyl(var1 = anterior)) |> 
+      dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
+      dplyr::rename(position = anterior) |> 
+      dplyr::select(position, rate) |> 
+      dplyr::mutate(position = ifelse(position == 0, "body", "head"))
+
+    head.bycohort <- suppressMessages(entgl.head |>
+                                        janitor::tabyl(var1 = cohort, var2 = anterior)) |>
+                                        format_dt(direction = "row") |>
+                                        dplyr::rename_at(dplyr::vars(starts_with("0")), ~"body") |>
+                                        dplyr::rename_at(dplyr::vars(starts_with("1")), ~"head")
+    
+    #'---------------------------------------
+    # Entanglement events
+    #'---------------------------------------
+    
+    entgl.events <- entgl.rate[, list(
+      `No. entanglements` =
+        paste0(
+          round(mean(n_events), 2),
+          " (±",
+          round(sd(n_events), 2),
+          ") [", min(n_events), "–", max(n_events), "]"
+        )
+    ), cohort]
+    
+    entgl.df <- 
+      purrr::reduce(list(entgl.bycohort, 
+                         data.table::data.table(cohort = entgl.bycohort$cohort, ` ` = "|"),
+                         head.bycohort, 
+                         data.table::data.table(cohort = entgl.bycohort$cohort, `  ` = "|"),
+                         entgl.events), dplyr::left_join, by = 'cohort')
+    
+    #'---------------------------------------
+    # Entanglement severity
+    #'---------------------------------------
+    
+    entgl.sev <- purrr::set_names(cohort.ab) |>
+      purrr::map(.f = ~ sim[[.x]][
+        day > 0 & is_entgl == 1,
+        list(entgl = sum(is_entgl),
+             minor = sum(entgl_sev == 0),
+             moderate = sum(entgl_sev == 1),
+             severe = sum(entgl_sev == 2)), whale]) |>
+      tibble::enframe() |>
+      tidyr::unnest(cols = c(value)) |>
+      dplyr::rename(cohort = name) |> data.table::as.data.table()
+    
+    if(5 %in% cohortID){
+      
+      entgl.sev.calf <- suppressWarnings(sim[[cohorts[id==5,abb]]][
+        day > 0 & is_entgl_calf == 1,
+        list(entgl = sum(is_entgl_calf),
+             minor = sum(entgl_sev_calf == 0),
+             moderate = sum(entgl_sev_calf == 1),
+             severe = sum(entgl_sev_calf == 2),
+             born = max(born)), whale] |>
+        dplyr::mutate(cohort = "c(m,f)") |> 
+        dplyr::relocate(cohort, .before = "whale") |> 
+        dplyr::filter(born == 1) |> 
+        dplyr::select(-born))
+      
+      entgl.sev <- data.table::rbindlist(list(entgl.sev, entgl.sev.calf))
+    }
+   
+    #'---------------------------------------
+    # Entanglement duration
+    #'---------------------------------------
+
+    entgl.durations <-
+      suppressWarnings(entgl.sev[
+        , list(
+          `minor (days)` = paste0(
+            round(mean(minor), 0),
+            " (±", round(sd(minor), 0),
+            ") [", min(minor), "–", max(minor), "]"
+          ),
+          `moderate (days)` = paste0(
+            round(mean(moderate), 0),
+            " (±", round(sd(moderate), 0),
+            ") [", min(moderate), "–", max(moderate), "]"
+          ),
+          `severe (days)` = paste0(
+            round(mean(severe), 0),
+            " (±", round(sd(severe), 0),
+            ") [", min(severe), "–", max(severe), "]"
+          )
+        ),
+        cohort
+      ])
+    
+    if(plot){
+      
+      if(nrow(entgl.sev) == 0){
+        warning("No entanglement events recorded.")
+      } else {
+      
+      events.df <- 
+        tidyr::pivot_longer(data = entgl.sev[, c("cohort", "minor", "moderate", "severe")],
+                            !cohort, names_to = "severity", values_to = "days") |> 
+        dplyr::mutate(title = "Entanglement severity") |> 
+        dplyr::mutate(severity = stringr::str_to_sentence(severity)) |> 
+        dplyr::left_join(y = cohorts[, c("name", "abb")], by = c("cohort" = "abb"))
+      
+      print(ggplot2::ggplot(events.df, aes(x = factor(severity), y = days)) + 
+        ggplot2::geom_boxplot(fill = "darkgrey") +
+        ggplot2::facet_grid(name ~ factor(title)) +
+        ylab("Time spent (hrs)") +
+        xlab("") + 
+        ylab("Duration (days)") + 
+        theme_narw() + 
+        ggplot2::scale_y_continuous(breaks = pretty(range(events.df$days), n = 10)))
+      
+      }
+      
+    }
+    
+  
+  gear_risk <- purrr::set_names(cohort.ab) |>
+      purrr::map(.f = ~ sim[[.x]][
+        alive == 1 & day > 0,
+        list(mean = round(mean(gear_risk), 3),
+             sd = round(sd(gear_risk), 3),
+             min = round(min(gear_risk), 3),
+             max = round(max(gear_risk), 3))] |> 
+          dplyr::mutate(`p(entangled)` = paste0(format(mean, big.mark = ","),
+                                " (±", format(sd, big.mark = ","), ") [",
+                                format(min, big.mark = ","), "–",
+                                format(max, big.mark = ","), "]"))) |>
+      tibble::enframe() |>
+      tidyr::unnest(cols = c(value)) |>
+      dplyr::rename(cohort = name) |> 
+    dplyr::select(cohort, "p(entangled)")
+  
+  
+  cat("\n+++++++++++ Entanglements +++++++++++")
+  
+  if(length(cohortID) > 1 | (length(cohortID) == 1 & all(cohortID == 5))){
+    print(knitr::kable(entgl.bycohort, format = "simple"))
+    if(nrow(head.bycohort) > 0) print(knitr::kable(head.bycohort, format = "simple"))
+  } else {
+    print(knitr::kable(entgl.overall, format = "simple"))
+    print(knitr::kable(head.overall, format = "simple"))
+  }
+  
+  print(knitr::kable(purrr::reduce(list(entgl.events, gear_risk), 
+                                   dplyr::left_join, by = 'cohort'), format = "simple"))
+  
+  print(knitr::kable(entgl.durations, format = "simple"))
+  
+  
+  ## Vessel strikes ---------------------------------------------------------------
+  
+  strike.rate <- purrr::set_names(cohort.ab) |>
+    purrr::map(.f = ~ sim[[.x]][
+      day > 0,
+      list(strike = max(strike)), whale]) |>
+    tibble::enframe() |>
+    tidyr::unnest(cols = c(value)) |>
+    dplyr::rename(cohort = name) |> 
+    data.table::as.data.table()
+  
+  if(5 %in% cohortID){
+    
+  strike.rate.calf <- 
+    suppressWarnings(sim[["ad(f,l)"]][day > 0, list(strike = max(strike_calf), born = max(born)), whale] |>
+    dplyr::mutate(cohort = "c(m,f)") |> 
+    dplyr::relocate(cohort, .before = "whale") |> 
+    dplyr::filter(born == 1) |> 
+    dplyr::select(-born))
+  
+  strike.rate <- data.table::rbindlist(list(strike.rate, strike.rate.calf))
+  
+  }
+  
+  strike.overall <- suppressWarnings(strike.rate |> 
+    janitor::tabyl(var1 = strike)) |> 
+    dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
+    dplyr::select(strike, rate) |> 
+    dplyr::mutate(strike = ifelse(strike == 0, "no", "yes"))
+  
+  strike.overall.calf <- suppressWarnings(strike.rate.calf |> 
+    janitor::tabyl(var1 = strike)) |> 
+    dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
+    dplyr::select(strike, rate) |> 
+    dplyr::mutate(strike = ifelse(strike == 0, "no", "yes"))
+  
+  # By cohort
+  strike.bycohort <- suppressWarnings(suppressMessages(strike.rate |> 
+    janitor::tabyl(var1 = cohort, var2 = strike)) |> 
+    format_dt(direction = "row") |> 
+    dplyr::rename_at(dplyr::vars(starts_with("0")), ~"not struck") |> 
+    dplyr::rename_at(dplyr::vars(starts_with("1")), ~"struck"))
+  
+  strike_risk <- purrr::set_names(cohort.ab) |>
+    purrr::map(.f = ~ sim[[.x]][
+      alive == 1 & day > 0,
+      list(mean = round(mean(strike_risk), 3),
+           sd = round(sd(strike_risk), 3),
+           min = round(min(strike_risk), 3),
+           max = round(max(strike_risk), 3))]) |>
+    tibble::enframe() |>
+    tidyr::unnest(cols = c(value)) |>
+    dplyr::rename(cohort = name) |> 
+    dplyr::mutate(`p(strike)` = paste0(format(mean, big.mark = ","),
+                                " (±", format(sd, big.mark = ","), ") [",
+                                format(min, big.mark = ","), "–",
+                                format(max, big.mark = ","), "]")) |> 
+    dplyr::select(cohort, "p(strike)")
+  
+  cat("\n\n+++++++++++ Vessel strikes +++++++++++")
+  
+  if(length(cohortID) > 1 | (length(cohortID) == 1 & all(cohortID == 5))){
+    print(knitr::kable(strike.bycohort, format = "simple"))
+  } else {
+    print(knitr::kable(strike.overall, format = "simple"))
+  }
+
+  print(knitr::kable(strike_risk, format = "simple"))
+ 
+  
+  ## Noise ---------------------------------------------------------------
+  
+  noise_lvl <- purrr::set_names(cohort.ab) |>
+    purrr::map(.f = ~ sim[[.x]][
+      alive == 1 & day > 0,
+      list(mean = round(mean(noise_lvl), 3),
+           sd = round(sd(noise_lvl), 3),
+           min = round(min(noise_lvl), 3),
+           max = round(max(noise_lvl), 3))]) |>
+    tibble::enframe() |>
+    tidyr::unnest(cols = c(value)) |>
+    dplyr::rename(cohort = name) |> 
+    dplyr::mutate(`noise level` = paste0(format(mean, big.mark = ","),
+                                " (±", format(sd, big.mark = ","), ") [",
+                                format(min, big.mark = ","), "–",
+                                format(max, big.mark = ","), "]")) |> 
+    dplyr::select(cohort, `noise level`)
+  
+  dB_thresh <- purrr::set_names(cohort.ab) |>
+    purrr::map(.f = ~ sim[[.x]][
+      alive == 1 & day > 0,
+      list(mean = round(mean(dB_thresh), 1),
+           sd = round(sd(dB_thresh), 1),
+           min = round(min(dB_thresh), 1),
+           max = round(max(dB_thresh), 1))]) |>
+    tibble::enframe() |>
+    tidyr::unnest(cols = c(value)) |>
+    dplyr::rename(cohort = name) |> 
+    dplyr::mutate(`response threshold` = paste0(format(mean, big.mark = ","),
+                                         " (±", format(sd, big.mark = ","), ") [",
+                                         format(min, big.mark = ","), "–",
+                                         format(max, big.mark = ","), "]")) |> 
+    dplyr::select(cohort, `response threshold`)
+     
+  noise.rate <- purrr::set_names(cohort.ab) |>
+    purrr::map(.f = ~ sim[[.x]][
+      day > 0 & alive == 1, list(noise_resp = sum(noise_resp)), whale]) |>
+    tibble::enframe() |>
+    tidyr::unnest(cols = c(value)) |>
+    dplyr::rename(cohort = name) |> 
+    data.table::as.data.table()
+  
+  beh.resp <- noise.rate[, list(mean = round(mean(noise_resp), 1),
+                    sd = round(sd(noise_resp), 1),
+                    min = round(min(noise_resp), 1),
+                    max = round(max(noise_resp), 1)), cohort] |> 
+    dplyr::mutate(`Responses (No. days)` = paste0(format(mean, big.mark = ","),
+                                                " (±", format(sd, big.mark = ","), ") [",
+                                                format(min, big.mark = ","), "–",
+                                                format(max, big.mark = ","), "]")) |> 
+    dplyr::select(cohort, `Responses (No. days)`)
+  
+  cat("\n\n+++++++++++ Pile-driving noise +++++++++++")
+  print(knitr::kable(purrr::reduce(list(noise_lvl, dB_thresh, beh.resp), dplyr::left_join, by = 'cohort'), format = "simple"))
+  
+  }
+  
+  # Energy budgets ---------------------------------------------------------------
+  
+  if("energy" %in% what | what == "all"){
+    
+    cat("\n")
+    cat("=============================================================\n")
+    cat("ENERGY BUDGETS (MJ per day) \n")
+    cat("=============================================================")
+    
+    ## Intake ---------------------------------------------------------------
+    
+  Ein <- purrr::set_names(cohort.ab) |>
+      purrr::map(.f = ~ sim[[.x]][
+        alive == 1 & day > 0,
+        list(mean = round(mean(E_in), 1),
+             sd = round(sd(E_in), 1),
+             min = round(min(E_in), 1),
+             max = round(max(E_in), 1))]) |>
+      tibble::enframe() |>
+      tidyr::unnest(cols = c(value)) |>
+      dplyr::rename(cohort = name) |> 
+      dplyr::mutate(E_in = paste0(format(mean, big.mark = ","),
+                                  " (±", format(sd, big.mark = ","), ") [",
+                                  format(min, big.mark = ","), "–",
+                                  format(max, big.mark = ","), "]"))
+   
+  if(5 %in% cohortID){
+    
+    Ein.calf <- suppressWarnings(sim[["ad(f,l)"]][
+        alive_calf == 1 & day > 0,
+        list(mean = round(mean(E_in_calf), 1),
+             sd = round(sd(E_in_calf), 1),
+             min = round(min(E_in_calf), 1),
+             max = round(max(E_in_calf), 1))] |>
+      dplyr::mutate(cohort = "c(m,f)") |> 
+      dplyr::relocate(cohort, .before = "mean") |> 
+      dplyr::mutate(E_in = paste0(format(mean, big.mark = ","),
+                                  " (±", format(sd, big.mark = ","), ") [",
+                                  format(min, big.mark = ","), "–",
+                                  format(max, big.mark = ","), "]")))
+    
+    Ein <- data.table::rbindlist(list(Ein, Ein.calf))
+    
+  }
+  
+    ## Expenditure ---------------------------------------------------------------
+    
+  Eout <- purrr::set_names(cohort.ab) |>
+    purrr::map(.f = ~ sim[[.x]][
+      alive == 1 & day > 0,
+      list(mean = round(mean(E_out), 1),
+           sd = round(sd(E_out), 1),
+           min = round(min(E_out), 1),
+           max = round(max(E_out), 1))]) |>
+    tibble::enframe() |>
+    tidyr::unnest(cols = c(value)) |>
+    dplyr::rename(cohort = name) |> 
+    dplyr::mutate(E_out = paste0(format(mean, big.mark = ","),
+                                " (±", format(sd, big.mark = ","), ") [",
+                                format(min, big.mark = ","), "–",
+                                format(max, big.mark = ","), "]"))
+  
+  if(5 %in% cohortID){
+    
+    Eout.calf <- suppressWarnings(sim[["ad(f,l)"]][
+      alive_calf == 1 & day > 0,
+      list(mean = round(mean(E_out_calf), 1),
+           sd = round(sd(E_out_calf), 1),
+           min = round(min(E_out_calf), 1),
+           max = round(max(E_out_calf), 1))] |>
+      dplyr::mutate(cohort = "c(m,f)") |> 
+      dplyr::relocate(cohort, .before = "mean") |> 
+      dplyr::mutate(E_out = paste0(format(mean, big.mark = ","),
+                                  " (±", format(sd, big.mark = ","), ") [",
+                                  format(min, big.mark = ","), "–",
+                                  format(max, big.mark = ","), "]")))
+    
+    Eout <- data.table::rbindlist(list(Eout, Eout.calf))
+    
+  }
+  
+    ## Balance ---------------------------------------------------------------
+    
+  Ebalance <- purrr::set_names(cohort.ab) |>
+    purrr::map(.f = ~ sim[[.x]][
+      alive == 1 & day > 0,
+      list(negative = sum(E_tot < 0),
+           positive = sum(E_tot > 0)), 
+           whale]) |>
+    tibble::enframe() |>
+    tidyr::unnest(cols = c(value)) |>
+    dplyr::rename(cohort = name) |> 
+      data.table::as.data.table()
+    
+    if(5 %in% cohortID){
+      
+    Ebalance.calf <- suppressWarnings(sim[["ad(f,l)"]][
+        alive_calf == 1 & day > 0,
+        list(negative = sum(E_tot_calf < 0),
+             positive = sum(E_tot_calf > 0)), whale] |>
+      dplyr::mutate(cohort = "c(m,f)") |> 
+      dplyr::relocate(cohort, .before = "whale"))
+    
+    Ebalance <- data.table::rbindlist(list(Ebalance, Ebalance.calf))
+    
+    }
+  
+  Ebalance <- janitor::adorn_percentages(Ebalance[, c(1,3,4)], "row") |> 
+    dplyr::rename(balance_neg = negative, balance_pos = positive) |> 
+    dplyr::select(balance_neg, balance_pos) |> 
+    cbind(Ebalance)
+
+  Ebalance <- Ebalance[, list(
+    negative = paste0(
+      100 * round(mean(balance_neg), 3), "% (±",
+      100 * round(sd(balance_neg), 3),
+      ") [",
+      100 * round(min(balance_neg), 3),
+      "–",
+      100 * round(max(balance_neg), 3),
+      "]"
+    ),
+    positive = paste0(
+      100 * round(mean(balance_pos), 3), "% (±",
+      100 * round(sd(balance_pos), 3),
+      ") [",
+      100 * round(min(balance_pos), 3),
+      "–",
+      100 * round(max(balance_pos), 3),
+      "]"
+    )
+  ), cohort]
+  
+  print(knitr::kable(purrr::reduce(list(Ein[, c("cohort", "E_in")],
+                                        Eout[, c("cohort", "E_out")]), dplyr::left_join, by = 'cohort') |> 
+                       dplyr::rename(Energy_intake = E_in,
+                                     Energy_expenditure = E_out), format = "simple"))
+  
+  print(knitr::kable(Ebalance |> dplyr::rename(Deficit = negative, 
+                                     Surplus = positive), format = "simple"))
+    
+  }
+   
 }
