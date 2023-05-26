@@ -3579,7 +3579,7 @@ growth_curve <- function(param, obj, cohortID, ylabel){
   ind.survived <- dat[day == 365 & alive == 1, whale,]
   dat <- dat[whale %in% ind.survived]
   n.ind <- length(ind.survived)
-  # n.ind <- obj$param$nsim
+
   if(nrow(dat) > 0){
 
   param_dat <- matrix(unlist(dat[day > 0 & cohort == cohortID, param, with = FALSE]),
@@ -3600,7 +3600,11 @@ growth_curve <- function(param, obj, cohortID, ylabel){
     ggplot2::geom_path(aes(x = day, y = median), col = "deepskyblue4") + 
     theme_narw() +
     ylab(ylabel) + xlab("Day of the year") +
-    ggtitle(label = ifelse(grepl(pattern = "calf", param), cohorts[1,name], cohorts[id==cohortID,name])) +
+    ggtitle(label = ifelse(grepl(pattern = "calf", param), 
+                           cohorts[1, name],
+                           ifelse(grepl(pattern = "fetus_l", param), 
+                                  "Fetus", cohorts[id == cohortID, name])
+                           )) +
     ggplot2::scale_x_continuous(breaks = seq(5, 365, by = 40)) +
     ggplot2::scale_y_continuous(
       limits = ~ y.range,
@@ -3714,6 +3718,13 @@ gape_size_R <- function(L, omega, alpha){
 
 # UTILITIES ------------------------------------------------------
 
+fix_paths_vignettes <- function(vignette.name = "narwind"){
+  vignette.path <- paste0("/Volumes/GoogleDrive/My Drive/Documents/git/narwind/docs/articles/", vignette.name, ".html")
+  tx  <- readLines(vignette.path)
+  tx_mod  <- gsub(pattern = "../../../../../My%20Drive/Documents/git/narwind/articles/", replace = "", x = tx)
+  writeLines(tx_mod, con = vignette.path)
+}
+
 inspect <- function(obj, cohort = "ad(f,l)", whaleID = 1, calf = FALSE){
   pdf(file = "allplots.pdf")
   par(mfrow = c(3,3))
@@ -3731,9 +3742,13 @@ inspect <- function(obj, cohort = "ad(f,l)", whaleID = 1, calf = FALSE){
 }
 
 format_dt <- function(dt, direction = "col"){
+  if(nrow(dt) > 0){
   dt |>  janitor::adorn_percentages(denominator = direction) |>
     janitor::adorn_pct_formatting() |> 
     janitor::adorn_ns()
+  } else {
+    dt
+  }
 }
 
 array2dt <- function(a){
