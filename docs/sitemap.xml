@@ -130,16 +130,31 @@
     <loc>/reference/narwind.html</loc>
   </url>
   <url>
+    <loc>/reference/new_calf.html</loc>
+  </url>
+  <url>
     <loc>/reference/placental_maintenance.html</loc>
   </url>
   <url>
+    <loc>/reference/plot.narwproj.html</loc>
+  </url>
+  <url>
     <loc>/reference/plot.narwsim.html</loc>
+  </url>
+  <url>
+    <loc>/reference/plot_gam.html</loc>
   </url>
   <url>
     <loc>/reference/plot_raster.html</loc>
   </url>
   <url>
     <loc>/reference/predict.narwsim.html</loc>
+  </url>
+  <url>
+    <loc>/reference/predict_backup.html</loc>
+  </url>
+  <url>
+    <loc>/reference/predict_leslie.html</loc>
   </url>
   <url>
     <loc>/reference/print.narwsim.html</loc>
@@ -172,6 +187,15 @@
     <loc>/reference/theme_narw.html</loc>
   </url>
   <url>
+    <loc>/reference/w_density.html</loc>
+  </url>
+  <url>
     <loc>/reference/weighted_density.html</loc>
+  </url>
+  <url>
+    <loc>/reference/write.narwproj.html</loc>
+  </url>
+  <url>
+    <loc>/reference/write.narwsim.html</loc>
   </url>
 </urlset>

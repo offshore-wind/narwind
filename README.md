@@ -26,6 +26,33 @@ noise exposure leading to cessation of foraging/nursing activities, and
 (3) increased energetic costs associated with entanglement in fishing
 gear.
 
+## Getting started
+
+If you are just getting started with `narwind`, we recommend reading the
+[tutorial
+vignette](https://pjbouchet.github.io/narwind/articles/narwind.html),
+which provides a detailed introduction to the package.
+
+## Installation
+
+Install the GitHub development version to access the latest features and
+patches.
+
+``` r
+# install.packages("remotes")
+remotes::install_github("pjbouchet/narwind") # OR
+
+# install.packages("devtools")
+devtools::install_github("pjbouchet/narwind")
+```
+
+The package relies on compiled code (C++) and functionality provided by
+the [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html)
+package. The `Rtools` software may be needed on Windows machines.
+
+Installation instructions can be found at
+<https://cran.r-project.org/bin/windows/Rtools/rtools40.html>.
+
 ## Background
 
 Marine renewable energy sources are poised to make a vital contribution
@@ -85,31 +112,6 @@ may combine in unexpected ways to generate cumulative impacts greater
 than the individual sum of their parts. PCoMS models encompassing each
 key NARW habitat have been identified as a high priority target for
 management in a recent review of NARW health and monitoring needs.
-
-## Getting started
-
-If you are just getting started with `narwind`, we recommend reading the
-tutorial vignette (under `Articles > Getting started`), which provides a
-detailed introduction to the package.
-
-## Installation
-
-Install the GitHub development version to access the latest features and
-patches.
-
-``` r
-# install.packages("remotes")
-remotes::install_github("pjbouchet/narwind") # OR
-
-# install.packages("devtools")
-devtools::install_github("pjbouchet/narwind")
-```
-
-The package relies on compiled code (C++) and functionality provided by
-the [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html)
-package. The `Rtools` software may be needed on Windows machines.
-Installation instructions can be found at
-<https://cran.r-project.org/bin/windows/Rtools/rtools40.html>.
 
 ## Funding
 

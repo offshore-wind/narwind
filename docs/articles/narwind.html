@@ -77,7 +77,7 @@
 Enrico Pirotta, Len Thomas, Catriona Harris</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2023-05-26</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2023-05-29</h4>
       
       
       <div class="hidden name"><code>narwind.Rmd</code></div>
@@ -148,12 +148,12 @@ time horizon. This includes:</p>
 <li>Loading the package and compiling the necessary model code.</li>
 <li>Defining offshore wind scenarios.</li>
 <li>Running simulations using the <code><a href="../reference/narw.html">narw()</a></code> function.</li>
-<li>Inspecting outputs using the <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method.</li>
+<li>Inspecting outputs using the <code><a href="https://www.math.uzh.ch/pages/spam/reference/print.html" class="external-link">print()</a></code> method.</li>
 <li>Generating summary statistics, simulation diagnostics, and maps
-using the <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> and <code>plot</code> methods.</li>
+using the <code><a href="https://rdrr.io/pkg/terra/man/summary.html" class="external-link">summary()</a></code> and <code>plot</code> methods.</li>
 <li>Forecasting population size using the <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>
 method.</li>
-<li>Visualizing population trends using the <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>
+<li>Visualizing population trends using the <code><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot()</a></code>
 method.</li>
 </ul>
 <hr>
@@ -193,7 +193,7 @@ using the <code>scenario``()</code> function.</li>
 including in the absence of wind farm development activities (i.e.,
 baseline conditions, if relevant).</li>
 <li>Inspecting, visualizing, and summarizing model outputs using the
-<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>, and <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>
+<code><a href="https://rdrr.io/pkg/terra/man/summary.html" class="external-link">summary()</a></code>, <code><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot()</a></code>, and <code><a href="https://www.math.uzh.ch/pages/spam/reference/print.html" class="external-link">print()</a></code>
 methods.</li>
 <li>Forecasting right whale abundance using the <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>
 method.</li>
@@ -271,9 +271,9 @@ their unique identifiers is stored in an object called
 below.</p>
 <table class="table">
 <colgroup>
-<col width="13%">
-<col width="19%">
-<col width="67%">
+<col width="5%">
+<col width="6%">
+<col width="88%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
@@ -325,26 +325,26 @@ execution.</td>
 <h3 id="viewing-data">Viewing data<a class="anchor" aria-label="anchor" href="#viewing-data"></a>
 </h3>
 <p>Outputs from the <code><a href="../reference/narw.html">narw()</a></code> simulator can be viewed in the R
-console using the <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method. <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> is
+console using the <code><a href="https://www.math.uzh.ch/pages/spam/reference/print.html" class="external-link">print()</a></code> method. <code><a href="https://www.math.uzh.ch/pages/spam/reference/print.html" class="external-link">print()</a></code> is
 part of a group of generic functions that can be applied to various R
 objects and will behave differently depending on the class of the object
 that is passed to them. Other generic functions include
-<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, or <code><a href="https://rdrr.io/r/base/write.html" class="external-link">write()</a></code>
+<code><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot()</a></code>, <code><a href="https://rdrr.io/pkg/terra/man/summary.html" class="external-link">summary()</a></code>, or <code><a href="https://rdrr.io/r/base/write.html" class="external-link">write()</a></code>
 (among others) – these are covered in later sections.
-<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> can also be called implicitly, that is, simply by
+<code><a href="https://www.math.uzh.ch/pages/spam/reference/print.html" class="external-link">print()</a></code> can also be called implicitly, that is, simply by
 typing the name of the relevant object in the console and pressing
 <code>[enter]</code> on the keyboard. The default behavior for objects
 of class <code>narwsim</code> as returned by <code><a href="../reference/narw.html">narw()</a></code> is to
 give an overview of the data from the first 5 days of the simulation,
 for the first animal in each cohort. Optional arguments allow users to
 override these default settings and display data for specific days,
-animals, and/or cohorts. The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method has the
+animals, and/or cohorts. The <code><a href="https://www.math.uzh.ch/pages/spam/reference/print.html" class="external-link">print()</a></code> method has the
 following arguments:</p>
 <table class="table">
 <colgroup>
-<col width="13%">
-<col width="19%">
-<col width="66%">
+<col width="5%">
+<col width="6%">
+<col width="87%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
@@ -384,7 +384,7 @@ below).</td>
 <p>For example, the code below displays the first 5 days of the
 simulation for adult males 4.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">m</span>, rowID <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, whaleID <span class="op">=</span> <span class="fl">4</span>, cohortID <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://www.math.uzh.ch/pages/spam/reference/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">m</span>, rowID <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, whaleID <span class="op">=</span> <span class="fl">4</span>, cohortID <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
@@ -530,7 +530,7 @@ simulation for adult males 4.</p>
 <code class="sourceCode R"><span><span class="co"># By contrast, the below will show all data </span></span>
 <span><span class="va">m</span> <span class="co"># Same as print(m)</span></span></code></pre></div>
 <blockquote>
-<p><strong>Note:</strong> The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method is only used
+<p><strong>Note:</strong> The <code><a href="https://www.math.uzh.ch/pages/spam/reference/print.html" class="external-link">print()</a></code> method is only used
 for viewing data inside the R console. To export / save data on disk,
 use the <code><a href="https://rdrr.io/r/base/write.html" class="external-link">write()</a></code> method described in the <a href="#exporting-data">Exporting data</a> section.</p>
 </blockquote>
@@ -538,7 +538,7 @@ use the <code><a href="https://rdrr.io/r/base/write.html" class="external-link">
 <div class="section level3">
 <h3 id="model-summary-and-diagnostics">Model summary and diagnostics<a class="anchor" aria-label="anchor" href="#model-summary-and-diagnostics"></a>
 </h3>
-<p>The <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> method provides a range of diagnostics
+<p>The <code><a href="https://rdrr.io/pkg/terra/man/summary.html" class="external-link">summary()</a></code> method provides a range of diagnostics
 that are helpful for assessing whether simulated whale behavior aligns
 with biological expectations. These relate to individual (1) health, (2)
 movements, (3) habitat use, (4) behavior (i.e., activity budgets), (5)
@@ -547,9 +547,9 @@ below).</p>
 <p>The function takes the following arguments:</p>
 <table class="table">
 <colgroup>
-<col width="17%">
-<col width="17%">
-<col width="64%">
+<col width="4%">
+<col width="6%">
+<col width="88%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
@@ -595,12 +595,12 @@ identifiers are listed in an object called <code>cohorts</code>.</td>
 </table>
 <table class="table">
 <caption>Table 1. Overview of model diagnostics and summary statistics
-returned by the <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> command.</caption>
+returned by the <code><a href="https://rdrr.io/pkg/terra/man/summary.html" class="external-link">summary()</a></code> command.</caption>
 <colgroup>
-<col width="11%">
-<col width="11%">
-<col width="11%">
-<col width="66%">
+<col width="4%">
+<col width="6%">
+<col width="2%">
+<col width="86%">
 </colgroup>
 <thead><tr class="header">
 <th>Category</th>
@@ -730,7 +730,7 @@ individuals are in energetic deficit (energy balance &lt; 0) or surplus
 </table>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Summary for adult females only</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">m</span>, cohortID <span class="op">=</span> <span class="fl">4</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/terra/man/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">m</span>, cohortID <span class="op">=</span> <span class="fl">4</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span></span>
 <span><span class="co">#&gt; -------------------------------------------------------------</span></span>
 <span><span class="co">#&gt; -------------------------------------------------------------</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -1041,8 +1041,8 @@ individuals are in energetic deficit (energy balance &lt; 0) or surplus
 <h3 id="plotting-outputs">Plotting outputs<a class="anchor" aria-label="anchor" href="#plotting-outputs"></a>
 </h3>
 <p>Several plots can be obtained from <code>narwsim</code> objects – all
-are produced using the <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> method. By default, a call to
-<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> will generate maps of simulated whale tracks, with
+are produced using the <code><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot()</a></code> method. By default, a call to
+<code><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot()</a></code> will generate maps of simulated whale tracks, with
 labels indicating the locations of births (if relevant) and deaths
 (color-coded by cause of mortality). The number of tracks shown is
 limited to a maximum of <code>100</code> to improve legibility and
@@ -1063,13 +1063,13 @@ ID of each animal are then displayed on mouse hover.</p>
 <p>Other maps/visualizations can be generated using the
 <code>what</code> argument (see details below).</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">m</span>, cohortID <span class="op">=</span> <span class="fl">4</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">m</span>, cohortID <span class="op">=</span> <span class="fl">4</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span></span></code></pre></div>
 <p><img src="narw_tracks.jpg"></p>
 <table class="table">
 <colgroup>
-<col width="12%">
-<col width="19%">
-<col width="67%">
+<col width="3%">
+<col width="4%">
+<col width="92%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
@@ -1149,9 +1149,9 @@ when <code>cohortID = 1:6</code>.</p>
 </blockquote>
 <table class="table">
 <colgroup>
-<col width="15%">
-<col width="15%">
-<col width="69%">
+<col width="7%">
+<col width="10%">
+<col width="82%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
@@ -1191,14 +1191,14 @@ class <code>narwproj</code>, which contains several datasets and model
 outputs in list format. Any call to <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> must
 therefore be assigned to an R object, as shown below.</p>
 </blockquote>
-<p>Population trends can be visualized using the <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>
+<p>Population trends can be visualized using the <code><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot()</a></code>
 command. When set to <code>TRUE</code>, the <code>cohort</code> argument
 shows time series of abundance for each cohort.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">narw.preds</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">narw.preds</span><span class="op">)</span></span></code></pre></div>
 <p><img src="narwind_files/figure-html/poptrends_all-1.png" width="700"></p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">narw.preds</span>, cohort <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">narw.preds</span>, cohort <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="narwind_files/figure-html/poptrends_cohort-1.png" width="768"></p>
 </div>
 <div class="section level3">
@@ -1213,10 +1213,10 @@ separate file will be produced for each cohort in
 <code>cohortID</code>.</p>
 <table class="table">
 <colgroup>
-<col width="12%">
-<col width="12%">
-<col width="12%">
-<col width="63%">
+<col width="7%">
+<col width="6%">
+<col width="7%">
+<col width="78%">
 </colgroup>
 <thead><tr class="header">
 <th>Object class</th>

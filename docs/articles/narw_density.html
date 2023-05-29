@@ -77,7 +77,7 @@
 Enrico Pirotta, Len Thomas, Catriona Harris</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2023-04-04</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2023-05-29</h4>
       
       
       <div class="hidden name"><code>narw_density.Rmd</code></div>
@@ -275,7 +275,7 @@ the original extent of the Duke University density surface products.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">narwc.sp</span>, add <span class="op">=</span> <span class="cn">T</span>, pch <span class="op">=</span> <span class="fl">16</span>, cex <span class="op">=</span> <span class="fl">0.25</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mfrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,<span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="NARW_sightings.jpeg"></p>
+<p><img src="../../../../../My%20Drive/Documents/git/narwind/articles/NARW_sightings.jpeg"></p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Plot sightings per year</span></span>
 <span><span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
@@ -284,7 +284,7 @@ the original extent of the Duke University density surface products.</p>
 <span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggsf.html" class="external-link">geom_sf</a></span><span class="op">(</span>data <span class="op">=</span> <span class="fu">sf</span><span class="fu">::</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_as_sf.html" class="external-link">st_as_sf</a></span><span class="op">(</span><span class="va">narwc.sp</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/facet_wrap.html" class="external-link">facet_wrap</a></span><span class="op">(</span><span class="op">~</span><span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">sighting_year</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>  <span class="fu">ggplot2</span><span class="fu">::</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/theme.html" class="external-link">theme</a></span><span class="op">(</span>plot.margin <span class="op">=</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/element.html" class="external-link">margin</a></span><span class="op">(</span>t <span class="op">=</span> <span class="fl">0</span>, r <span class="op">=</span> <span class="fl">0</span>, b <span class="op">=</span> <span class="fl">0</span>, l <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="narw_sightings_per_year.jpg"></p>
+<p><img src="../../../../../My%20Drive/Documents/git/narwind/articles/narw_sightings_per_year.jpg"></p>
 </div>
 <div class="section level2">
 <h2 id="sighting-density">Sighting density<a class="anchor" aria-label="anchor" href="#sighting-density"></a>
@@ -745,8 +745,8 @@ for the entire species’ range.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">plot_preds</span><span class="op">(</span><span class="va">preds.df.hgam</span>, plot.sightings <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu">plot_preds</span><span class="op">(</span><span class="va">d.narwc.df</span>, plot.sightings <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="predicted_density_canada.jpeg"></p>
-<p><img src="predicted_density_range.jpeg"></p>
+<p><img src="../../../../../My%20Drive/Documents/git/narwind/articles/predicted_density_canada.jpeg"></p>
+<p><img src="../../../../../My%20Drive/Documents/git/narwind/articles/predicted_density_range.jpeg"></p>
 <p>To make sure that NARW don’t wander out into deep, offshore waters
 during the simulation, we can crop the rasters above a minimum density
 threshold. The resulting spatial support is shown below.</p>
