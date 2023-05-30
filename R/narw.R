@@ -467,8 +467,6 @@ narw <- function(nsim = 1e3,
   # ............................................................
   # Births
   # ............................................................
-
-  outsim[["sim"]][[cohorts[id == 5, abb]]][, max(born), whale]
   
   if (5 %in% cohortID) {
    locs.birth <- gam.dt[cohort == 0 & born == 1]
