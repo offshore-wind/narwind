@@ -3,8 +3,30 @@ Type: Package
 Title: Assessing population effects of offshore wind development of North Atlantic right whales
 Version: 1.0
 Date: 2022-10-03
-Author: Phil J. Bouchet <pb282@st-andrews.ac.uk>
-Maintainer: Phil J. Bouchet <pb282@st-andrews.ac.uk>
+Authors@R: c(person(given = "Phil",
+           family = "Bouchet",
+           role = c("aut", "cre"),
+           email = "pb282@st-andrews.ac.uk"),
+    person(given = "Pirotta",
+           family = "Enrico",
+           email = "ep343@st-andrews.ac.uk",
+           role = "aut"),
+    person(given = "Hewitt",
+           family = "Josh",
+           email = "joshua.hewitt@duke.edu",
+           role = "aut"),
+    person(given = "Schick",
+           family = "Rob",
+           email = "robert.schick@duke.edu",
+           role = "aut"),
+    person(given = "Harris",
+           family = "Catriona",
+           email = "Catriona.Harris@st-andrews.ac.uk",
+           role = "aut"),
+    person(given = "Thomas",
+           family = "Len",
+           email = "len.thomas@st-andrews.ac.uk",
+           role = "aut"))
 Description: The narwind package provides functions for simulating right whales
 Encoding: UTF-8
 LazyData: true
