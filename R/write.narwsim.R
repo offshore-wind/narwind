@@ -73,7 +73,7 @@ write.narwsim <- function(obj, ...){
 
     stressors <- cbind(const, sim[[k]][whale %in% whaleID & day > 0, list(gear_risk, is_entgl, entgl_head, entgl_sev, entgl_d, entgl_start, entgl_end, is_entgl_calf, entgl_head_calf, entgl_sev_calf, entgl_d_calf, entgl_start_calf, entgl_end_calf, strike_risk, strike, strike_calf, noise_resp, noise_lvl, dB_thresh)])
 
-    feed <- cbind(const, sim[[k]][whale %in% whaleID & day > 0, list(feed, preyconc, minprey, gape, feedspeed, captEff, impedance, daylight, feed_effort, targetBC, cop_mass, cop_kJ, digestEff, metabEff, E_cop)])
+    feed <- cbind(const, sim[[k]][whale %in% whaleID & day > 0, list(feed, preyconc, minprey, gape, feedspeed, captEff, impedance, daylight, feed_effort, targetBC, cop_mass, cop_kJ, digestEff, metabEff_juv, metabEff_ad, E_cop)])
 
     growth <- cbind(const, sim[[k]][whale %in% whaleID & day > 0, list(delta_fat, ED_lip, lip_anab, lip_catab)])
 

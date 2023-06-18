@@ -152,7 +152,7 @@ print.narwsim <- function(obj, ...){
     }
     print(sim_dt[, list(whale, day,
       feed, preyconc, minprey, gape, feedspeed, captEff, impedance, daylight,
-      feed_effort, targetBC, cop_mass, cop_kJ, digestEff, metabEff, E_cop
+      feed_effort, targetBC, cop_mass, cop_kJ, digestEff, metabEff_juv, metabEff_ad, E_cop
     )])
 
     # Lactating females + calves
@@ -160,7 +160,7 @@ print.narwsim <- function(obj, ...){
       cat("\n")
       cat("\n +++ Calves +++\n\n")
       print(sim_dt[, list(whale, day,
-        assim, provision, mamm_M, milk_rate, Dmilk, t_suckling, targetBC_calf, nursing, milk_lip, milk_pro, EDlip, EDpro
+        assim, provision, mamm_M, milk_rate, t_suckling, targetBC_calf, nursing, milk_lip, milk_pro, EDlip, EDpro
       )])
     }
     cat("\n")

@@ -220,9 +220,10 @@ summary.narwsim <- function(obj,
       if(length(cohortID) == 1){
         plot(bodycondition.plot[[1]])
       } else {
-        patchwork::wrap_plots(bodycondition.plot, 
+        bcp <- patchwork::wrap_plots(bodycondition.plot, 
                               nrow = ifelse(length(cohortID) == 2, 1, 2), 
                               ncol = ifelse(length(cohortID) == 2, 1, 3))
+        print(bcp)
       }
 
       # Growth ---------------------------------------------------------------
@@ -237,6 +238,7 @@ summary.narwsim <- function(obj,
          .f = ~ growth_curve(param = "length", 
                              obj = obj, 
                              cohortID = .x, 
+                             whaleID = whaleID,
                              ylabel = "Body length (m)")
        )
       
@@ -246,6 +248,7 @@ summary.narwsim <- function(obj,
                  list(growth_curve(param = "fetus_l", 
                                    obj = obj, 
                                    cohortID = 4, 
+                                   whaleID = whaleID,
                                    ylabel = "Body length (m)")))
       }
       
@@ -255,10 +258,11 @@ summary.narwsim <- function(obj,
                  list(growth_curve(param = "length_calf", 
                                    obj = obj, 
                                    cohortID = 5, 
+                                   whaleID = whaleID,
                                    ylabel = "Body length (m)")))
       }
       
-      growth.plot <- patchwork::wrap_plots(body_growth_l)
+      growth.plot <- patchwork::wrap_plots(purrr::discard(.x = body_growth_l, .p = ~is.list(.x) & length(.x) == 1))
       print(growth.plot)
       
       } # End plot = TRUE
