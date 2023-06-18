@@ -9,6 +9,11 @@ padding: 20px;}
 
 .caption {width:850px;}
 
+footer .pkgdown {
+    text-align: right;
+    margin-left: 20rem;
+}
+
 code {
     padding: 2px 4px;
     font-size: 90%;
