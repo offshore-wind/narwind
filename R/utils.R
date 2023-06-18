@@ -2,13 +2,6 @@
 
 write <- function(x, ...) UseMethod("write")
 
-find_lean <- function(target.max, maxBC = 0.6, age = 69){
-  opt.fun <- function(x, age, target.max, maxBC){
-    return((length2mass(age2length(age, agL(age)), mL(), x)/(1-maxBC)-target.max)^2)}
-  out <- optimize(f = opt.fun, interval = c(0,1), target.max = target.max, maxBC = maxBC, age = age)
-  return(out$minimum)
-}
-
 meta <- function(seed = 215513, 
                  fill.NA = FALSE,
                  min.yr = NULL,
@@ -493,10 +486,10 @@ warp <- function(p, coords, lower = 700, upper = 850, left = 500, right = 750){
 }
 
 initiate_xy <- function(maplist,
-                         coords,
-                         migrate,
-                         init.month,
-                         nsim){
+                        coords,
+                        migrate,
+                        init.month,
+                        nsim){
   
   out <- do.call(rbind, lapply(1:12, function(mo) {
     
@@ -715,10 +708,10 @@ consolidate <- function(dtl, nsim, cnames, dates, months){
   purrr::map2(.x = dtl,
               .y = cnames, 
               .f = ~{
-                dt <- data.table::data.table(day = rep(0:365, times = nsim), 
+                dt <- data.table::data.table(day = rep(0:(length(dates)-1), times = nsim), 
                                              date = rep(dates, times = nsim),
                                              month = rep(months, times = nsim),
-                                             whale = rep(1:nsim, each = 366))
+                                             whale = rep(1:nsim, each = length(dates)))
                 a <- cbind(array2dt(.x), dt)
                 a$region <- sort(regions$region)[a$region]
                 a$cohort_name <- .y
@@ -784,7 +777,12 @@ consolidate <- function(dtl, nsim, cnames, dates, months){
 #   })
 # }
 
-optim_feeding <- function(bounds = list(c(0,0.2)), nm = NULL, linecol = "black", verbose = TRUE){
+optim_feeding <- function(bounds = list(), 
+                           err = 0.05,
+                           nm = NULL, 
+                          cex = 1.15,
+                           linecol = "black",
+                           verbose = TRUE){
   
   # Assuming B > 0 And S > 0:
   # - A is the value of the horizontal asymptote when x tends to -Inf
@@ -797,46 +795,111 @@ optim_feeding <- function(bounds = list(c(0,0.2)), nm = NULL, linecol = "black",
   f <- function(x, A = 1, D = 0, B, C, S) A + (D-A) / (1 + exp(B*(C-x)))^S
   
   # Define function to optimize
-  opt.f <- function(param, bounds, err = 0.001){
-    first <- (1 - f(bounds[1], B = param[1], C = param[2], S = param[3]) - err)^2
-    second <- (0 - f(bounds[2], B = param[1], C = param[2], S = param[3]) +  err)^2
-    sum(first, second)
+  opt.f <- function(param, bounds, e = err){
+    first <- (1 - f(bounds[1], B = param[1], C = param[2], S = param[3]))^2
+    second <- (0 - f(bounds[2], B = param[1], C = param[2], S = param[3]) + e)^2
+    third <- (1-param[3])^2
+    sum(first, second, third)
   }
   
   # Run optimization
   res <- purrr::map(.x = seq_along(bounds), 
-             .f = ~ {
-               out <- optim(par = c(15, 1, 0.1, 0.01), fn = opt.f, bounds = bounds[[.x]])
-               
-               # Print results
-               if(verbose){
-               cat("\nEstimated parameter values:\n")
-               cat("B",out$par[1],"\n")
-               cat("C",out$par[2],"\n")
-               cat("s",out$par[3],"\n\n")
-               print(data.frame(BC = bounds[[.x]], 
-                     effort = c(f(bounds[[.x]][1], 
-                                  B = out$par[1], 
-                                  C = out$par[2], 
-                                  S = out$par[3]), 
-                                f(bounds[[.x]][2], 
-                                  B = out$par[1],
-                                  C = out$par[2],
-                                  S = out$par[3]))))
-               }
-               return(out)
-             })
-
+                    .f = ~ {
+                      out <- optim(par = c(1, 0.1, 0.01), fn = opt.f, bounds = bounds[[.x]])
+                      
+                      # Print results
+                      if(verbose){
+                        cat("\n", nm[.x], "\n")
+                        cat("-----------------\n")
+                        cat("\nEstimated parameter values:\n")
+                        cat("B",out$par[1],"\n")
+                        cat("C",out$par[2],"\n")
+                        cat("S",out$par[3],"\n\n")
+                        print(data.frame(BC = bounds[[.x]], 
+                                         effort = c(f(bounds[[.x]][1], 
+                                                      B = out$par[1], 
+                                                      C = out$par[2], 
+                                                      S = out$par[3]), 
+                                                    f(bounds[[.x]][2], 
+                                                      B = out$par[1],
+                                                      C = out$par[2],
+                                                      S = out$par[3]))))
+                      }
+                      return(out)
+                    })
+  
   # Plot
   x <- seq(0, 1, length.out = 100)
+  tg <- paste("Target BC: \n", nm)
+  ypos <- c(0.7, 0.75)
   plot(x, f(x, B = res[[1]]$par[1], C = res[[1]]$par[2], S = res[[1]]$par[3]), 
-       type = "n", ylab = "Feeding effort", xlab = "Body condition (relative blubber mass, %)")
+       type = "n", ylab = "Feeding effort", xlab = "Body condition (relative blubber mass, %)",
+       cex.axis = cex, cex.main = cex, cex.lab = cex)
   purrr::walk(.x = seq_along(bounds), .f = ~{
+    abline(v = bounds[[.x]][2], lty = 3)
+    text(bounds[[.x]][2]+ 0.01, ypos[.x], tg[[.x]], cex = 0.9, adj = 0) 
     lines(x, f(x, B = res[[.x]]$par[1], C = res[[.x]]$par[2], S = res[[.x]]$par[3]), lty = .x, col = linecol)
   })
-  if(!is.null(nm)) legend("topright", legend = nm, lty = seq_along(bounds), col = linecol)
+  if(!is.null(nm)) legend("topright", legend = nm, lty = seq_along(bounds), col = linecol, cex = cex)
   
 }
+
+# optim_feeding <- function(bounds = list(c(0.05,0.2)), 
+#                           nm = NULL, 
+#                           linecol = "black",
+#                           verbose = TRUE){
+#   
+#   # Assuming B > 0 And S > 0:
+#   # - A is the value of the horizontal asymptote when x tends to -Inf
+#   # - D is the value of the horizontal asymptote when x tends to Inf
+#   # - B describes how rapidly the curve makes its transition between the two asymptotes;
+#   # - C is a location parameter, which does not have a nice interpretation (except if S = 1)
+#   # - S describes the asymmetry of the curve (the curve is symmetric when S = 1)
+#   
+#   # Define a 5-parameter logistic curve
+#   f <- function(x, A = 1, D = 0, B, C, S) A + (D-A) / (1 + exp(B*(C-x)))^S
+#   
+#   # Define function to optimize
+#   opt.f <- function(param, bounds, err = 0.001){
+#     first <- (1 - f(bounds[1], B = param[1], C = param[2], S = param[3]) - err)^2
+#     second <- (0 - f(bounds[2], B = param[1], C = param[2], S = param[3]) +  err)^2
+#     sum(first, second)
+#   }
+#   
+#   # Run optimization
+#   res <- purrr::map(.x = seq_along(bounds), 
+#              .f = ~ {
+#                out <- optim(par = c(15, 1, 0.1, 0.01), fn = opt.f, bounds = bounds[[.x]])
+#                
+#                # Print results
+#                if(verbose){
+#                cat("\nEstimated parameter values:\n")
+#                cat("B",out$par[1],"\n")
+#                cat("C",out$par[2],"\n")
+#                cat("s",out$par[3],"\n\n")
+#                print(data.frame(BC = bounds[[.x]], 
+#                      effort = c(f(bounds[[.x]][1], 
+#                                   B = out$par[1], 
+#                                   C = out$par[2], 
+#                                   S = out$par[3]), 
+#                                 f(bounds[[.x]][2], 
+#                                   B = out$par[1],
+#                                   C = out$par[2],
+#                                   S = out$par[3]))))
+#                }
+#                return(out)
+#              })
+# 
+#   # Plot
+#   x <- seq(0, 1, length.out = 100)
+#   plot(x, f(x, B = res[[1]]$par[1], C = res[[1]]$par[2], S = res[[1]]$par[3]), 
+#        type = "n", ylab = "Feeding effort", xlab = "Body condition (relative blubber mass, %)")
+#   purrr::walk(.x = seq_along(bounds), .f = ~{
+#     lines(x, f(x, B = res[[.x]]$par[1], C = res[[.x]]$par[2], S = res[[.x]]$par[3]), lty = .x, col = linecol)
+#   })
+#   if(!is.null(nm)) legend("topright", legend = nm, lty = seq_along(bounds), col = linecol)
+#   
+# }
 
 # Function to add new individual
 new_calf <- function(arr, year, attrib){
@@ -2011,7 +2074,7 @@ reshape_array <- function(a, value, ..., .id = NULL)
   return(tidy)
 }
 
-scale_growth <- function(target.max = 45000, maxBC = 0.6, age = 69){
+scale_growth <- function(target.max = 45000, maxBC = 0.6586636, age = 69){
   # When lean = 1, length2mass returns the total mass of an animal given its length(age), as per Fortune et al. (2021)
   # By setting lean < 1, we can scale down this relationship to obtain a growth curve for lean mass.
   # We use an optimisation to find esstimate a scalar that will prevent unrealistic values of total mass (>45t) 
@@ -2021,6 +2084,14 @@ scale_growth <- function(target.max = 45000, maxBC = 0.6, age = 69){
   out <- optimize(f = opt.fun, interval = c(0,1), target.max = target.max, maxBC = maxBC, age = age)
   return(out$minimum)
 }
+
+# find_lean <- function(target.max, maxBC = 0.6, age = 69){
+#   opt.fun <- function(x, age, target.max, maxBC){
+#     return((length2mass(age2length(age, agL(age)), mL(), x)/(1-maxBC)-target.max)^2)}
+#   out <- optimize(f = opt.fun, interval = c(0,1), target.max = target.max, maxBC = maxBC, age = age)
+#   return(out$minimum)
+# }
+
 
 gestation_threshold <- function(){
   
@@ -2071,6 +2142,141 @@ gestation_threshold <- function(){
 }
 
 # NOISE ------------------------------------------------------
+
+noise_surface <- function(ambient.db = 60, source.lvl = 220, mitigation = c(0, 10)){
+
+  init.month <- 10
+  
+  # Load turbine locations for each wind farm
+  turbines <- targets::tar_read(turbines)
+  no.piles <- purrr::map_dbl(.x = turbines, .f = ~nrow(.x))
+  
+  # Assume construction occurs N-S and W-E
+  turbines <- purrr::map(.x = turbines, .f = ~dplyr::arrange(.x, dplyr::desc(y), x))
+  
+  # Define start dates for piling activities in each scenario
+  current.year <- lubridate::year(lubridate::now())
+  leap <- sum(lubridate::leap_year(current.year), lubridate::leap_year(current.year + 1))
+  
+  start.date <- paste0(current.year, stringr::str_pad(init.month, width = 2, pad = "0"), "01")
+  date_seq <- as.character(seq(from = lubridate::ymd(start.date), by = 'day', length.out = ifelse(leap, 366, 365)))
+  
+  start.dates <- list(
+    
+    # Scenario 1 – Jan 15th start at Farm 1, Feb 1st start at Farm 2, and Jan 1st start at Farm 3
+    c(paste0(current.year+1, stringr::str_pad(1, width = 2, pad = "0"), "15"),
+      paste0(current.year+1, stringr::str_pad(2, width = 2, pad = "0"), "01"),
+      paste0(current.year+1, stringr::str_pad(1, width = 2, pad = "0"), "01")),
+    
+    # Scenario 2 – Jul 15th start at Farm 1, Sep 15th start at Farm 2, and May 1st start at Farm 3
+    c(paste0(current.year+1, stringr::str_pad(7, width = 2, pad = "0"), "15"),
+      paste0(current.year+1, stringr::str_pad(9, width = 2, pad = "0"), "15"),
+      paste0(current.year+1, stringr::str_pad(5, width = 2, pad = "0"), "01"))
+  )
+
+  piling.dates <- lapply(X = 1:2, FUN = function(sc) {
+    purrr::map2(
+      .x = start.dates[[sc]],
+      .y = no.piles,
+      .f = ~ {
+        out <- c(as.character(seq(from = lubridate::ymd(.x), by = "day", length.out = .y)))
+      }
+    ) |> purrr::set_names(nm = paste0("farm_0", names(no.piles)))
+  }) |> purrr::set_names(nm = c(1,2)) |> 
+    tibble::enframe() |> 
+    tidyr::unnest(cols = c("value")) |> 
+    dplyr::mutate(farm = rep(1:3, 2)) |> 
+    tidyr::unnest(cols = c("value")) |>
+    dplyr::rename(scenario = name, date = value) |> 
+    dplyr::mutate(scenario = as.numeric(scenario)) |> 
+    data.table::as.data.table()
+    
+  # Compile data
+  scenarios <- lapply(X = 1:2, FUN = function(sc) {
+    purrr::map(
+      .x = 1:3,
+      .f = ~ cbind(turbines[[.x]], piling.dates[scenario == sc & farm == .x, "date"])
+    ) |> do.call(what = "rbind") |> tibble::as_tibble()
+  }) |> purrr::set_names(nm = paste0("scenario_0", 1:2))
+  
+  # Spatial support
+  support.poly <- targets::tar_read(support_poly)
+  
+  # Calculate distances to each source (turbine location)
+  r <- ambient.r <- targets::tar_read(density_support) |> raster::raster()
+  raster::values(r) <- NA
+  ambient.r <- ambient.r - 1
+  ambient.r[ambient.r < 0] <- NA
+  ambient.r[ambient.r == 0] <- ambient.db
+  
+  scenarios <- purrr::map(
+    .x = scenarios,
+    .f = ~ {
+      .x$dsource <- lapply(X = 1:nrow(.x), FUN = function(turb) {
+        tmp <- r
+        tmp[raster::cellFromXY(tmp, data.frame(.x[turb, c("x", "y")]))] <- 1
+        terra::distance(tmp) |> 
+          terra::mask(mask = support.poly)
+      })
+      .x
+    }
+  )
+  
+  # Compute sound levels
+  scenarios <- purrr::map2(.x = scenarios,
+                      .y = mitigation,
+                      .f = ~ {
+     .x$db <- lapply(X = 1:nrow(.x), FUN = function(d) {
+      db.out <- source.lvl - .y - TL(.x$dsource[[d]])
+      db.out[db.out < ambient.db] <- NA
+      db.out
+    })
+    .x
+  })
+  
+  # Split by date
+  scenarios <- purrr::map(.x = scenarios, .f = ~{
+    split(.x, f = factor(.x$date))
+  })
+  
+  # Sum sound fields
+  sound.layer <- lapply(X = scenarios, FUN = function(sc) {
+    purrr::map(.x = date_seq, .f = ~ {
+    if (.x %in% names(sc)){
+          db.lyr <- raster::stack(sc[[.x]]$db) |> raster::calc(fun = max)
+          db.lyr <- raster::stack(db.lyr, ambient.r) |> raster::calc(fun = sum, na.rm = TRUE)
+          db.lyr[db.lyr == 0] <- NA
+          rescale_raster(db.lyr, new.min = ambient.db, new.max = source.lvl)
+        } else {
+          ambient.r
+        }
+      }) |> purrr::set_names(nm = date_seq)
+    })
+  
+  # # Sum sound fields
+  # sound.layer <- lapply(X = date_seq, FUN = function(pdat) {
+  #   if (pdat %in% unique(piling.dates$date)) {
+  #     purrr::map(.x = scenarios, .f = ~ {
+  #       if(pdat %in% names(.x)){
+  #         db.lyr <- raster::stack(.x[[pdat]]$db) |> raster::calc(fun = max)
+  #         db.lyr <- raster::stack(db.lyr, ambient.r) |> raster::calc(fun = sum, na.rm = TRUE)
+  #         db.lyr[db.lyr == 0] <- NA
+  #         rescale_raster(db.lyr, new.min = ambient.db, new.max = source.lvl)
+  #       } else {
+  #         ambient.r
+  #       }
+  #     })
+  #   } else {
+  #     ambient.r
+  #   }
+  # })
+  
+  # plot(terra::rast(sound.layer$scenario_01[[20]]), col = pals::viridis(100), main = "Noise levels (dB)", xlab = "Easting (km)")
+  
+  out <- purrr::map_depth(.x = sound.layer, .depth = 2, .f = ~as(.x, "SpatialGridDataFrame"))
+  return(out)
+  
+}
 
 response_km <- function(n = 100, max.d = 200, SL = 200, logfac = 15, a = 1.175, main = ""){
   
@@ -2184,6 +2390,7 @@ entgl_surface <- function(scalar = 1){
   d <- targets::tar_read(density_narw)
   regions <- targets::tar_read(regions)
   rd <- raster::raster(d[[1]])
+  
   GSL_scalar <- 1.114327 # Gulf of St Lawrence
   ELSWC_scalar <- 0.03025689 # Elsewhere Canada
   
@@ -2226,15 +2433,28 @@ get_entglD <- function(){
     janitor::clean_names()
 }
 
+rzinbinom <- function(n, mu, theta, size, pi) {
+  if(any(pi < 0) | any(pi > 1))  warning("'pi' must be in [0, 1]")
+  if(!missing(theta) & !missing(size)) stop("only 'theta' or 'size' may be specified")
+  if(!missing(size)) theta <- size
+  rval <- rnbinom(n, mu = mu, size = theta)
+  rval[runif(n) < pi] <- 0
+  rval
+}
+
 entgl_durations <- function(){
   
   # Duration of entanglement events
   entgl <- targets::tar_read(entgl_d)
   severity <- unique(entgl$severity)
   
-  # Negative binomial fit
+  # Zero-truncated negative binomial fit - as entanglement duration must be a minimum of 1 day
   fnb <- purrr::set_names(severity) |> 
-    purrr::map(.f = ~fitdistrplus::fitdist(entgl[entgl$severity == .x, ]$duration_days, "nbinom"))
+    purrr::map(.f = ~{
+      tab <- table(entgl[entgl$severity == .x, "duration_days"])
+      mat <- data.frame(j = as.numeric(names(tab)), n_j = as.numeric(tab))
+      unlist(suppressWarnings(preseqR::preseqR.ztnb.em(mat))[1:2])
+    })
   
   par(mfrow = c(3, 2))
   purrr::walk(
@@ -2243,17 +2463,21 @@ entgl_durations <- function(){
       hist(entgl[entgl$severity == .x, ]$duration_days,
            freq = FALSE,
            main = .x,
-           xlab = "Entanglement duration (days)"
-      )
+           breaks = 30,
+           cex.main = 1.2,
+           cex.axis = 1.1,
+           cex.lab = 1.1,
+           xlab = "Entanglement duration (days)")
       x <- seq(0, max(entgl[entgl$severity == .x, ]$duration_days), by = 1)
-      lines(x, dnbinom(x, size = fnb[[.x]]$estimate["size"], mu = fnb[[.x]]$estimate["mu"]), lwd = 1.5)
-      fitdistrplus::cdfcomp(fnb[[.x]])
+      lines(x, countreg::dztnbinom(x, size = fnb[[.x]]["size"], mu = fnb[[.x]]["mu"]), lwd = 1.5)
+      plot(ecdf(entgl[entgl$severity == .x, ]$duration_days), ylab = "CDF", main = "Empirical and theoretical CDFs")
+      lines(countreg::pztnbinom(x, size = fnb[[.x]]["size"], mu = fnb[[.x]]["mu"]), col = "firebrick", lwd = 1.5)
     }
   )
   print(fnb)
   
-  cat("Truncation at 365 days:\n\n")
-  purrr::map(.x = fnb, .f = ~1-pnbinom(365, size = .x$estimate["size"], mu = .x$estimate["mu"]))
+  cat("% Truncation at 365 days:\n\n")
+  purrr::map(.x = fnb, .f = ~round(100*(1-countreg::pztnbinom(365, size = .x["size"], mu = .x["mu"])), 3))
 }
 
 proxy_fishing <- function(){
@@ -3553,6 +3777,24 @@ get_world <- function(sc = "medium"){
 
 # PLOTTING ------------------------------------------------------
 
+plot_survival <- function(x = 0:100, a1 = 2, a2 = 0, a3 = 0.01, b1 = 60, b3 = 8, longevity = 69){
+  
+  plot(x, seq(0,1, length.out = length(x)), ylim = c(0,1), type = 'n', ylab = "p(survival)", xlab = "Age (years)")
+  axis(2, at = seq(0,1,0.1))
+  abline(v = longevity, lty = 1, col = "firebrick")
+  
+  lj = exp((-a1/b1) * (1-exp(-b1*x/longevity)))
+  lc = exp(-a2*x/longevity)
+  ls = exp((a3/b3) * (1-exp(b3*x/longevity)))
+  
+  lines(x, lj, col = "grey10", lty = 3)
+  lines(x, lc, col = "grey20", lty = 4)
+  lines(x, ls, col = "grey30", lty = 5)
+  
+  lines(x, lj*lc*ls, col = "black", lwd = 1.5)
+  
+}
+
 plot_gam <- function(obj){
   
   x <- seq(0, 1, 0.01)
@@ -3572,10 +3814,10 @@ plot_gam <- function(obj){
   }
 }
 
-growth_curve <- function(param, obj, cohortID, ylabel){
+growth_curve <- function(param, obj, cohortID, whaleID, ylabel){
 
   cohorts <- obj$param$cohorts
-  dat <- data.table(obj$sim[[cohorts[id==cohortID, abb]]])
+  dat <- data.table(obj$sim[[cohorts[id==cohortID, abb]]][whale %in% whaleID, ])
   ind.survived <- dat[day == 365 & alive == 1, whale,]
   dat <- dat[whale %in% ind.survived]
   n.ind <- length(ind.survived)
@@ -3857,8 +4099,10 @@ estTruncNorm <- function(target.mean, L, U){
   return(out$par)
 }
 
-draw <- function(distrib = "norm", mu, std = NULL, L = -Inf, U = Inf, seed = 215513, x.lab = "",
-                 y.lab = "", title = NULL, verbose = TRUE, linecol = "black"){
+draw <- function(distrib = "norm", mu, std = NULL, L = -Inf, U = Inf, seed = 215513, title = NULL, 
+                 from = NULL, to = NULL,
+                 verbose = TRUE, 
+                 ...){
   
   set.seed(seed)
   
@@ -3877,8 +4121,7 @@ draw <- function(distrib = "norm", mu, std = NULL, L = -Inf, U = Inf, seed = 215
     cat("sd:", sd(n), "\n")
     }
     
-    curve(expr = truncnorm::dtruncnorm(x = x, L, U, L, truncN.param), from = min(n), to = max(n), 
-          main = ifelse(is.null(title), "Half Normal distribution", title), ylab = y.lab, xlab = x.lab, lwd = 1.5, col = linecol)
+    curve(expr = truncnorm::dtruncnorm(x = x, L, U, L, truncN.param), from = ifelse(is.null(from), min(n), from), to = ifelse(is.null(to), max(n), to), ...)
     
   } else if(distrib == "tnorm"){
     
@@ -3891,8 +4134,7 @@ draw <- function(distrib = "norm", mu, std = NULL, L = -Inf, U = Inf, seed = 215
     cat("sd:", sd(n), "\n")
     }
     
-    curve(expr = truncnorm::dtruncnorm(x = x, a = L, b = U, mean = mu, sd = std), from = min(n), to = max(n),
-          main = ifelse(is.null(title), "Truncated Normal distribution", title), ylab = y.lab, xlab = x.lab, lwd = 1.5, col = linecol)
+    curve(expr = truncnorm::dtruncnorm(x = x, a = L, b = U, mean = mu, sd = std), from = ifelse(is.null(from), min(n), from), to = ifelse(is.null(to), max(n), to), ...)
     
   } else if(distrib == "norm"){
     
@@ -3905,8 +4147,7 @@ draw <- function(distrib = "norm", mu, std = NULL, L = -Inf, U = Inf, seed = 215
     cat("sd:", sd(n), "\n")
     }
     
-    curve(expr = dnorm(x = x, mu, std), from = min(n), to = max(n),
-          main = ifelse(is.null(title), " Normal distribution", title), ylab = "", xlab = "", lwd = 1.5, col = linecol)
+    curve(expr = dnorm(x = x, mu, std), from = ifelse(is.null(from), min(n), from), to = ifelse(is.null(to), max(n), to), ...)
     
   } else if(distrib == "gamma") {
     
@@ -3921,8 +4162,8 @@ draw <- function(distrib = "norm", mu, std = NULL, L = -Inf, U = Inf, seed = 215
     cat("sd:", sd(n), "\n")
     }
     
-    curve(expr = dgamma(x = x, shape = gamma.params$shape, scale = gamma.params$scale), from = min(n), to = max(n), 
-          main = ifelse(is.null(title), "Gamma distribution", title), ylab = y.lab, xlab = x.lab, lwd = 1.5, col = linecol)
+    curve(expr = dgamma(x = x, shape = gamma.params$shape, scale = gamma.params$scale), from = ifelse(is.null(from), min(n), from), to = ifelse(is.null(to), max(n), to),
+          ...)
     
   } else if(distrib == "beta") {
     
@@ -3937,8 +4178,7 @@ draw <- function(distrib = "norm", mu, std = NULL, L = -Inf, U = Inf, seed = 215
     cat("sd:", sd(n), "\n")
     }
     
-    curve(expr = dbeta(x = x, beta.params$alpha, beta.params$beta), from = 0, to = 1, 
-          main = ifelse(is.null(title), "Beta distribution", title), ylab = y.lab, xlab = x.lab, lwd = 1.5, col = linecol)
+    curve(expr = dbeta(x = x, beta.params$alpha, beta.params$beta), from = 0, to = 1, ...)
   }
 }
 

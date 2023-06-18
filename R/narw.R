@@ -3,6 +3,7 @@
 #' Simulate right whale movements and behavior across a calendar year.
 #' @export
 #' @param nsim Number of simulated animals
+#' @param scenario 
 #' @param n.prop Number of proposals used in the importance sampler (Michelot, 2019)
 #' @import data.table
 #' @importFrom foreach `%dopar%`
@@ -30,6 +31,7 @@ narw <- function(nsim = 1e3,
   cohortID <- 1:6
   stressors <- TRUE
   growth <- TRUE
+  cease.nursing <- FALSE
   
   # Starvation threshold expressed as relative blubber mass
   # As per Pirotta et al. (2018) - to test extreme conditions of leanness
@@ -43,16 +45,8 @@ narw <- function(nsim = 1e3,
     if("growth" %in% names(args)) growth <- args[["growth"]] 
     if("init.month" %in% names(args)) init.month <- args[["init.month"]]
     if("starvation" %in% names(args)) starvation <- args[["starvation"]]
+    if("cease.nursing" %in% names(args)) cease.nursing <- args[["cease.nursing"]]
   }
-  
-  # nsim = 10
-  # cohortID = 5
-  # scenario = NULL
-  # init.month = 2
-  # stressors = FALSE
-  # growth = TRUE
-  # n.cores = NULL
-  # progress = TRUE
 
   cohortID <- cohortID[cohortID > 0]
   
@@ -63,8 +57,6 @@ narw <- function(nsim = 1e3,
   # In line with sample sizes used in case studies from Michelot (2020)
   n.prop = 50
   
-  # if(!init.month %in% 1:12) stop("<init.month> must be an integer between 1 and 12")
-  # if(!"init.model" %in% ls(envir = .GlobalEnv)) stop("The model must first be initialized using <load_model>")
   if(any(!cohortID %in% 1:6)) stop("Unrecognized cohort")
   
   cat("-------------------------------------------------------------\n")
@@ -147,7 +139,6 @@ narw <- function(nsim = 1e3,
   daylightmaps <- lapply(daylight, raster::as.matrix)
   regionsmap <- raster::as.matrix(regions_m)
   
-  
   # mo <- 1
   # evalEnvironment(maps[[mo]],
   #                 maps.weighted.seus[[mo]],
@@ -186,21 +177,65 @@ narw <- function(nsim = 1e3,
   # ............................................................
   
   # Define time steps and sequence of density maps for each day
-  # Use a non-leap year like 2021
-  start.date <- paste0(2021, stringr::str_pad(init.month, width = 2, pad = "0"), "01")
-  init.date <- paste0(2021, "-", stringr::str_pad(init.month, width = 2, pad = "0"), "-", "00")
-  date_seq <- c(init.date, as.character(seq(from = lubridate::ymd(start.date), by = 'day', length.out = 365)))
-  map_seq <- c(init.month, lubridate::month(date_seq[2:366]))
+  # # Use a non-leap year like 2021
+  # start.date <- paste0(2021, stringr::str_pad(init.month, width = 2, pad = "0"), "01")
+  # init.date <- paste0(2021, "-", stringr::str_pad(init.month, width = 2, pad = "0"), "-", "00")
+  # date_seq <- c(init.date, as.character(seq(from = lubridate::ymd(start.date), by = 'day', length.out = 365)))
+  # map_seq <- c(init.month, lubridate::month(date_seq[2:366]))
+  
+  current.year <- lubridate::year(lubridate::now())
+  leap <- sum(lubridate::leap_year(current.year), lubridate::leap_year(current.year + 1))
+  start.date <- paste0(current.year, stringr::str_pad(init.month, width = 2, pad = "0"), "01")
+  init.date <- paste0(current.year, "-", stringr::str_pad(init.month, width = 2, pad = "0"), "-", "00")
+  date_seq <- c(init.date, as.character(seq(from = lubridate::ymd(start.date), by = 'day', length.out = ifelse(leap, 366, 365))))
+  map_seq <- c(init.month, lubridate::month(date_seq[2:length(date_seq)]))
   
   # Migratory destinations
   migration.df <- purrr::map(.x = cohortID, 
                              .f = ~{data.frame(seus = prob_migration(nsim, "SEUS", .x),
-                             gsl = prob_migration(nsim, "GSL", .x))}) |> purrr::set_names(nm = cohorts[id %in% cohortID, abb])
+                             gsl = prob_migration(nsim, "GSL", .x))}) |> 
+    purrr::set_names(nm = cohorts[id %in% cohortID, abb])
   
   init_maps <- purrr::map(.x = maps, .f = ~{
     p <- as.numeric(.x)
     p[!is.finite(p)] <- 0
     p})
+  
+  # plot(support_poly, axes = TRUE)
+  # plot(world, col = "grey", add = TRUE)
+  # 
+  # x_coords <- c(500,750,750,500)
+  # y_coords <- c(700,700,850, 850)
+  # poly1 <- sp::Polygon(cbind(x_coords,y_coords))
+  # firstPoly <- sp::Polygons(list(poly1), ID = "A")
+  # firstSpatialPoly <- sp::SpatialPolygons(list(firstPoly))
+  # sp::proj4string(firstSpatialPoly) <- narw_crs()
+  # firstSpatialPoly <- rgeos::gDifference(firstSpatialPoly, world)
+  # firstSpatialPoly <- rgeos::intersect(firstSpatialPoly, support_poly)
+  # 
+  # plot(firstSpatialPoly, add = TRUE, col = "orange")
+  # 
+  # x_coords <- c(-1000,3000,3000,-1000)
+  # y_coords <- c(-5000, -5000,-300, -300)
+  # poly1 <- sp::Polygon(cbind(x_coords,y_coords))
+  # firstPoly <- sp::Polygons(list(poly1), ID = "A")
+  # firstSpatialPoly <- sp::SpatialPolygons(list(firstPoly))
+  # sp::proj4string(firstSpatialPoly) <- narw_crs()
+  # firstSpatialPoly <- rgeos::gDifference(firstSpatialPoly, world)
+  # firstSpatialPoly <- rgeos::intersect(firstSpatialPoly, support_poly)
+  # 
+  # plot(firstSpatialPoly, add = TRUE, col = "lightblue")
+  # 
+  # x_coords <- c(-1000,1300,1300,-1000)
+  # y_coords <- c(1475, 1475, 5000, 5000)
+  # poly1 <- sp::Polygon(cbind(x_coords,y_coords))
+  # firstPoly <- sp::Polygons(list(poly1), ID = "A")
+  # firstSpatialPoly <- sp::SpatialPolygons(list(firstPoly))
+  # sp::proj4string(firstSpatialPoly) <- narw_crs()
+  # firstSpatialPoly <- rgeos::gDifference(firstSpatialPoly, world)
+  # firstSpatialPoly <- rgeos::intersect(firstSpatialPoly, support_poly)
+  # 
+  # plot(firstSpatialPoly, add = TRUE, col = "lightgreen")
   
   init_maps.seus <- purrr::map(.x = init_maps, .f = ~warp(.x, coords, -5000, -300, -1000, 3000))
   init_maps.gsl <- purrr::map(.x = init_maps, .f = ~warp(.x, coords, 1475, 5000, -1000, 1300))
@@ -218,25 +253,6 @@ narw <- function(nsim = 1e3,
       nsim = nsim
     )
   ) |> purrr::set_names(nm = cohorts[id %in% cohortID, abb])
-  
-  
-  # test_inits <- function(ind){
-  #   xinit = matrix(data = coords[init.inds[[1]], 'x'], nrow = nrow(init.inds[[1]]))
-  #   yinit = matrix(data = coords[init.inds[[1]], 'y'], nrow = nrow(init.inds[[1]]))
-  #   plot(regions)
-  #   plot(world, add = T, col = "grey")
-  #   points(xinit[,ind], yinit[,ind], pch = 16, col = c(rep("#cb4154", 2), rep("#4199cb", 3), rep("orange",4), "#41cbb8", rep("#cb4154", 2)))
-  #   legend("bottomright", legend=month.abb,
-  #          fill=c(rep("#cb4154", 2), rep("#4199cb", 3), rep("orange",4), "#41cbb8", rep("#cb4154", 2))) 
-  # }
-
-
-  # init.inds <- purrr::map(.x = cohortID, 
-  #   .f = ~init_xy(maps = maps, 
-  #                 coords = coords, 
-  #                 cohort.id = .x, 
-  #                 nsim = nsim)) |> 
-  #   purrr::set_names(nm = cohorts[id %in% cohortID, abb])
   
   # ............................................................
   # Run simulation
@@ -327,7 +343,10 @@ narw <- function(nsim = 1e3,
                                 stressors = stressors,
                                 growth = growth,
                                 starvation = starvation,
-                                progress = FALSE)} # End foreach loop
+                                nursing_cessation = cease.nursing,
+                                progress = FALSE
+                                )
+                              } # End foreach loop
     
     names(out) <- cohorts[id %in% cohortID, abb]
     
@@ -350,8 +369,8 @@ narw <- function(nsim = 1e3,
     
     out <- list(NARW_simulator(
       cohortID = cohortID,
-      seus = migration.df[[1]][,1],
-      gsl = migration.df[[1]][,2],
+      seus = migration.df[[1]][, 1],
+      gsl = migration.df[[1]][, 2],
       densities = maps,
       densities_seus = maps.weighted.seus,
       densities_gsl = maps.weighted.gsl,
@@ -366,15 +385,17 @@ narw <- function(nsim = 1e3,
       regions = regionsmap,
       M = n.prop, # Number of proposals used in the importance sampler for movement (Michelot, 2019)
       stepsize = step.size / 2, # Movement framework involves two half-steps (Michelot 2019, 2020)
-      xinit = matrix(data = coords[init.inds[[1]], 'x'], nrow = nrow(init.inds[[1]])),
-      yinit = matrix(data = coords[init.inds[[1]], 'y'], nrow = nrow(init.inds[[1]])),
+      xinit = matrix(data = coords[init.inds[[1]], "x"], nrow = nrow(init.inds[[1]])),
+      yinit = matrix(data = coords[init.inds[[1]], "y"], nrow = nrow(init.inds[[1]])),
       support = geomap,
       limits = map_limits,
       resolution = map_resolution,
       stressors = stressors,
       growth = growth,
       starvation = starvation,
-      progress = ifelse(progress, TRUE, FALSE)))
+      nursing_cessation = cease.nursing,
+      progress = ifelse(progress, TRUE, FALSE)
+    ))
     
   }
   
@@ -412,37 +433,70 @@ narw <- function(nsim = 1e3,
   # ............................................................
   # MORTALITY AND BODY CONDITION
   # ............................................................
-
+  
   gam.dt <- purrr::map(.x = seq_along(cohortID), .f = ~ {
 
-   outsim[["sim"]][[.x]][, death:= `if`(all(alive==0), 1, max(which(alive==1))), whale]
+   outsim[["sim"]][[.x]][, death:= `if`(all(alive==0), 1, max(which(alive==1))+1), whale] # This is the row not the day
+   outsim[["sim"]][[.x]][, death:= `if`(death > length(date_seq), NA, death), list(whale, day)]
     
-   dt_adjuv <- purrr::reduce(list(
+   dt_adjuv <- 
+     
+     purrr::reduce(list(
+     
      # Starting condition
      outsim[["sim"]][[.x]][day == 0, list(cohort = cohort, cohort_name = cohort_name, start_bc = bc), whale],
+     
      # Finishing conditions
-     outsim[["sim"]][[.x]][day == 365, list(end_bc = bc, alive, abort, strike, starve), whale],
+     outsim[["sim"]][[.x]][day == length(date_seq)-1, list(end_bc = bc, alive, abort, strike, starve, died), whale],
+     
      # Date, day, region and coordinates of when death occurred
      outsim[["sim"]][[.x]][, .SD[death], .SDcols = c("date", "day", "easting", "northing", "region"), whale] |> dplyr::distinct()
-    ), dplyr::left_join, by = "whale") |> 
-     dplyr::mutate(born = 1)
+    
+     ), dplyr::left_join, by = "whale") |> 
+     dplyr::mutate(born = 1, event = "death")
 
+   outsim[["sim"]][[.x]]$death <- NULL
+   
   if (cohortID[.x] == 5) {
     
     outsim[["sim"]][[.x]][, dob:= `if`(all(born==0), 1, min(which(born==1))), whale]
-    outsim[["sim"]][[.x]][, death_calf:= `if`(all(alive_calf==0), dob, max(which(alive_calf==1))), whale]
+    outsim[["sim"]][[.x]][, death_calf:= `if`(all(alive_calf==0) & sum(born)>1, dob, max(which(alive_calf==1))), whale]
+    # outsim[["sim"]][[.x]][, death_calf:= `if`(death_calf > length(date_seq), NA, death_calf), list(whale, day)]
+    
+    calf_columns <- c("cohort_calf", "cohort_name", "alive_calf", "bc_calf", "born", "date", "day", "easting", "northing", "region")
     
     dt_calves <- purrr::reduce(list(
-      # Starting condition
-      outsim[["sim"]][[.x]][, .SD[dob], .SDcols = c("cohort_calf", "cohort_name", "bc_calf", "born"), whale] |>
-        dplyr::distinct() |> 
-        dplyr::rename(start_bc = bc_calf, cohort = cohort_calf),
+      
+      dplyr::bind_rows(
+        
+        # Births
+        outsim[["sim"]][[.x]][, .SD[dob], .SDcols = calf_columns, whale] |>
+          dplyr::distinct() |>
+          dplyr::mutate(event = "birth") |>
+          dplyr::rename(start_bc = bc_calf, cohort = cohort_calf, alive = alive_calf),
+        
+        # Deaths
+        outsim[["sim"]][[.x]][, .SD[death_calf], .SDcols = calf_columns, whale] |>
+          dplyr::distinct() |>
+          dplyr::mutate(event = "death") |>
+          dplyr::rename(start_bc = bc_calf, cohort = cohort_calf, alive = alive_calf) |> 
+          dplyr::mutate(date = replace(date, alive == 1, NA),
+                        day = replace(day, alive == 1, NA),
+                        easting = replace(easting, alive == 1, NA),
+                        northing = replace(northing, alive == 1, NA),
+                        region = replace(region, alive == 1, NA))
+      ) |> dplyr::select(-alive),
+      
       # Finishing conditions
-      outsim[["sim"]][[.x]][day == 365, list(end_bc = bc, alive, abort, strike, starve), whale],
-      # Date, day, region and coordinates of when death occurred
-      outsim[["sim"]][[.x]][, .SD[death_calf], .SDcols = c("date", "day", "easting", "northing", "region"), whale] |> dplyr::distinct()
-    ), dplyr::left_join, by = "whale") |> 
-      dplyr::relocate(born, .after = dplyr::last_col())
+      outsim[["sim"]][[.x]][day == length(date_seq) - 1, list(end_bc = bc_calf, alive_calf, abort, strike_calf, starve_calf, died_calf), whale] |> 
+        dplyr::rename(alive = alive_calf, strike = strike_calf, starve = starve_calf, died = died_calf)
+    ),
+    
+    dplyr::left_join,
+    by = "whale")
+      
+      outsim[["sim"]][[.x]]$dob <- NULL
+      outsim[["sim"]][[.x]]$death_calf <- NULL
     
   } else {
     dt_calves <- data.table::data.table()
@@ -452,30 +506,38 @@ narw <- function(nsim = 1e3,
   
   # Add full cohort information
   gam.dt <- data.table::merge.data.table(x = gam.dt, y = cohorts, by.x = "cohort", by.y = "id", all.x = TRUE)
-  data.table::setcolorder(gam.dt,
-  c("cohort", "cohort_name", "name", "class", "abb", "whale", "alive", "start_bc", "end_bc", "starve", "strike", "date", "day", "easting", "northing", "region"))
+  
+  data.table::setcolorder(gam.dt, c("cohort", "cohort_name", "name", "class", "abb", "whale", "alive", "start_bc", "end_bc", "starve", "strike", "date", "day", "easting", "northing", "region"))
   gam.dt[cohort == 0, cohort_name:= "Calves (male, female)"]
-  gam.dt[,cause_death:= ifelse(strike == 1, "strike", ifelse(starve == 1, "starve", "NA"))]
+ 
+   gam.dt[, cause_death:= ifelse(strike == 1, "strike",
+                               ifelse(starve == 1, "starve", 
+                                      ifelse(died == 1, "other", "none")))]
+   
+   gam.dt <- gam.dt |> dplyr::mutate(date = lubridate::as_date(date))
   
   # ............................................................
   # Deaths
   # ............................................................
   
-  locs.dead <- gam.dt[alive == 0 & born == 1]
+  locs.dead <- gam.dt[event == "death" & alive == 0 & born == 1]
   data.table::setorder(locs.dead, -cohort, whale)
-
+  # if (nrow(locs.dead) == 0) locs.dead <- list(NULL)
+  
   # ............................................................
   # Births
   # ............................................................
   
   if (5 %in% cohortID) {
-   locs.birth <- gam.dt[cohort == 0 & born == 1]
-  #   locs.birth <-
-  #     outsim[["sim"]][[cohorts[id == 5, abb]]][day > 0, .SD[ifelse(which.max(born) == 1, 0, which.max(born))],
-  #       .SDcols = c("date", "day", "cohort_calf", "easting", "northing", "region"), whale
-  #     ] |>
-  #     dplyr::mutate(event = "birth", date = lubridate::as_date(date))
-    if (nrow(locs.birth) == 0) locs.birth <- list(NULL)
+    
+   locs.birth <- gam.dt[event == "birth" & cohort == 0 & born == 1]
+   # if (nrow(locs.birth) == 0) locs.birth <- list(NULL)
+   
+    # locs.birth <-
+    #   outsim[["sim"]][[cohorts[id == 5, abb]]][day > 0, .SD[ifelse(which.max(born) == 1, 0, which.max(born))],
+    #     .SDcols = c("date", "day", "cohort_calf", "easting", "northing", "region"), whale
+    #   ] |> dplyr::mutate(event = "birth", date = lubridate::as_date(date)) |> data.table::as.data.table()
+
   } else {
     locs.birth <- list(NULL)
   }
@@ -653,7 +715,8 @@ narw <- function(nsim = 1e3,
   
   class(outsim) <- c("narwsim", class(outsim))
   class(outsim$init$xy) <- c("xyinits", class(outsim$init$xy))
-  cat("\nDone!\n")
+  if(length(cohortID)==1) cat("\n")
+  cat("Done!\n")
   cat(paste0("Time elapsed: ", run_time))
   gc()
   return(outsim)

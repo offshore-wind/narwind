@@ -103,7 +103,8 @@ predict.narwsim <- function(obj,
   cohort.vec <- do.call(c, sapply(X = 1:nrow(cohorts), FUN = function(x) rep(cohorts$id[x], each = N0[x])))
   
   # Reproductive females - 4% never reproduce
-  reprod.fem <- rbinom(n = sum(N0), size = 1, prob = ifelse(cohort.vec == 6, (1 - 0.04), 1))
+  nonrep <- 0.04
+  reprod.fem <- rbinom(n = sum(N0), size = 1, prob = ifelse(cohort.vec == 6, (1 - nonrep), 1))
   
   # Number of individuals in each cohort
   narw.pop <- array(
@@ -227,6 +228,8 @@ predict.narwsim <- function(obj,
                                     surv_preds[["4"]](bc) * (cohort.vec == 4) +
                                     surv_preds[["5"]](bc) * (cohort.vec == 5) +
                                     surv_preds[["6"]](bc) * (cohort.vec == 6))
+    
+    # narw.indiv[1, "p_surv", ] <- 0.85
 
     #'------------------------------------------------------
     # Loop over years
@@ -267,8 +270,7 @@ predict.narwsim <- function(obj,
             age = narw.indiv[i, "age", ],
             female = narw.indiv[i, "female", ],
             rest = narw.indiv[i-1, "rest", ],
-            abort = abort.rate
-          )
+            abort = abort.rate)
         
         #' ----------------------------
         # GROWTH
@@ -282,13 +284,13 @@ predict.narwsim <- function(obj,
         
         # Predict new body condition from current body condition
         narw.indiv[i, "bc", ] <-
-          alive * (bc_preds[["0"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 0) +
-                     bc_preds[["1"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 1) +
-                     bc_preds[["2"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 2) +
-                     bc_preds[["3"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 3) +
-                     bc_preds[["4"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 4) +
-                     bc_preds[["5"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 5) +
-                     bc_preds[["6"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i, "cohort", ] == 6))
+          alive * (bc_preds[["0"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 0) +
+                     bc_preds[["1"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 1) +
+                     bc_preds[["2"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 2) +
+                     bc_preds[["3"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 3) +
+                     bc_preds[["4"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 4) +
+                     bc_preds[["5"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 5) +
+                     bc_preds[["6"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 6))
         
         # Increment total mass
         narw.indiv[i, "tot_mass", ] <- alive * narw.indiv[i, "lean_mass", ] / (1 - narw.indiv[i, "bc", ])
@@ -334,7 +336,7 @@ predict.narwsim <- function(obj,
             )
           )
           
-          new.calves[i,,] <- add_calf(new.births, mat.attribs)
+          new.calves[i,,] <- add_calf(new.births, mat.attribs, nonrep)
           narw.indiv <- abind::abind(narw.indiv, new.calves, along = 3)
         }
         
@@ -355,6 +357,7 @@ predict.narwsim <- function(obj,
           # 0.95 * narw.indiv[i, "alive", ]
 
         narw.indiv[i, "p_surv", ] <- ps
+        # narw.indiv[i, "p_surv", ] <-  0.85 * narw.indiv[i, "alive", ]
         
         #' ----------------------------
         # TOTALS

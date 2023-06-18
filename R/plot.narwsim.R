@@ -39,7 +39,7 @@ plot.narwsim <- function(obj,
   bymonth <- FALSE
   bywhale <- FALSE
   cohortID <- obj$param$cohortID
-  whaleID <- 1:obj$param$nsim
+  if(is.null(whaleID)) whaleID <- 1:obj$param$nsim
   
   # Default values
   if(length(args) > 0){
@@ -69,7 +69,7 @@ plot.narwsim <- function(obj,
 
   if(what == "inits"){
     
-    if (is.null(whaleID)) {
+    if (!is.null(whaleID)) {
       for (k in 1:length(obj$init$xy)) {
         if (!"xyinits" %in% class(obj$init$xy)) stop("Input not recognized")
         par(mfrow = c(3, 4))
@@ -163,7 +163,7 @@ plot.narwsim <- function(obj,
   # Generate plots
   # ....................................
   
-  COLORS <- c('starve' = 'firebrick', 'strike' = 'deepskyblue4', 'birth' = "#15A471")
+  COLORS <- c('starve' = 'firebrick', 'strike' = 'deepskyblue4', 'birth' = "#15A471", 'other' = 'darkorange')
   SHAPES <- c('Calves' = 1, 'Juveniles' = 16, 'Adults' = 16)
   
   plot.list <- purrr::set_names(cohortID) |>
@@ -177,6 +177,8 @@ plot.narwsim <- function(obj,
       # tracks[cohort_name == .y, cohort_name:= new.name]
       tracks.cohort$cohort_name <- new.name
       locs.dead[cohort %in% c(0,5), cohort_name:= new.name]
+      # if("data.table" %in% class(locs.birth)) 
+      locs.birth[cohort %in% c(0,5), cohort_name:= new.name]
     }
 
     # Plot base map (land)
@@ -222,7 +224,7 @@ plot.narwsim <- function(obj,
         ggplot2::geom_point(data = locs.dead[cohort > 0 & whale %in% whaleID & abb %in% cohorts[id == .x, abb]],
                             aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class))) +
         
-        {if(.x == 5 & !is.null(locs.birth[[1]])) 
+        {if(.x == 5 & "data.table" %in% class(locs.birth)) 
           ggplot2::geom_point(data = locs.birth[whale %in% whaleID], aes(x = easting, y = northing, colour = factor(event))) } +
         
         ggplot2::geom_point(data = locs.dead[cohort == 0 & whale %in% whaleID& abb %in% cohorts[id == .x, abb]],
