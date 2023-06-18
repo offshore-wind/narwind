@@ -4,6 +4,7 @@
 #include <RcppEigen.h>
 #include "geodesic.h"
 #include "bioenergetics.h"
+#include <math.h>
 
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(cpp11)]]
@@ -11,13 +12,15 @@
 // Standard deviations of the Normal half-step function
 double sigma_move(int r){
   
-  // double sigma_travel = 19.28;
-  // double sigma_feed = 3.5;
-  // double sigma_nurse = 3.05;
+  // Standard deviation of Normal half-step density given by 
+  // sigma = mean step length / sqrt(pi)
   
-  double sigma_travel = 20.33374; // estRayleighParams(80, 150)
-  double sigma_feed = 3.807328; // estRayleighParams(6.5, 30)
-  double sigma_nurse = 10.49833; // estRayleighParams(30, 80)
+  // Scale parameter of corresponding Rayleigh distribution given by
+  // lambda = sigma * sqrt(2)
+  
+  double sigma_travel = 45/std::sqrt(M_PI);
+  double sigma_feed = 6.75/std::sqrt(M_PI); 
+  double sigma_nurse = 18.5/std::sqrt(M_PI);
   
   // Travel
   if(r == 7 | r == 8){ // MIDA and SCOS
@@ -26,6 +29,11 @@ double sigma_move(int r){
     return sigma_nurse;
   } else { // BOF, CABOT, CCB, GOM, GSL, SNE
     return sigma_feed;
+    // if(feed == 1){
+    //   return sigma_feed;
+    // } else {
+    //   return sigma_nurse;
+    // }
   }
 }
 
@@ -161,11 +169,6 @@ public:
 
         }
       }
-
-      // if(environment(x0,y0, 'D')==0) std::cout << "Yes1" << std::endl;
-      
-      // int crossland = environment(x0, y0, 'D') > 0;
-      // std::cout<< crossland << std::endl;
       
       // Sample m points in the circle, and compute their weights
       // Use asterisks to create pointers
@@ -200,8 +203,10 @@ public:
         char lyr;
         if(animal.seus == 1 & animal.gsl == 0){
           lyr = 'S';
+          // lyr = 'D';
         } else if(animal.seus == 0 & animal.gsl == 1){
           lyr = 'G';
+          // lyr = 'D';
         } else {
           lyr = 'D';
         }
@@ -385,8 +390,10 @@ public:
         char lyr;
         if(animal.seus == 1 & animal.gsl == 0){
           lyr = 'S';
+          // lyr = 'D';
         } else if(animal.seus == 0 & animal.gsl == 1){
           lyr = 'G';
+          // lyr = 'D';
         } else {
           lyr = 'D';
         }
