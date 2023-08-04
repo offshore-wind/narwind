@@ -65,7 +65,7 @@ print.narwsim <- function(obj, ...){
     }
     print(sim_dt[, list(whale, day,
       cohort, gsl, seus, alive, age, bc, length, length_a, length_b, length_c,
-      mass, leanmass, fatmass, mass_a, mass_b, mouth_r, mouth_a, mouth_w, abort
+      mass, leanmass, fatmass, mass_a, mass_b, mouth_r, mouth_a, mouth_w, abort, starve, died, date_died, p_died
     )])
 
     if (k == 5) {
@@ -75,10 +75,10 @@ print.narwsim <- function(obj, ...){
         La_calf, Lb_calf, Lc_calf,
         mass_calf, leanmass_calf, fatmass_calf,
         ma_calf, mb_calf, mouth_r_calf,
-        mouth_a_calf, mouth_w_calf
+        mouth_a_calf, mouth_w_calf, starve_calf, died_calf, date_died_calf 
       )]
       colnames(c.att) <- c("whale", "day", "cohort", "alive", "age", "bc", "length", "length_a", "length_b", "length_c",
-      "mass", "leanmass", "fatmass", "mass_a", "mass_b", "mouth_r", "mouth_a", "mouth_w")
+      "mass", "leanmass", "fatmass", "mass_a", "mass_b", "mouth_r", "mouth_a", "mouth_w", "starve", "died", "date_died")
       print(c.att)
     }
 
@@ -105,7 +105,7 @@ print.narwsim <- function(obj, ...){
     cat("Activity budgets \n")
     cat("--------------------------\n")
     cat("\n")
-    print(sim_dt[, list(whale, day, d_travel, swimspeed, t_travel, t_feed, t_nurse, t_rest, t_sum, t_remain)])
+    print(sim_dt[, list(whale, day, d_travel, swimspeed, glide, glide_feed, glide_echelon, t_travel, t_feed, t_rest_nurse)])
     cat("\n")
 
     cat("--------------------------\n")
@@ -114,13 +114,13 @@ print.narwsim <- function(obj, ...){
 
     if (k == 5) {
       cat("\n +++ Adults +++\n\n")
-      print(sim_dt[, list(whale, day, delta_fat, ED_lip, lip_anab, lip_catab)])
+      print(sim_dt[, list(whale, day, delta_fat, EDlip, EDpro, lip_anab, lip_catab, perc_muscle, perc_viscera, perc_bones)])
       cat("\n")
       cat("\n +++ Calves +++\n\n")
-      print(sim_dt[, list(whale, day, delta_fat_calf, ED_lip, lip_anab, lip_catab)])
+      print(sim_dt[, list(whale, day, delta_fat_calf, EDlip, EDpro, lip_anab, lip_catab, perc_muscle, perc_viscera, perc_bones)])
     } else {
       cat("\n")
-      print(sim_dt[, list(whale, day, delta_fat, ED_lip, lip_anab, lip_catab)])
+      print(sim_dt[, list(whale, day, delta_fat, EDlip, EDpro, lip_anab, lip_catab, perc_muscle, perc_viscera, perc_bones)])
     }
     cat("\n")
 
@@ -152,7 +152,7 @@ print.narwsim <- function(obj, ...){
     }
     print(sim_dt[, list(whale, day,
       feed, preyconc, minprey, gape, feedspeed, captEff, impedance, daylight,
-      feed_effort, targetBC, cop_mass, cop_kJ, digestEff, metabEff_juv, metabEff_ad, E_cop
+      feed_effort, eta_lwrBC, eta_upprBC, targetBC, cop_mass, cop_kJ, digestEff, metabEff_juv, metabEff_ad, E_cop
     )])
 
     # Lactating females + calves
@@ -160,7 +160,8 @@ print.narwsim <- function(obj, ...){
       cat("\n")
       cat("\n +++ Calves +++\n\n")
       print(sim_dt[, list(whale, day,
-        assim, provision, mamm_M, milk_rate, t_suckling, targetBC_calf, nursing, milk_lip, milk_pro, EDlip, EDpro
+        t_lac, assim, provision, zeta, milk_drop, eta_milk, mamm_M, mammEff, 
+        milk_rate, t_suckling, targetBC_calf, nursing, milk_lip, milk_pro
       )])
     }
     cat("\n")
@@ -174,7 +175,7 @@ print.narwsim <- function(obj, ...){
     } else {
       cat("\n")
     }
-    print(sim_dt[, list(whale, day, E_out, rmr, LC, stroke, E_growth)])
+    print(sim_dt[, list(whale, day, E_out, rmr, LC, scalar_LC, stroke, stroke_feed, E_growth)])
     
     if (k == 5) {
       cat("\n +++ Calves +++\n\n")
@@ -190,12 +191,15 @@ print.narwsim <- function(obj, ...){
       cat("--------------------------\n")
       cat("\n")
       print(sim_dt[, list(whale, day,
-        E_gest, fgrowth, placenta, hic, delta_m,
+        E_gest, fgrowth, placenta, hic, delta_fetus_m, delta_fetus_l,
         fetus_l, fetus_m, birth_l, birth_m, muscle_m, viscera_m, bones_m, blubber_m,
-        muscle_lip, muscle_pro, visc_lip, visc_pro, bone_lip, blubber_lip, blubber_pro
+        muscle_lip, muscle_pro, visc_lip, visc_pro, bone_lip, bone_pro, blubber_lip, blubber_pro,
+        prop_mu, prop_visc, prop_bones, dens_blu, dens_mu, dens_visc, dens_bo
       )])
     }
 
+
+    
     if (k == 5) {
       cat("\n")
       cat("--------------------------\n")
