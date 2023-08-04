@@ -35,7 +35,7 @@ summary.narwsim <- function(obj,
   
  # Preamble ---------------------------------------------------------------
   
-  if(!"narwsim" %in% class(obj)) stop("Input must be of class <narwsim>")
+  if(!inherits(obj, "narwsim")) stop("Object must be of class <narwsim>")
   
   cat("-------------------------------------------------------------\n")
   cat("-------------------------------------------------------------\n")
@@ -104,22 +104,48 @@ summary.narwsim <- function(obj,
     
     n.dead <- gamdat[whale %in% whaleID & cohort %in% cohortID,
                           list(born = sum(born == 1),
-                               alive = sum(alive == 1)), name] |>
+                          alive = sum(alive == 1)), name] |>
       dplyr::mutate(dead = born - alive) |> 
       dplyr::select(-born) |> 
       format_dt(direction = "row") |> 
       dplyr::rename(cohort = name)
     
-    print(knitr::kable(n.dead, format = "simple"))
+    if(5 %in% cohortID){
+    n.dead.calves <- gamdat[whale %in% whaleID & cohort ==0,
+                     list(alive = sum(alive == 1)), name] |>
+      dplyr::mutate(dead = nrow(gamdat[whale %in% whaleID & cohort ==0 & event == "birth"]) - alive) |> 
+      format_dt(direction = "row") |> 
+      dplyr::rename(cohort = name)
     
-    n.dead.region <- dead.df[, list(strike = sum(strike), 
-                                     starve = sum(starve)),
-                                 list(abb, region)] |> 
-      dplyr::mutate(strike = dplyr::coalesce(strike, 0),
-                    starve = dplyr::coalesce(starve, 0),
-                    region = dplyr::coalesce(region, "region")) |> 
-      tidyr::pivot_longer(!c(abb, region), names_to = "cause_death", values_to = "count") |> 
-      tidyr::pivot_wider(names_from = abb, values_from = count) |> 
+    print(knitr::kable(data.table::rbindlist(list(n.dead, n.dead.calves)), format = "simple"))
+    
+    } else {
+      
+      print(knitr::kable(n.dead, format = "simple"))
+    
+    }
+    
+    # Mortality by region
+    
+    if(5 %in% cohortID){
+      
+      dead.df[cohort == 0, ] <- dead.df |> 
+        dplyr::filter(cohort == 0) |> 
+        dplyr::rowwise() |> 
+        dplyr::mutate(cause_death = ifelse(sum(starve, strike, died) == 0, 
+                      paste0(cause_death, " (female)"), cause_death)) |>
+        dplyr::ungroup()
+      
+    }
+    
+    n.dead.region <- dead.df[, .N, list(abb, region, cause_death)] |> 
+      # dplyr::mutate(strike = dplyr::coalesce(strike, 0),
+      #               starve = dplyr::coalesce(starve, 0),
+      #               other = dplyr::coalesce(other, 0),
+      #               region = dplyr::coalesce(region, "region")) |> 
+      # tidyr::pivot_longer(!c(abb, region), names_to = "cause_death", values_to = "count") |> 
+      tidyr::pivot_wider(names_from = abb, values_from = N) |> 
+      {\(.) {replace(.,is.na(.),0)}}() |> 
       dplyr::arrange(cause_death, region)
     
     if(nrow(n.dead.region)> 0){
@@ -127,19 +153,9 @@ summary.narwsim <- function(obj,
       n.dead.region <- split(n.dead.region, f = factor(n.dead.region$cause_death)) |> 
         purrr::map(.f = ~format_dt(.x, direction = "col"))
       
-      
       purrr::walk(.x = n.dead.region,
                   .f = ~ print(knitr::kable(.x, format = "simple")))
-      
-      # purrr::walk(.x = split(n.dead.region, f = n.dead.region$cohort),
-      #             .f = ~{
-      #               # if(vignette){
-      #               #   print(knitr::kable(.x[, 1:7], format = "simple"))
-      #               #   print(knitr::kable(.x[, c(1:2, 8:ncol(.x))], format = "simple"))
-      #               # } else {
-      #               print(knitr::kable(.x, format = "simple"))
-      #               # }
-      #               })
+    
     }
     cat("\n")
     
@@ -228,42 +244,42 @@ summary.narwsim <- function(obj,
 
       # Growth ---------------------------------------------------------------
       
-      # .....................................................
-      # GROWTH
-      # .....................................................
-      
-      body_growth_l <-
-       purrr::map(
-         .x = cohortID,
-         .f = ~ growth_curve(param = "length", 
-                             obj = obj, 
-                             cohortID = .x, 
-                             whaleID = whaleID,
-                             ylabel = "Body length (m)")
-       )
-      
-      if (4 %in% cohortID) {
-        body_growth_l <-
-          append(body_growth_l, 
-                 list(growth_curve(param = "fetus_l", 
-                                   obj = obj, 
-                                   cohortID = 4, 
-                                   whaleID = whaleID,
-                                   ylabel = "Body length (m)")))
-      }
-      
-      if (5 %in% cohortID) {
-        body_growth_l <-
-          append(body_growth_l, 
-                 list(growth_curve(param = "length_calf", 
-                                   obj = obj, 
-                                   cohortID = 5, 
-                                   whaleID = whaleID,
-                                   ylabel = "Body length (m)")))
-      }
-      
-      growth.plot <- patchwork::wrap_plots(purrr::discard(.x = body_growth_l, .p = ~is.list(.x) & length(.x) == 1))
-      print(growth.plot)
+      # # .....................................................
+      # # GROWTH
+      # # .....................................................
+      # 
+      # body_growth_l <-
+      #  purrr::map(
+      #    .x = cohortID,
+      #    .f = ~ growth_curve(param = "length", 
+      #                        obj = obj, 
+      #                        cohortID = .x, 
+      #                        whaleID = whaleID,
+      #                        ylabel = "Body length (m)")
+      #  )
+      # 
+      # if (4 %in% cohortID) {
+      #   body_growth_l <-
+      #     append(body_growth_l, 
+      #            list(growth_curve(param = "fetus_l", 
+      #                              obj = obj, 
+      #                              cohortID = 4, 
+      #                              whaleID = whaleID,
+      #                              ylabel = "Body length (m)")))
+      # }
+      # 
+      # if (5 %in% cohortID) {
+      #   body_growth_l <-
+      #     append(body_growth_l, 
+      #            list(growth_curve(param = "length_calf", 
+      #                              obj = obj, 
+      #                              cohortID = 5, 
+      #                              whaleID = whaleID,
+      #                              ylabel = "Body length (m)")))
+      # }
+      # 
+      # growth.plot <- patchwork::wrap_plots(purrr::discard(.x = body_growth_l, .p = ~is.list(.x) & length(.x) == 1))
+      # print(growth.plot)
       
       } # End plot = TRUE
   } # End what == health
@@ -577,7 +593,7 @@ summary.narwsim <- function(obj,
 
   # Stressors ---------------------------------------------------------------
   
-  if("stressors" %in% what | what == "all"){
+  if(any(c("stressors", "strike", "gear", "noise", "other") %in% what) | what == "all"){
     
     cat("\n")
     cat("=============================================================\n")
@@ -585,6 +601,8 @@ summary.narwsim <- function(obj,
     cat("=============================================================\n")
 
     ## Entanglements ---------------------------------------------------------------
+    
+    if("gear" %in% what){
     
     #'---------------------------------------
     # Entanglement rates
@@ -689,7 +707,7 @@ summary.narwsim <- function(obj,
     # Entanglement events
     #'---------------------------------------
     
-    entgl.events <- entgl.rate[, list(
+    entgl.events <- entgl.rate[n_events > 0, list(
       `No. entanglements` =
         paste0(
           round(mean(n_events), 2),
@@ -746,19 +764,31 @@ summary.narwsim <- function(obj,
       suppressWarnings(entgl.sev[
         , list(
           `minor (days)` = paste0(
-            round(mean(minor), 0),
-            " (±", round(sd(minor), 0),
-            ") [", min(minor), "–", max(minor), "]"
+            ifelse(all(minor == 0), 0, round(mean(minor[minor>0]), 0)),
+            " (±", 
+            ifelse(all(minor == 0) | is.na(sd(minor[minor>0])), 0, round(sd(minor[minor>0]), 0)),
+            ") [", 
+            ifelse(all(minor == 0), 0, min(minor[minor>0])),
+            "–", 
+            ifelse(all(minor==0), 0, max(minor[minor>0])), "]"
           ),
           `moderate (days)` = paste0(
-            round(mean(moderate), 0),
-            " (±", round(sd(moderate), 0),
-            ") [", min(moderate), "–", max(moderate), "]"
+            ifelse(all(moderate == 0), 0, round(mean(moderate[moderate>0]), 0)),
+            " (±", 
+            ifelse(all(moderate == 0) | is.na(sd(moderate[moderate>0])), 0, round(sd(moderate[moderate>0]), 0)),
+            ") [", 
+            ifelse(all(moderate == 0), 0, min(moderate[moderate>0])),
+            "–", 
+            ifelse(all(moderate==0), 0, max(moderate[moderate>0])), "]"
           ),
           `severe (days)` = paste0(
-            round(mean(severe), 0),
-            " (±", round(sd(severe), 0),
-            ") [", min(severe), "–", max(severe), "]"
+            ifelse(all(severe == 0), 0, round(mean(severe[severe>0]), 0)),
+            " (±", 
+            ifelse(all(severe == 0) | is.na(sd(severe[severe>0])), 0, round(sd(severe[severe>0]), 0)),
+            ") [", 
+            ifelse(all(severe == 0), 0, min(severe[severe>0])),
+            "–", 
+            ifelse(all(severe==0), 0, max(severe[severe>0])), "]"
           )
         ),
         cohort
@@ -790,7 +820,6 @@ summary.narwsim <- function(obj,
       
     }
     
-  
   gear_risk <- purrr::set_names(cohort.ab) |>
       purrr::map(.f = ~ sim[[.x]][
         alive == 1 & day > 0,
@@ -810,25 +839,29 @@ summary.narwsim <- function(obj,
   
   cat("\n+++++++++++ Entanglements +++++++++++")
   
-  if(length(cohortID) > 1 | (length(cohortID) == 1 & all(cohortID == 5))){
-    print(knitr::kable(entgl.bycohort, format = "simple"))
-    if(nrow(head.bycohort) > 0) print(knitr::kable(head.bycohort, format = "simple"))
-  } else {
-    print(knitr::kable(entgl.overall, format = "simple"))
-    print(knitr::kable(head.overall, format = "simple"))
-  }
+  # if(length(cohortID) > 1 | (length(cohortID) == 1 & all(cohortID == 5))){
+  #   print(knitr::kable(entgl.bycohort, format = "simple"))
+  #   if(nrow(head.bycohort) > 0) print(knitr::kable(head.bycohort, format = "simple"))
+  # } else {
+  #   print(knitr::kable(entgl.overall, format = "simple"))
+  #   print(knitr::kable(head.overall, format = "simple"))
+  # }
   
-  print(knitr::kable(purrr::reduce(list(entgl.events, gear_risk), 
-                                   dplyr::left_join, by = 'cohort'), format = "simple"))
-  
+  print(knitr::kable(entgl.overall, format = "simple"))
+  print(knitr::kable(head.overall, format = "simple"))
+  print(knitr::kable(entgl.bycohort, format = "simple"))
+  print(knitr::kable(purrr::reduce(list(entgl.events, gear_risk), dplyr::left_join, by = 'cohort'), format = "simple"))
   print(knitr::kable(entgl.durations, format = "simple"))
   
+    }
   
   ## Vessel strikes ---------------------------------------------------------------
   
+  if("strike" %in% what){
+    
   strike.rate <- purrr::set_names(cohort.ab) |>
     purrr::map(.f = ~ sim[[.x]][
-      day > 0,
+      day > 0 & alive == 0,
       list(strike = max(strike)), whale]) |>
     tibble::enframe() |>
     tidyr::unnest(cols = c(value)) |>
@@ -847,18 +880,20 @@ summary.narwsim <- function(obj,
   strike.rate <- data.table::rbindlist(list(strike.rate, strike.rate.calf))
   
   }
-  
-  strike.overall <- suppressWarnings(strike.rate |> 
+
+  strike.overall <- suppressWarnings(
+    strike.rate |> 
     janitor::tabyl(var1 = strike)) |> 
     dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
     dplyr::select(strike, rate) |> 
     dplyr::mutate(strike = ifelse(strike == 0, "no", "yes"))
+
   
-  strike.overall.calf <- suppressWarnings(strike.rate.calf |> 
-    janitor::tabyl(var1 = strike)) |> 
-    dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
-    dplyr::select(strike, rate) |> 
-    dplyr::mutate(strike = ifelse(strike == 0, "no", "yes"))
+  # strike.overall.calf <- suppressWarnings(strike.rate.calf |> 
+  #   janitor::tabyl(var1 = strike)) |> 
+  #   dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
+  #   dplyr::select(strike, rate) |> 
+  #   dplyr::mutate(strike = ifelse(strike == 0, "no", "yes"))
   
   # By cohort
   strike.bycohort <- suppressWarnings(suppressMessages(strike.rate |> 
@@ -885,17 +920,68 @@ summary.narwsim <- function(obj,
   
   cat("\n\n+++++++++++ Vessel strikes +++++++++++")
   
-  if(length(cohortID) > 1 | (length(cohortID) == 1 & all(cohortID == 5))){
-    print(knitr::kable(strike.bycohort, format = "simple"))
-  } else {
-    print(knitr::kable(strike.overall, format = "simple"))
-  }
-
+  print(knitr::kable(strike.overall, format = "simple"))
+  print(knitr::kable(strike.bycohort, format = "simple"))
   print(knitr::kable(strike_risk, format = "simple"))
  
+  }
+  
+  ## Mortality from other sources --------------------------------------------
+
+ if("other" %in% what){
+    
+  mortality <- purrr::set_names(cohort.ab) |>
+    purrr::map(.f = ~ sim[[.x]][
+      day > 0,
+      list(dead = max(died)), whale]) |>
+    tibble::enframe() |>
+    tidyr::unnest(cols = c(value)) |>
+    dplyr::rename(cohort = name) |> 
+    data.table::as.data.table()
+  
+  if(5 %in% cohortID){
+    
+    mortality.calf <- 
+      suppressWarnings(sim[["ad(f,l)"]][day > 0, list(dead = max(died_calf), born = max(born)), whale] |>
+                         dplyr::mutate(cohort = "c(m,f)") |> 
+                         dplyr::relocate(cohort, .before = "whale") |> 
+                         dplyr::filter(born == 1) |> 
+                         dplyr::select(-born))
+    
+    mortality.rate <- data.table::rbindlist(list(mortality, mortality.calf))
+    
+  }
+  
+  mortality.overall <- suppressWarnings(mortality.rate |> janitor::tabyl(var1 = dead)) |> 
+    dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
+    dplyr::select(dead, rate) |>
+    dplyr::rename(mortality = dead) |> 
+    dplyr::mutate(mortality = ifelse(mortality == 0, "alive", "dead"))
+  
+  mortality.overall.calf <- suppressWarnings(mortality.calf |> janitor::tabyl(var1 = dead)) |> 
+    dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
+    dplyr::select(dead, rate) |> 
+    dplyr::rename(mortality = dead) |> 
+    dplyr::mutate(mortality = ifelse(mortality == 0, "alive", "dead"))
+  
+  # By cohort
+  mortality.bycohort <- suppressWarnings(suppressMessages(mortality.rate |> 
+                                                         janitor::tabyl(var1 = cohort, var2 = dead)) |> 
+                                        format_dt(direction = "row") |> 
+                                        dplyr::rename_at(dplyr::vars(starts_with("0")), ~"alive") |> 
+                                        dplyr::rename_at(dplyr::vars(starts_with("1")), ~"dead"))
+  
+  cat("\n\n+++++++++++ Other sources of mortality +++++++++++")
+  
+  print(knitr::kable(mortality.overall, format = "simple"))
+  print(knitr::kable(mortality.bycohort, format = "simple"))
+ 
+ }
   
   ## Noise ---------------------------------------------------------------
   
+    if("noise" %in% what){
+    
   noise_lvl <- purrr::set_names(cohort.ab) |>
     purrr::map(.f = ~ sim[[.x]][
       alive == 1 & day > 0,
@@ -948,7 +1034,7 @@ summary.narwsim <- function(obj,
   
   cat("\n\n+++++++++++ Pile-driving noise +++++++++++")
   print(knitr::kable(purrr::reduce(list(noise_lvl, dB_thresh, beh.resp), dplyr::left_join, by = 'cohort'), format = "simple"))
-  
+    }
   }
   
   # Energy budgets ---------------------------------------------------------------
