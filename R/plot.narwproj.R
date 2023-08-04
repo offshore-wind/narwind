@@ -24,6 +24,8 @@ plot.narwproj <- function(obj,
                           n.breaks = 5,
                           vignette = FALSE){
   
+  if(!inherits(obj, "narwproj")) stop("Object must be of class <narwproj>")
+  
   gtable_filter_remove <- function (x, name, trim = TRUE){
     matches <- !(x$layout$name %in% name)
     x$layout <- x$layout[matches, , drop = FALSE]

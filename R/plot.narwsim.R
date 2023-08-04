@@ -41,6 +41,10 @@ plot.narwsim <- function(obj,
   cohortID <- obj$param$cohortID
   if(is.null(whaleID)) whaleID <- 1:obj$param$nsim
   
+  if(bymonth & bywhale) stop("<bymonth> and <bywhale> cannot both be set to TRUE")
+  if(!what %in% c("inits", "map", "gam", "feed", "migrate")) stop("Unrecognized input to <what> argument")
+  if(!inherits(obj, "narwsim")) stop("Object must be of class <narwsim>")
+  
   # Default values
   if(length(args) > 0){
     if("nmax" %in% names(args)) nmax <- args[["nmax"]]
@@ -51,22 +55,15 @@ plot.narwsim <- function(obj,
     if("whaleID" %in% names(args)) whaleID <- args[["whaleID"]]
   }
   
-  if(bymonth & bywhale) stop("<bymonth> and <bywhale> cannot both be set to TRUE")
-  if(!what %in% c("inits", "map", "prob")) stop("Unrecognized input to <what> argument")
-  
-  # obj = m
-  # whaleID = NULL
-  # animate = FALSE
-  # web = FALSE
-  # nmax = 100
-  
-  if(!"narwsim" %in% class(obj)) stop("Input must be an object of class <narwsim>")
-  
   cohorts <- obj$param$cohorts
   cohort.ab <- cohorts[id %in% cohortID, abb]
   cohort.names <- cohorts[id %in% cohortID, name]
   n.ind <- obj$param$nsim
 
+  #' -------------------------------------------------------
+  # INITIAL LOCATIONS ---- 
+  #' -------------------------------------------------------
+  
   if(what == "inits"){
     
     if (!is.null(whaleID)) {
@@ -95,42 +92,55 @@ plot.narwsim <- function(obj,
       }
     }
     
-  } else if (what == "prob") {
+    #' -------------------------------------------------------
+    # FITTED GAMs ----
+    #' -------------------------------------------------------  
     
-    cohorts <- obj$param$cohorts
-    
-    x_axis <- seq(0,1,0.01)
-    
-    bc_preds <- obj$gam$pred$bc
-    surv_preds <- obj$gam$pred$surv
-    
-    if(5 %in% cohortID) which.cohorts <- c(0, cohortID) else which.cohorts <- cohortID
-    
-    pred.df <- tibble::tibble(cohort = factor(do.call(c, purrr::map(.x = which.cohorts, .f = ~rep(.x, each = length(x_axis))))),
-                              start_bc = rep(x_axis, length(which.cohorts)))
-    
-    pred.df$surv <- apply(X = pred.df, MARGIN = 1, FUN = function(x) surv_preds[[as.character(x[1])]](x[2]))
-    pred.df$bc <- apply(X = pred.df, MARGIN = 1, FUN = function(x) bc_preds[[as.character(x[1])]](x[2]))
-    
-    pred.df <- pred.df |> tidyr::pivot_longer(!c(cohort, start_bc), names_to = "variable", values_to = "value")
-    
+    } else if (what == "gam") {
 
-    to_string <- ggplot2::as_labeller(c('bc' = "Body condition", 'surv' = "Survival"))
-    linecol <- c("black", "#f46a9b", "#ef9b20", "#edbf33", "#87bc45", "#27aeef", "#b33dc6")
+      plot(obj$gam$fit$surv, scheme = 1, scale = 0, pages = 1)
+      plot(obj$gam$fit$bc, scheme = 1, scale = 0, pages = 1)
     
+  # } else if (what == "prob") {
+  #   
+  #   cohorts <- obj$param$cohorts
+  #   
+  #   x_axis <- seq(0,1,0.01)
+  #   
+  #   bc_preds <- obj$gam$pred$bc
+  #   surv_preds <- obj$gam$pred$surv
+  #   
+  #   if(5 %in% cohortID) which.cohorts <- c(0, cohortID) else which.cohorts <- cohortID
+  #   
+  #   pred.df <- tibble::tibble(cohort = factor(do.call(c, purrr::map(.x = which.cohorts, .f = ~rep(.x, each = length(x_axis))))),
+  #                             start_bc = rep(x_axis, length(which.cohorts)))
+  #   
+  #   pred.df$surv <- apply(X = pred.df, MARGIN = 1, FUN = function(x) surv_preds[[as.character(x[1])]](x[2]))
+  #   pred.df$bc <- apply(X = pred.df, MARGIN = 1, FUN = function(x) bc_preds[[as.character(x[1])]](x[2]))
+  #   
+  #   pred.df <- pred.df |> tidyr::pivot_longer(!c(cohort, start_bc), names_to = "variable", values_to = "value")
+  #   
+  # 
+  #   to_string <- ggplot2::as_labeller(c('bc' = "Body condition", 'surv' = "Survival"))
+  #   linecol <- c("black", "#f46a9b", "#ef9b20", "#edbf33", "#87bc45", "#27aeef", "#b33dc6")
+  #   
+  #   
+  #   ggplot2::ggplot(data = pred.df) +
+  #     ggplot2::geom_line(aes(x = start_bc, y = value, col = cohort), linewidth = 0.65) +
+  #     theme_narw() +
+  #     xlab("Body condition") +
+  #     ylab("Probability") +
+  #     ggplot2::scale_y_continuous(limits = c(0,1), breaks = seq(0,1,0.1)) +
+  #     ggplot2::scale_color_manual(values = linecol, labels = cohorts$name) +
+  #     ggplot2::facet_wrap(~variable, scales = "free", labeller = to_string) +
+  #     ggplot2::theme(legend.position = "right",
+  #                    legend.title = ggplot2::element_blank())
+  #   
+    #' -------------------------------------------------------
+    # MOVEMENT TRACKS ----
+    #' -------------------------------------------------------  
     
-    ggplot2::ggplot(data = pred.df) +
-      ggplot2::geom_line(aes(x = start_bc, y = value, col = cohort), linewidth = 0.65) +
-      theme_narw() +
-      xlab("Body condition") +
-      ylab("Probability") +
-      ggplot2::scale_y_continuous(limits = c(0,1), breaks = seq(0,1,0.1)) +
-      ggplot2::scale_color_manual(values = linecol, labels = cohorts$name) +
-      ggplot2::facet_wrap(~variable, scales = "free", labeller = to_string) +
-      ggplot2::theme(legend.position = "right",
-                     legend.title = ggplot2::element_blank())
-    
-  } else if (what == "map") {
+  } else if (what %in% c("map", "feed", "migrate")) {
   
   if(n.ind > nmax) {warning("Plotting only the first ", nmax, " tracks"); n.ind <- nmax}
   if(is.null(whaleID)) whaleID <- seq_len(n.ind)
@@ -140,7 +150,7 @@ plot.narwsim <- function(obj,
   locs.birth <- obj$birth
   
   locations <- purrr::set_names(x = cohort.ab) |>
-    purrr::map(.f = ~sim[[.x]][day > 0, list(date, month, whale, easting, northing, region, cohort_name)])
+    purrr::map(.f = ~sim[[.x]][day > 0, list(date, month, whale, easting, northing, region, cohort_name, feed, north)])
   
   tracks <- data.table::rbindlist(locations)
 
@@ -182,7 +192,8 @@ plot.narwsim <- function(obj,
     }
 
     # Plot base map (land)
-    base_p <- gg.opts + ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", linewidth = 0.25) +
+    base_p <- gg.opts + 
+      ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", linewidth = 0.25) +
       theme_narw(vertical = TRUE)
 
     # Produce required plot(s)
@@ -210,53 +221,88 @@ plot.narwsim <- function(obj,
         
         base_p +
         
+        # ............................................................
+        # Color by individual
+        # ............................................................
+        
         {if(bywhale) ggplot2::geom_path(data = tracks.cohort,
                 mapping = ggplot2::aes(x = easting, y = northing, group = whale, 
                                        col = factor(whale)), alpha = 0.7, linewidth = lwd) } +
         
         {if(bywhale & length(whaleID) <= 10) ggplot2::scale_color_manual(values = whaleID)} +
         
-        {if(bywhale & length(whaleID) <= 10) ggnewscale::new_scale_colour() } +
+        {if(bywhale & length(whaleID) <= 10) ggnewscale::new_scale_colour() }
+      
+      if(what == "feed"){
+        
+        track_p <- track_p +
+          ggplot2::geom_point(data = tracks.cohort,
+                              mapping = ggplot2::aes(x = easting, y = northing, group = whale, colour = factor(feed))) 
+        
+      } else if(what == "migrate"){
+        
+        track_p <- track_p +
+          ggplot2::geom_path(data = tracks.cohort,
+            mapping = ggplot2::aes(x = easting, y = northing, group = whale, colour = factor(north))) +
+          
+          {if(.x == 5 & "data.table" %in% class(locs.birth))
+            ggplot2::geom_point(data = locs.dead[cohort == 0 & whale %in% whaleID & abb %in% cohorts[id == 0, abb]],
+                                aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class)))}
+        
+      } else {
+        
+        track_p <- track_p +
+          
+          # ............................................................
+        # Same color
+        # ............................................................
         
         {if(!bywhale) ggplot2::geom_path(data = tracks.cohort,
-                           mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = lwd) }+
+             mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = lwd)} +
         
+        # ............................................................
+        # Mortality - adults
+        # ............................................................
+        
+        # Adults / juveniles
         ggplot2::geom_point(data = locs.dead[cohort > 0 & whale %in% whaleID & abb %in% cohorts[id == .x, abb]],
                             aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class))) +
         
-        {if(.x == 5 & "data.table" %in% class(locs.birth)) 
-          ggplot2::geom_point(data = locs.birth[whale %in% whaleID], aes(x = easting, y = northing, colour = factor(event))) } +
+        # ............................................................
+        # Calving events
+        # ............................................................
         
-        ggplot2::geom_point(data = locs.dead[cohort == 0 & whale %in% whaleID& abb %in% cohorts[id == .x, abb]],
-                            aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class))) +
+        {if(.x == 5 & "data.table" %in% class(locs.birth))
+            ggplot2::geom_point(data = locs.dead[cohort == 0 & whale %in% whaleID & abb %in% cohorts[id == 0, abb]],
+                                aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class)))} +
+        
+        {if(.x == 5 & "data.table" %in% class(locs.birth))
+            ggplot2::geom_point(data = locs.birth[whale %in% whaleID], aes(x = easting, y = northing, colour = factor(event)))
+        } +
+        
+        # ............................................................
+        # Color and theme options
+        # ............................................................
         
         ggplot2::scale_color_manual(values = COLORS) +
-        ggplot2::scale_shape_manual(values = SHAPES) +
-        
-        # {if(bywhale & length(whaleID) > 10) 
-        #   ggplot2::theme(
-        #   legend.title = element_blank(),
-        #   legend.position = "none",
-        #   legend.background = element_rect(fill = "white", colour = NA),
-        #   legend.text = element_text(size = 10),
-        #   legend.key = element_rect(fill = "transparent"))} +
-        # 
-        ggplot2::theme(
+        ggplot2::scale_shape_manual(values = SHAPES)
+
+    }
+     
+    track_p <- track_p +
+      ggplot2::theme(
           legend.title = element_blank(),
           legend.position = c(1000, -500),
           legend.background = element_rect(fill = "white", colour = NA),
           legend.text = element_text(size = 10),
           legend.key = element_rect(fill = "transparent"))  +
-        
         labs(color = NULL) +
-        ggplot2::coord_sf(expand = FALSE) +
         ggplot2::facet_wrap(~cohort_name) +
-        
+        ggplot2::coord_sf(expand = FALSE) +
         ggplot2::theme(plot.margin = unit(c(-0.30,0,0,0), "null"))
-      
     }
-    
-    track_p
+
+    print(track_p)
   })
   
   if(web){
