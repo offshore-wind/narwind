@@ -95,7 +95,8 @@ Rcpp::NumericVector prob_migration(int n, std::string destination, int cohortID)
     
     if(destination == "GSL"){
       
-      out(i) = multinomial(Rcpp::NumericVector::create(0.6, 0.4));
+      out(i) = R::rbinom(1, 0.4);
+        // multinomial(Rcpp::NumericVector::create(0.6, 0.4));
       
     } else if(destination == "SEUS"){
       
@@ -152,7 +153,7 @@ Rcpp::NumericVector prob_migration(int n, std::string destination, int cohortID)
 double response_threshold(Rcpp::NumericVector db){
   std::random_device rd;     // Only used once to initialize (seed) engine
   std::mt19937 rng(rd());    // Random-number engine used (Mersenne-Twister in this case)
-  std::uniform_int_distribution<int> uniform(0,4999);
+  std::uniform_int_distribution<int> uniform(0,9999);
   int d = uniform(rd);
   return(db[d]);
 }
@@ -230,9 +231,9 @@ double rtnorm(double location,
  
  double start_age(int cohort){
    if(cohort == 0){
-     return 1/365;
+     return 0;
    } else if(cohort >= 1 && cohort <= 2){
-     return R::runif(1, 9);
+     return R::runif(1, 8);
    } else {
      return R::runif(9, 68); // Longevity of 69 years (-1 for 1 year simulation)
    }
@@ -250,7 +251,7 @@ Rcpp::NumericVector start_age_vec(Rcpp::NumericVector cohort){
     if(cohort[i] == 0){
       a[i] = 0;
     } else if(cohort[i] >= 1 && cohort[i] <= 2){
-      a[i] = R::runif(1, 9);
+      a[i] = R::runif(1, 8);
     } else {
       a[i] = R::runif(9, 68);
     }
@@ -269,18 +270,81 @@ Rcpp::NumericVector start_age_vec(Rcpp::NumericVector cohort){
 //    return is_entangled;
 //  }
 
+// [[Rcpp::export]]
+double survivorship(double age,
+                    double a1 = 0.1,
+                    double a2 = 0,
+                    double a3 = 0.01,
+                    double b1 = 60,
+                    double b3 = 8,
+                    double longevity = 69){
+
+  // From Barlow and Boveng (1991)
+
+  double lj, lc, ls, out;
+
+  // Exponentially decreasing risk due to juvenile mortality factors
+  lj = std::exp((-a1/b1) * (1-std::exp(-b1*age/longevity)));
+  
+  // Constant risk due to other factors
+  lc = std::exp(-a2*age/longevity);
+  
+  // Exponentially increasing risk due to senescent mortality factors
+  ls = std::exp((a3/b3) * (1-exp(b3*age/longevity)));
+  
+  out = lj * ls * lc;
+  
+  return(out);
+
+}
+
+// [[Rcpp::export]]
+Rcpp::NumericVector survivorship_vec(Rcpp::NumericVector age,
+                                     double a1 = 0.1,
+                                     double a2 = 0,
+                                     double a3 = 0.01,
+                                     double b1 = 60,
+                                     double b3 = 8,
+                                     double longevity = 69){
+  
+  // From Barlow and Boveng (1991)
+  
+  int n = age.size();
+  Rcpp::NumericVector out(n);
+  double lj, lc, ls;
+  
+  for(int i = 0; i<n; i++){
+    // Exponentially decreasing risk due to juvenile mortality factors
+    lj = std::exp((-a1/b1) * (1-std::exp(-b1*age(i)/longevity)));
+    
+    // Constant risk due to other factors
+    lc = std::exp(-a2*age(i)/longevity);
+    
+    // Exponentially increasing risk due to senescent mortality factors
+    ls = std::exp((a3/b3) * (1-exp(b3*age(i)/longevity)));
+    
+    out(i) = lj * ls * lc;
+  }
+
+  return(out);
+  
+}
 
 
 //' Entanglement event
 //' @name entanglement_event
- //' @param p_anterior Probability that the entanglement involves the anterior region of the body (mouth, head, rostrum)
+ //' @param p_head Probability that the entanglement involves the anterior region of the body (mouth, head, rostrum)
  // [[Rcpp::export]]
  
  Rcpp::NumericVector entanglement_event(double p_entangled = 0,
-                                        double p_anterior = 0.732, // weighted mean of entries in spreadsheet of model parameters,
-                                        Rcpp::NumericVector p_severity = Rcpp::NumericVector::create(0.761, 0.155, 0.084)){       
+                                        double p_head = 0.732, 
+                                        double p_mortality = 0,
+                                        Rcpp::NumericVector p_severity = Rcpp::NumericVector::create(0.819, 0.140, 0.041)
+                                        ){       
    
-   Rcpp::NumericVector out (6); // Store results
+   // p(head) weighted mean of entries in spreadsheet of model parameters,
+   
+   Rcpp::NumericVector out (8); // Store results
    
    // Is the animal entangled?
    // Annual entanglement rate = 0.259 -- Knowlton et al. (2012)
@@ -289,26 +353,41 @@ Rcpp::NumericVector start_age_vec(Rcpp::NumericVector cohort){
    
    if(is_entangled){
      
-     out(0) = is_entangled;
+     out(0) = is_entangled; // First value
 
-     // Does the entanglement involve the anterior region of the body?
-     out(1) = R::rbinom(1, p_anterior); 
-     
      // How severe is the entanglement (0 = minor, 1 = moderate, 2 = severe)
-     out(2) = multinomial(p_severity);
+     out(1) = multinomial(p_severity); // Second value
      
-     // Duration  of entanglement (days)
+     // Does the entanglement involve the anterior region of the body?
+     out(2) = R::rbinom(1, p_head);  // Third value
+     
+     if(out(2) == 1){
+       // Reduction in the mouth gape
+       if(out(1)==0){
+         out(3) = R::runif(0,0.15);  // Fourth value
+       } else if(out(1)==1){
+         out(3) = R::runif(0.15,0.3);  // Fourth value
+       } else if(out(1)==2){
+         out(3) = R::runif(0.3,0.5);  // Fourth value
+       }
+     } 
+     
+     // Duration of entanglement (days)
      // From Pirotta et al. (2023 Oikos)
      // See entgl_durations() function
      // All long-term events involve moderate or severe injuries (Knowlton et al. 2016 Cons Biol)
-     if(out(2) == 0){
-       out(3) = Rf_rnbinom_mu(0.7363271, 111.3911746);
-     } else if(out(2) == 1){
-       out(3) = Rf_rnbinom_mu(0.7493824, 124.2184062);
+     if(out(1) == 0){
+       out(4) = Rf_rnbinom_mu(0.7363271, 111.3911746); // Fifth value
+     } else if(out(1) == 1){
+       out(4) = Rf_rnbinom_mu(0.7493824, 124.2184062); // Fifth value
      } else {
-       out(3) = Rf_rnbinom_mu(0.6527522, 211.8187153);
+       out(4) = Rf_rnbinom_mu(0.6527522, 211.8187153); // Fifth value
      }
+     
+     out(7) = R::rbinom(1, p_mortality); // Last value
+     
    }
+   
    return out;
  }
 
@@ -348,35 +427,50 @@ Rcpp::NumericVector start_age_vec(Rcpp::NumericVector cohort){
  //' @param shape2 Second shape parameter of the beta distribution
  // [[Rcpp::export]]
  
- long double start_bcondition(double cohort, int month = 10, double max_bc = 0.6){
+ long double start_bcondition(double cohort){
    
    long double bc;
    
-   // Calves
-   if(cohort == 0){
-     bc = rtnorm(0.06, 0.01, 0.06, 1);
-     
-     // Pregnant and lactating females
-   } else if(cohort == 4 | cohort == 5){
-     
-     if(month >= 6 & month <= 10){ // During the foraging season
-       bc = rtnorm(0.4, 0.05, 0.05, max_bc); 
-     } else {
-       bc = rtnorm(0.3, 0.05, 0.05, max_bc); // Other time of year
-     }
-     
-     // All other individuals
-   } else {
-     
-     if(month >= 6 & month <= 10){ // During the foraging season
-       bc = rtnorm(0.35, 0.075, 0.05, max_bc); 
-     } else {
-       bc = rtnorm(0.15, 0.075, 0.05, max_bc); // Other time of year
-     }
-     
+   if(cohort == 0){ // Calves
+     bc = rtnorm(0.3341088, 0.05095528, 0.05, 0.6);
+     // bc = rtnorm(0.08, 0.01, 0.06, 1);
+   } else if(cohort == 5){ // Lactating females, which start simulation as late pregnant
+     bc = rtnorm(0.6, 0.05, 0.05, 0.6);
+   } else { // All other individuals
+    bc = rtnorm(0.35, 0.075, 0.05, 0.6); 
    }
    return bc;
  }
+ 
+ // long double start_bcondition(double cohort, int month = 10){
+ //   
+ //   long double bc;
+ //   
+ //   // Calves
+ //   if(cohort == 0){
+ //     bc = rtnorm(0.06, 0.01, 0.06, 1);
+ //     
+ //     // Pregnant and lactating females
+ //   } else if(cohort == 4 | cohort == 5){
+ //     
+ //     if(month >= 6 & month <= 10){ // During the foraging season
+ //       bc = rtnorm(0.4, 0.05, 0.05, 0.6586636); 
+ //     } else {
+ //       bc = rtnorm(0.3, 0.05, 0.05, 0.6586636); // Other time of year
+ //     }
+ //     
+ //     // All other individuals
+ //   } else {
+ //     
+ //     if(month >= 6 & month <= 10){ // During the foraging season
+ //       bc = rtnorm(0.35, 0.075, 0.05, 0.5188374); 
+ //     } else {
+ //       bc = rtnorm(0.15, 0.075, 0.05, 0.5188374); // Other time of year
+ //     }
+ //     
+ //   }
+ //   return bc;
+ // }
 
 //' Initialize body condition
  //' @name start_bodycondition
@@ -387,7 +481,7 @@ Rcpp::NumericVector start_age_vec(Rcpp::NumericVector cohort){
  //' @param shape2 Second shape parameter of the beta distribution
  // [[Rcpp::export]]
 
-Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month = 10, double max_bc = 0.6){
+Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month = 10){
 
   int n = cohort.size();
   Rcpp::NumericVector bc(n);
@@ -396,25 +490,19 @@ Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month =
 
     // Calves
     if(cohort[i] == 0){
-      bc[i] = rtnorm(0.06, 0.01, 0.06, max_bc);
+      
+      bc[i] = rtnorm(0.3539697, 0.08844279, 0.05, 0.6);;
 
-      // Pregnant and lactating females
-    } else if(cohort[i] == 4 | cohort[i] == 5){
+      // Lactating females, starting as late pregnant
+    } else if(cohort[i] == 5){
 
-      if(month >= 7 & month <= 10){ // During the foraging season
-        bc[i] = rtnorm(0.4, 0.05, 0.05, max_bc);
-      } else {
-        bc[i] = rtnorm(0.3, 0.05, 0.05, max_bc); // Other time of year
-      }
+        bc[i] = rtnorm(0.6, 0.05, 0.05, 0.6);
 
       // All other individuals
     } else {
-
-      if(month >= 7 & month <= 10){ // During the foraging season
-        bc[i] = rtnorm(0.35, 0.075, 0.05, max_bc);
-      } else {
-        bc[i] = rtnorm(0.15, 0.075, 0.05, max_bc); // Other time of year
-      }
+      
+        bc[i] = rtnorm(0.35, 0.075, 0.05, 0.5188374);
+      
     }
   }
 
@@ -615,7 +703,7 @@ double length2mass(double L,
                    Eigen::MatrixXd param,
                    double lean = 0.5435686){
   
-  // lean determined by find_lean(45000)
+  // lean determined by find_lean(45000, 0.6) or
   
   double a = param(0,0);
   double b = param(0,1);
@@ -777,6 +865,25 @@ Rcpp::NumericVector increment_cohort(Rcpp::NumericVector cohort,
    return std::round(1/(1 + exp(min_prey - D)));
  }
 
+//' Incidence of foraging behavior
+ //' @name feeding_threshold
+ //' @description Determines whether the prey concentration encountered by an animal
+ //' is sufficient to support foraging
+ //' @param min_prey Minimum prey density threshold that triggers foraging (\ifelse{html}{\out{copepods/m<sup>3</sup>}}{\eqn{copepods/m^3})
+ //' @param D Prey concentration (\ifelse{html}{\out{copepods/m<sup>3</sup>}}{\eqn{copepods/m^3})
+ // [[Rcpp::export]]
+ 
+ Rcpp::NumericVector feeding_threshold_vec(double min_prey, 
+                                           Rcpp::NumericVector D){
+   int n = D.size();
+   Rcpp::NumericVector out(n);
+     for(int i = 0; i < n; i++) {
+       out(i) = std::round(1/(1 + exp(min_prey - D(i))));
+     };
+   return out;
+ }
+
+
 // //' Swim speed during foraging
 // //' @description Provides an estimate of swim speed during foraging based on body length
 // //' @param L Body length (cm)
@@ -807,42 +914,56 @@ Rcpp::NumericVector increment_cohort(Rcpp::NumericVector cohort,
 //    return 1/(1 + exp(-eta * ((beta * M / R) - 1)));
 //  }
 
-//' Variation in feeding/suckling effort with body condition
-//'  @name scale_effort
- //' @description Calculates feeding/suckling effort given an animal's body condition
- //' @param A Horizontal asymptote when x tends to -Inf
- //' @param D Horizontal asymptote when x tends to Inf
- //' @param B Steepness of the transition between the two asymptotes
- //' @param C Location parameter
- //' @param S Curve asymmetry (the curve us symmetric when S = 1)
- //' @note An increase in feeding effort during periods of compromised health is simulated as a 
- //' behavioral mechanism to compensate for periods of disturbance, should adequate resources be available. 
- //' This is achieved by using a 5-parameter logistic function (bounded by 0 and 1) of body condition, which 
- //' is designed to reduce to 0 at the animal’s target body condition and ensures that fat reserves do not grow out
- //' of bounds under favorable conditions. While the possibility of early weaning resulting from good body 
- //' condition of both mother and calf is not considered explicitly, suckling effort is made to vary as a 
- //' function of the calf’s reserve mass, in the same way that foraging effort does in juveniles/adults.
- //' @return A scalar on feeding/suckling effort
- // [[Rcpp::export]]
- 
- double scale_effort(double x, double A, double D, double B, double C, double S){
-   return A + (D-A) / std::pow(1 + std::exp(B*(C-x)), S);
+// //' Variation in feeding/suckling effort with body condition
+// //'  @name scale_effort
+//  //' @description Calculates feeding/suckling effort given an animal's body condition
+//  //' @param A Horizontal asymptote when x tends to -Inf
+//  //' @param D Horizontal asymptote when x tends to Inf
+//  //' @param B Steepness of the transition between the two asymptotes
+//  //' @param C Location parameter
+//  //' @param S Curve asymmetry (the curve us symmetric when S = 1)
+//  //' @note An increase in feeding effort during periods of compromised health is simulated as a 
+//  //' behavioral mechanism to compensate for periods of disturbance, should adequate resources be available. 
+//  //' This is achieved by using a 5-parameter logistic function (bounded by 0 and 1) of body condition, which 
+//  //' is designed to reduce to 0 at the animal’s target body condition and ensures that fat reserves do not grow out
+//  //' of bounds under favorable conditions. While the possibility of early weaning resulting from good body 
+//  //' condition of both mother and calf is not considered explicitly, suckling effort is made to vary as a 
+//  //' function of the calf’s reserve mass, in the same way that foraging effort does in juveniles/adults.
+//  //' @return A scalar on feeding/suckling effort
+//  // [[Rcpp::export]]
+//  
+//  double scale_effort(double x, double A, double D, double B, double C, double S){
+//    return A + (D-A) / std::pow(1 + std::exp(B*(C-x)), S);
+//  }
+// 
+// // [[Rcpp::export]]
+// 
+// Rcpp::NumericVector scale_effort_vec(Rcpp::NumericVector x, 
+//                                      double A, double D, double B, double C, double S){
+//   
+//   int n = x.size();
+//   Rcpp::NumericVector out(n);
+//   for(int i = 0; i<n; i++){
+//     out(i) = A + (D-A) / std::pow(1 + std::exp(B*(C-x(i))), S);
+//   }
+//   return out;
+// }
+
+
+// [[Rcpp::export]]
+ double feeding_effort(double eta, double rho, double bc){
+   return 1 / (1 + std::exp(-eta*(rho*(1/bc)-1)));
  }
 
 // [[Rcpp::export]]
-
-Rcpp::NumericVector scale_effort_vec(Rcpp::NumericVector x, 
-                                     double A, double D, double B, double C, double S){
-  
-  int n = x.size();
+Rcpp::NumericVector feeding_effort_vec(double eta, double rho, Rcpp::NumericVector bc){
+  int n = bc.size();
   Rcpp::NumericVector out(n);
   for(int i = 0; i<n; i++){
-    out(i) = A + (D-A) / std::pow(1 + std::exp(B*(C-x(i))), S);
+    out(i) = 1 / (1 + std::exp(-eta*(rho*(1/bc(i))-1)));
   }
   return out;
 }
-
-
 
 //' Convert degrees to radians
  //' @name deg2radians
@@ -883,18 +1004,18 @@ Rcpp::NumericVector scale_effort_vec(Rcpp::NumericVector x,
 //    return 1 / (1 + (F * tau_clear / stomach_size));
 //  }
 
-//' Energy content of the prey
-//' @name Econtent_cop
- //' @description Calculates the amount of energy that a whale can obtain from an average individual prey
- //' @param m Average mass of the prey (g/cop)
- //' @param rho Energy density of the prey (J/g) 
- //' @param E_digest Digestive efficiency (fecal and urinary, \%)
- //' @param E_hif Metabolizing efficiency (1-heat increment of feeding, \%)
- // [[Rcpp::export]]
- 
- double Econtent_cop(double m, double rho, double E_digest, double E_hif){ 
-   return m * rho * E_digest * E_hif;
- }
+// //' Energy content of the prey
+// //' @name Econtent_cop
+//  //' @description Calculates the amount of energy that a whale can obtain from an average individual prey
+//  //' @param m Average mass of the prey (g/cop)
+//  //' @param rho Energy density of the prey (J/g) 
+//  //' @param E_digest Digestive efficiency (fecal and urinary, \%)
+//  //' @param E_hif Metabolizing efficiency (1-heat increment of feeding, \%)
+//  // [[Rcpp::export]]
+//  
+//  double Econtent_cop(double m, double rho, double E_digest, double E_hif){ 
+//    return m * rho * E_digest * E_hif;
+//  }
 
 //' Filtration rate
 //' @name filtration_rate
@@ -948,6 +1069,26 @@ Rcpp::NumericVector scale_effort_vec(Rcpp::NumericVector x,
    return out;
  }
 
+// [[Rcpp::export]]
+
+Rcpp::NumericVector milk_assimilation_vec(Rcpp::NumericVector t,
+                             int T_lac,
+                             double a,
+                             double zeta){ 
+  int n = t.size();
+  Rcpp::NumericVector out(n);
+  for(int i = 0; i<n; i++){
+    if(t(i) <= a){
+      out(i) = 1;
+    } else if (t(i) >= T_lac){
+      out(i) = 0;
+    } else {
+      out(i) = (1 - (t(i) - a)/(T_lac - a))/(1 - (zeta * (t(i) - a)/(T_lac - a)));
+    }
+  }
+  return out;
+}
+
 //' Milk provisioning
 //' @name milk_supply
  //' @description Defines how milk provisioning varies in response to the female's body condition
@@ -978,10 +1119,37 @@ Rcpp::NumericVector scale_effort_vec(Rcpp::NumericVector x,
    return out;
  } 
 
+// [[Rcpp::export]]
+
+Rcpp::NumericVector milk_supply_vec(double kappa,
+                                    double target_condition, 
+                                    Rcpp::NumericVector M, 
+                                    Rcpp::NumericVector R, 
+                                    double zeta){ 
+  int nm = M.size();
+  int nr = R.size();
+  if (nr!=nm) Rcpp::stop("Arguments have different lengths");
+  
+  Rcpp::NumericVector out (nm);
+
+  for(int i = 0; i<nm; i++){
+    if(R(i)/M(i) <= kappa){
+      out(i) = 0;
+    } else if (R(i)/M(i) >= target_condition){
+      out(i) = 1;
+    } else {
+      out(i) = ((1-zeta)*(R(i) - kappa * M(i)))/(M(i) * (target_condition - kappa) - zeta * (R(i) - kappa * M(i)));
+    }
+  }
+  
+  return out;
+} 
+
 //' Total mass of mammary glands
 //' @name mammary_mass
  //' @description Predicts mammary mass from total mass in females
  //' @param M Total body mass (kg)
+ //' @note Oftedal (1997)
  // [[Rcpp::export]]
  
  double mammary_mass(double M){ 
@@ -993,11 +1161,12 @@ Rcpp::NumericVector scale_effort_vec(Rcpp::NumericVector x,
  //' @description Predicts the amount of milk produced by unit time from mammary mass
  //' @param m Mass of mammary glands (kg)
  //' @return Milk yield/production rate (kg/s)
+ //' @note Equation taken from Hanwell & Peaker ()1997)
  // [[Rcpp::export]]
  
  double milk_production(double m){ 
    // return 0.0835 * std::pow(m, 1.965);
-   return (1.67 * std::pow(m, 0.95))/86400;
+   return (1.67 * std::pow(m, 0.95));
  } 
 
 //' Resting metabolic rate
@@ -1034,51 +1203,95 @@ Rcpp::NumericVector scale_effort_vec(Rcpp::NumericVector x,
  } 
 
 //' Costs of locomotion
-//' @name locomotor_costs
- //' @description Predicts total locomotor costs from the mass-specific, stroke-based allometric
- //' relationships proposed by Williams et al. (2017).
- //' @param M Total body mass (kg)
- //' @param Sroutine Routine stroke frequency
- //' @param delta Time spent in activity a (s)
- //' @param phi Locomotory cost scalars (d.u.)
- //' @note We only consider stroke rates associated with routine swimming. Williams et al. (2017) do also 
- //' present equations for performance (maximum aerobic) swimming, which likely capture startle/flight responses.
- //' To our knowledge, no data on the swimming kinematics of right whales exhibiting this behavior exist at present.
- //' The equations used were derived from data on odontocetes up to 3,000 kg in weight,
- //' including killer whales (Orcinus orca). It is assumed that these relationships hold when
- //' extrapolating to the larger body mass range exhibited by North Atlantic right whales.
- //' @return Total daily locomotor costs (kJ)
  // [[Rcpp::export]]
- double locomotor_costs(double mass, 
+ double locomotor_costs(double mass,
+                        double distance,
                         double strokerate_foraging,
-                        double strokerate, 
+                        double strokerate,
                         double glide_foraging,
                         double glide,
                         double t_feed,
-                        double t_activ, 
-                        double scalar){ 
-   
+                        double t_activ,
+                        double scalar){
+
    // Check that vector arguments are of the same size
    // if (t_activ.size()!=scalars.size()) Rcpp::stop("Arguments have different lengths");
-   
+
    // Total number of strokes per day
    double tot_strokes = scalar * (strokerate_foraging * t_feed * (1 - glide_foraging) + strokerate * t_activ * (1 - glide));
-   
-   // Cost per stroke (Williams et al. 2017) (J / kg / stroke)
-   double J_stroke = (1.46 + 0.0005 * mass);
-   
+
+   // Cost per stroke
+   // 0.4 J per kg per m (Williams et al. 1999)
+   // Distance traveled in m
+   // Average stroke rate during routine diving (0.11375 Hz) 
+   double J_stroke = 0.4 * distance/(0.11375*86400);
+
    // Total cost per day (MJ)
    return J_stroke * mass * tot_strokes/1000000;
-   
-   // int n = t_activ.size();
-   // Rcpp::NumericVector scalar (n);
-   // 
-   // for(int i = 0; i < n; ++i){
-   //   scalar[i] += delta[i] * phi[i];
-   // }
-   
-   // return sum(scalar) * M * strokerate * 
- } 
+ }
+
+// ' Costs of locomotion
+// ' @name locomotor_costs
+// ' @description Predicts total locomotor costs from the mass-specific, stroke-based allometric
+// ' relationships proposed by Williams et al. (2017).
+// ' @param M Total body mass (kg)
+// ' @param Sroutine Routine stroke frequency
+// ' @param delta Time spent in activity a (s)
+// ' @param phi Locomotory cost scalars (d.u.)
+// ' @note We only consider stroke rates associated with routine swimming. Williams et al. (2017) do also
+// ' present equations for performance (maximum aerobic) swimming, which likely capture startle/flight responses.
+// ' To our knowledge, no data on the swimming kinematics of right whales exhibiting this behavior exist at present.
+// ' The equations used were derived from data on odontocetes up to 3,000 kg in weight,
+// ' including killer whales (Orcinus orca). It is assumed that these relationships hold when
+// ' extrapolating to the larger body mass range exhibited by North Atlantic right whales.
+// ' @return Total daily locomotor costs (kJ)
+
+// double locomotor_costs(double mass, 
+//                        double strokerate_foraging,
+//                        double strokerate, 
+//                        double glide_foraging,
+//                        double glide,
+//                        double t_feed,
+//                        double t_activ, 
+//                        double scalar){ 
+//   
+//   // Check that vector arguments are of the same size
+//   // if (t_activ.size()!=scalars.size()) Rcpp::stop("Arguments have different lengths");
+//   
+//   // Total number of strokes per day
+//   double tot_strokes = scalar * (strokerate_foraging * t_feed * (1 - glide_foraging) + strokerate * t_activ * (1 - glide));
+//   
+//   // Cost per stroke (Williams et al. 2017) (J / kg / stroke)
+//   double J_stroke = (1.46 + 0.0005 * mass);
+//   // double J_stroke = 3.38;
+//   
+//   // Total cost per day (MJ)
+//   return J_stroke * mass * tot_strokes/1000000;
+//   
+//   // int n = t_activ.size();
+//   // Rcpp::NumericVector scalar (n);
+//   // 
+//   // for(int i = 0; i < n; ++i){
+//   //   scalar[i] += delta[i] * phi[i];
+//   // }
+//   
+//   // return sum(scalar) * M * strokerate * 
+// } 
+
+
+
+// // [[Rcpp::export]]
+// double testmin(double n){
+//   
+//   Rcpp::NumericVector distances(n);
+//   for(int i = 0; i<n;i++){
+//     distances(i) = R::rnorm(150, 20);
+//     std::cout << distances(i) << std::endl;
+//   }
+//   
+//   return(Rcpp::which_min(distances));
+//   
+// }
 
 // //' Energetic cost of fetal growth during pregnancy
 //  //' @param M_muscle Mass of muscles in fetus (kg)
@@ -1162,10 +1375,15 @@ Rcpp::NumericVector scale_effort_vec(Rcpp::NumericVector x,
  // [[Rcpp::export]]
  
  double fetal_blubber_mass(double L,
-                           double M_muscle, double M_viscera, double M_bones,
-                           double D_blubber, double D_muscle, double D_viscera, double D_bones){ 
-   return D_blubber * (std::exp(-4.115 + 3.016 * std::log(L)) - 
-                       (M_muscle/D_muscle) - (M_viscera/D_viscera) - (M_bones/D_bones));
+                           double BC,
+                           double M_muscle, 
+                           double M_viscera, 
+                           double M_bones,
+                           double D_blubber,
+                           double D_muscle, 
+                           double D_viscera, 
+                           double D_bones){ 
+   return D_blubber * (std::exp(-4.115 + 3.016 * std::log(L)) * (1+BC) - (M_muscle/D_muscle) - (M_viscera/D_viscera) - (M_bones/D_bones));
  }  
 
 //' Fetal mass 
@@ -1254,28 +1472,42 @@ Rcpp::NumericVector scale_effort_vec(Rcpp::NumericVector x,
 
 // [[Rcpp::export]]
 
-double growth_cost(double mass_increment,
+double growth_cost(double leanmass_increment,
                    double EDens_lipids, 
                    double EDens_protein,
-                   double lipid_in_blubber,
                    double lipid_in_muscle,
                    double lipid_in_viscera,
                    double lipid_in_bones,
-                   double protein_in_blubber,
                    double protein_in_muscle,
                    double protein_in_viscera,
                    double protein_in_bones,
-                   double prop_blubber,
                    double prop_muscle,
                    double prop_viscera,
                    double prop_bones){
   
-  double cost_blubber = EDens_lipids * lipid_in_blubber + EDens_protein * protein_in_blubber;
-  double cost_muscle = EDens_lipids * lipid_in_muscle + EDens_protein * protein_in_muscle;
-  double cost_viscera = EDens_lipids * lipid_in_viscera + EDens_protein * protein_in_viscera;
-  double cost_bones = EDens_lipids * lipid_in_bones + EDens_protein * protein_in_bones;
+  // double lipid_in_blubber,
+  // double protein_in_blubber,
+  // double prop_blubber,
   
-  return mass_increment * (cost_blubber * prop_blubber + cost_muscle * prop_muscle + cost_viscera * prop_viscera + cost_bones * prop_bones);
+  // double cost_blubber = EDens_lipids * lipid_in_blubber + EDens_protein * protein_in_blubber;
+  double cost_muscle = (EDens_lipids * lipid_in_muscle) + (EDens_protein * protein_in_muscle);
+  double cost_viscera = (EDens_lipids * lipid_in_viscera )+ (EDens_protein * protein_in_viscera);
+  double cost_bones = (EDens_lipids * lipid_in_bones) + (EDens_protein * protein_in_bones);
+  
+  // return mass_increment * (cost_blubber * prop_blubber + cost_muscle * prop_muscle + cost_viscera * prop_viscera + cost_bones * prop_bones);
+  return leanmass_increment * (cost_muscle * prop_muscle + cost_viscera * prop_viscera + cost_bones * prop_bones);
+}
+
+// [[Rcpp::export]]
+
+double fatdeposition_cost(double fatmass_increment,
+                          double energy_density_lipids, 
+                          double energy_density_protein,
+                          double lipid_in_blubber,
+                          double protein_in_blubber){
+  
+  double cost_blubber = (energy_density_lipids * lipid_in_blubber) + (energy_density_protein * protein_in_blubber);
+  return fatmass_increment * cost_blubber;
 }
 
 
@@ -1307,7 +1539,7 @@ double growth_cost(double mass_increment,
 // newind[year,"p_surv",] <- 1
 
 // [[Rcpp::export]]
-Rcpp::NumericMatrix add_calf(int n, Rcpp::StringVector attr){
+Rcpp::NumericMatrix add_calf(int n, Rcpp::StringVector attr, double nonreprod){
   
   int nattr = attr.size();
   Rcpp::NumericMatrix out(nattr,n);
@@ -1331,8 +1563,9 @@ Rcpp::NumericMatrix add_calf(int n, Rcpp::StringVector attr){
   Rcpp::NumericMatrix::Row psurv = out.row(8);
   psurv = psurv + 1;
   
-  Rcpp::NumericMatrix::Row reprod = out.row(13); // Reproductive females
-  reprod = reprod + 1;
+  out(13,Rcpp::_) = Rcpp::rbinom(n, 1, 1-nonreprod); // Reproductive females
+  // Rcpp::NumericMatrix::Row reprod = out.row(13); 
+  // reprod = reprod + 1;
   
   Rcpp::rownames(out) = attr;
   
@@ -1431,10 +1664,42 @@ double findminval(double num1, double num2){
     return num2;
   }
 }
+
+// [[Rcpp::export]]
+double pbirth(float now, 
+              float enter,
+              float timespan = 60){
+  double out = (now - enter)/timespan;
+  if(out > 1) out = 1;
+  return out;
+}
+
+
 // [[Rcpp::export]]
 
-double pbirth(double now, double enter, int timespan = 60){
-  return (now - enter)/timespan;
+Rcpp::NumericVector pbirth_vec(Rcpp::NumericVector now, 
+                               float enter,
+                               float timespan = 60){
+  int n = now.size();
+  Rcpp::NumericVector out(n);
+  for (int i = 0; i<n; i++){
+    out(i)= (now(i) - enter)/timespan;
+    if(out(i) > 1) out(i) = 1;
+  }
+  return out;
+}
+  
+// [[Rcpp::export]]
+Rcpp::NumericVector seq_cpp(double start,
+                            double end,
+                            int npts){
+
+  Rcpp::NumericVector out(npts);
+  double interval = (end-start)/(npts + 1);
+  for (int i = 0; i<npts; i++){
+    out(i) = start + (i+1)*interval; 
+  }
+  return out;
 }
   
 #endif
