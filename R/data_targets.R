@@ -56,9 +56,10 @@ data_targets = list(
   # ........................................................................
   
   targets::tar_target(name = dummy_prey, command = proxy_prey()),
-  targets::tar_target(name = dummy_noise, command = proxy_noise()),
-  targets::tar_target(name = dummy_vessels, command = proxy_vessels(pmax = 0.25)),
+  # targets::tar_target(name = dummy_noise, command = proxy_noise()),
+  targets::tar_target(name = dummy_vessels, command = proxy_vessels()),
   targets::tar_target(name = fishing_layer, command = entgl_surface()),
+  targets::tar_target(name = noise_layer, command = noise_surface()),
   targets::tar_target(name = daylight, command = get_daylight()),
   targets::tar_target(name = entgl_d, command = get_entglD()),
   
@@ -78,7 +79,12 @@ data_targets = list(
   # Save data to package
   # ........................................................................
   
-  targets::tar_target(name = save_data, command = save_objects())
+  targets::tar_target(name = save_data, command = save_objects()),
 
-
+  # ........................................................................
+  # Offshore wind scenarios
+  # ........................................................................
+  
+  targets::tar_target(name = scenarios, command = get_scenarios())
+  
 )
