@@ -10,59 +10,54 @@
 #'
 predict.narwsim <- function(obj,
                             n = 100,
+                            # method = "spline",
                             # scenario,
                             yrs = 35,
                             ...) {
 
-  if(sum(suppressWarnings(purrr::map_lgl(.x = obj$gam$pred, .f = ~any(is.na(.x)))) > 0)) 
-    stop("Insufficient sample size. Cannot make predictions.") 
+  # Adapted from original code by Scott Creel
+  # https://www.montana.edu/screel/teaching/bioe-440r-521/course-outline/stoch_projection_new.R
   
-  if(length(obj$param$cohortID) < 6) stop("Missing cohorts. Cannot make predictions.")
+  #'------------------------------------------------------------
+  # Function checks ----
+  #'------------------------------------------------------------
+  
+  if(!inherits(obj, "narwsim")) stop("Object must be of class <narwsim>")
+  if(is.null(obj$gam$post)) warning("Posterior samples for terminal functions not available. Run the posterior() function to estimate variance.")
+  
+  if(sum(suppressWarnings(purrr::map_lgl(.x = obj$gam$fit, .f = ~any(is.null(unlist(.x))))) > 0)){
+    w1 <- "A problem occurred" 
+    if(obj$param$nsim<100) w2 <- " (sample size likely insufficient)" else w2 = ""
+    stop(paste0(w1, w2, " --> Cannot generate projections"))
+  }
+  
+  if(length(obj$param$cohortID) < 6) stop("Missing cohorts --> Cannot generate projections")
   
   # Function ellipsis –– optional arguments
   args <- list(...)
+  
+  # Default arguments
+  progress <- TRUE
   
   # Default values
   if(length(args) == 0){
     progress <- TRUE
   } else {
-    if("progress" %in% names(args)) progress <- args[["progress"]] else progress <- TRUE
+    if("progress" %in% names(args)) progress <- args[["progress"]]
   }
   
+  # User can specify the <yrs> argument either as a number of years from now
+  # or as a target end year
   if(yrs > 2000){
     yrs <- yrs - lubridate::year(lubridate::now())
   }
-  
-  cat("Initializing ...\n")
-  
-  # if(is.null(obj$gam)) stop("Insufficient data available. Cannot proceed with population projections.")
-  # if(!identical(cohortID, 1:6)) stop("Missing cohorts in input <obj>. Cannot proceed with population projections.")
-  # if(length(obj$gam$fit$surv$xlevels[[1]]) < 6 | length(obj$gam$fit$bc$xlevels[[1]]) < 6) stop("Missing factor levels in input <obj>. Cannot proceed with population projections.")
-  
-  # plogis("link" predictions + error)
-  
-  # Adapted from original code by Scott Creel
-  # https://www.montana.edu/screel/teaching/bioe-440r-521/course-outline/stoch_projection_new.R
-  # 
-  # Prediction intervals
-  # https://stat.ethz.ch/pipermail/r-help/2011-April/275632.html
-  
-  # Population estimate as per 2022 NARW report card is 340 (+/- 7).
-  
-  # test <- mgcv::predict.gam(mod$gam[[1]]$surv, newdata = data.frame(start_bc = seq(0,0.6, 0.01)), type = "link", se.fit = TRUE)
-  # plot(seq(0,0.6, 0.01), plogis(test$fit), type = "l")
-  # lines(seq(0,0.6, 0.01), plogis(Reduce("+", test)), lty = 2)
-  # lines(seq(0,0.6, 0.01), plogis(Reduce("-", test)), lty = 2)
-  # test2 <- mgcv::predict.gam(mod$gam[[1]]$surv, newdata = data.frame(start_bc = 0.2), type = "response")
-  # abline(v = 0.2)
-  # abline(h = tesct2)
-  
+
   cohortID <- obj$param$cohortID
-  cohorts <- obj$param$cohorts |> dplyr::slice(1) |> 
+  cohorts.proj <- obj$param$cohorts |> dplyr::slice(1) |> 
     dplyr::mutate(name = gsub(", female", "", name), abb = gsub(",f", "", abb)) |> 
     dplyr::bind_rows(obj$param$cohorts) |> 
     dplyr::mutate(name = gsub("male, female", "female", name), abb = gsub("m,f", "f", abb))
-  cohorts <- cohorts[c(1,3,5,2,4,6,7,8)]
+  cohorts.proj <- cohorts.proj[c(1,3,5,2,4,6,7,8)]
   
   # Attributes to monitor during projection
   mat.attribs <- c("alive", "cohort", "female", "age", "length", "tot_mass", "lean_mass", "bc",
@@ -71,55 +66,95 @@ predict.narwsim <- function(obj,
   # Current year
   current.yr <- lubridate::year(lubridate::now())
   
+  #'------------------------------------------------------
+  # TERMINAL FUNCTIONS ----
+  #'------------------------------------------------------
+  
   # Extract terminal functions
-  mod <- obj$gam$fit
-  mod[["gest"]] <- gam_gest
+  # mod <- obj$gam$fit
+  # mod[["gest"]] <- gam_gest
+  
+  # Spline interpolation of the fitted GAM relationships
+  # mbc_preds <- splinefun(x = gam_gest$mod[,2], y = gam_gest$fitted.values)
+  # bc_preds <- obj$gam$pred$bc
+  # surv_preds <- obj$gam$pred$surv
+  
+  # Fitted models
+  surv.model <- obj$gam$fit$surv
+  bc.model <- obj$gam$fit$bc
+  mbc.model <- gam_gest$gam
+  
+  # Inverse link functions
+  ilink.surv <- family(obj$gam$fit$surv)$linkinv
+  ilink.bc <- family(obj$gam$fit$bc)$linkinv
+  ilink.mbc <- family(gam_gest$gam)$linkinv
+  
+  # Posterior samples
+  if(is.null(obj$gam$post)){
+    
+    if(inherits(surv.model, "gam")){
+      surv.mcmc <- matrix(data = coef(surv.model), nrow = 1, ncol = length(coef(surv.model)))
+    } else if(inherits(surv.model, "scam")){
+      surv.mcmc <- matrix(data = tsgam:::coef.scam(surv.model), nrow = 1, ncol = length(tsgam:::coef.scam(surv.model)))
+    }
+    
+    if(inherits(bc.model, "gam")){
+      bc.mcmc <- matrix(data = coef(bc.model), nrow = 1, ncol = length(coef(bc.model)))
+    } else if(inherits(surv.model, "scam")){
+      bc.mcmc <- matrix(data = tsgam:::coef.scam(bc.model), nrow = 1, ncol = length(tsgam:::coef.scam(bc.model)))
+    }
+
+    mbc.mcmc <- matrix(data = coef(mbc.model), nrow = 1, ncol = length(coef(mbc.model)))
+    
+    n.mcmc <- 1
+    
+  } else {
+    surv.mcmc <- obj$gam$post$surv
+    bc.mcmc <- obj$gam$post$bc
+    mbc.mcmc <- obj$gam$post$mbc
+    n.mcmc <- nrow(surv.mcmc)
+  }
+  
+
   
   #'------------------------------------------------------
-  # GAM PARAMETERS
-  #'------------------------------------------------------
-  
-  mbc_preds <- obj$gam$pred$bc_gest
-  bc_preds <- obj$gam$pred$bc
-  surv_preds <- obj$gam$pred$surv
-  
-  #'------------------------------------------------------
-  # Abortion rate
+  # Abortion rate ----
   #'------------------------------------------------------
   
   abort.rate <- sum(obj$abort[, abort])/obj$param$nsim
   
   #'------------------------------------------------------
-  # INITIALIZATION
+  # INITIALIZATION ----
   #'------------------------------------------------------
   
   # Define initial population vector
-  N0 <- c(0, 7, 212, 0, 71, 1, 7, 61)
-  names(N0) <- cohorts[, name]
+  # N0 <- c(0, 7, 212, 0, 71, 0, 7, 61)
+  N_0 <- N0[["yr2019"]]
+  names(N_0) <- cohorts.proj[, name]
   
-  cat("Setting up ...\n")
+  cat("Initializing ...\n")
   
   # Initial cohort vector
-  cohort.vec <- do.call(c, sapply(X = 1:nrow(cohorts), FUN = function(x) rep(cohorts$id[x], each = N0[x])))
+  cohort.vec <- do.call(c, sapply(X = 1:nrow(cohorts.proj), FUN = function(x) rep(cohorts.proj$id[x], each = N_0[x])))
   
   # Reproductive females - 4% never reproduce
   nonrep <- 0.04
-  reprod.fem <- rbinom(n = sum(N0), size = 1, prob = ifelse(cohort.vec == 6, (1 - nonrep), 1))
+  reprod.fem <- rbinom(n = sum(N_0), size = 1, prob = ifelse(cohort.vec == 6, (1 - nonrep), 1))
   
   # Number of individuals in each cohort
   narw.pop <- array(
-    data = NA, c(n, yrs + 1, nrow(cohorts)),
+    data = NA, c(n, yrs + 1, nrow(cohorts.proj)),
     dimnames = list(
       paste0("prj ", 1:n),
       paste0("yr ", 0:yrs),
-      cohorts$name
+      cohorts.proj$name
     )
   )
-  narw.pop[, 1, ] <- rep(N0, each = n)
+  narw.pop[, 1, ] <- rep(N_0, each = n)
   
   # Total population size
   tot.pop <- matrix(0, n, yrs + 1, dimnames = list(paste0("prj", 1:n), paste0("yr ", 0:yrs)))
-  tot.pop[, 1] <- sum(N0)
+  tot.pop[, 1] <- sum(N_0)
   
   births <- array(
     data = NA, c(yrs + 1, n),
@@ -130,7 +165,7 @@ predict.narwsim <- function(obj,
   )
   
   #'------------------------------------------------------
-  # RUN PROJECTIONS
+  # PROJECTIONS ----
   #'------------------------------------------------------
   
   # This uses nested loops. 
@@ -158,10 +193,10 @@ predict.narwsim <- function(obj,
     # layers: individuals <n>
     # 4th dimension: replicate projection -> later converted to list
     narw.indiv <- array(
-      data = NA, c(yrs + 1, length(mat.attribs), sum(N0)),
+      data = NA, c(yrs + 1, length(mat.attribs), sum(N_0)),
       dimnames = list(
         paste0("yr ", 0:yrs), mat.attribs,
-        paste0("whale ", 1:(sum(N0)))
+        paste0("whale ", 1:(sum(N_0)))
       )
     )
     
@@ -171,10 +206,10 @@ predict.narwsim <- function(obj,
     
     # Sex
     #  -- Calves (male)
-    narw.indiv[, "female", 1:N0[1]] <- 0
+    narw.indiv[, "female", 1:N_0[1]] <- 0
     #  -- Calves (female)
     fem <- which(cohort.vec == 0)
-    narw.indiv[, "female", fem[fem > N0[1]]] <- 1
+    narw.indiv[, "female", fem[fem > N_0[1]]] <- 1
     #  -- Juveniles and adults
     narw.indiv[, "female", which(cohort.vec %in% c(2, 4, 5, 6))] <- 1
     narw.indiv[, "female", which(cohort.vec %in% c(1, 3))] <- 0
@@ -210,7 +245,14 @@ predict.narwsim <- function(obj,
     narw.indiv[1, "reprod", ] <- reprod.fem
     
     # Reserves needed to leave resting state and initiate pregnancy
-    narw.indiv[1, "min_bc", ] <- mbc_preds(narw.indiv[1, "tot_mass", ]) * (cohort.vec == 6)
+    Xp <- predict(mbc.model, data.frame(mass = narw.indiv[1, "tot_mass", ]), type = "lpmatrix")
+    
+    # Different function for each individual
+    mbc.curves <- mbc.mcmc[sample(n.mcmc, nrow(Xp), replace = TRUE),]
+    narw.indiv[1, "min_bc", ] <- (cohort.vec == 6) * 
+      sapply(seq_len(nrow(Xp)), FUN = function(r){ilink.mbc(Xp[r,] %*% mbc.curves[r,])})
+
+    # narw.indiv[1, "min_bc", ] <- ilink.mbc(Xp %*% mbc.mcmc[sample(n.mcmc, 1, replace = TRUE),]) * (cohort.vec == 6)
     
     narw.indiv[1, "time_rest", ] <- (cohort.vec == 6)
       
@@ -221,13 +263,18 @@ predict.narwsim <- function(obj,
     narw.indiv[1, "birth", ] <- as.numeric(cohort.vec == 4)
     
     # Survival
-    narw.indiv[1, "p_surv", ] <- (surv_preds[["0"]](bc) * (cohort.vec == 0) +
-                                    surv_preds[["1"]](bc) * (cohort.vec == 1) +
-                                    surv_preds[["2"]](bc) * (cohort.vec == 2) +
-                                    surv_preds[["3"]](bc) * (cohort.vec == 3) +
-                                    surv_preds[["4"]](bc) * (cohort.vec == 4) +
-                                    surv_preds[["5"]](bc) * (cohort.vec == 5) +
-                                    surv_preds[["6"]](bc) * (cohort.vec == 6))
+    Xp <- predict(surv.model, data.frame(start_bc = bc, cohort = cohort.vec), type = "lpmatrix")
+    surv.curves <- surv.mcmc[sample(n.mcmc, nrow(Xp), replace = TRUE),]
+    narw.indiv[1, "p_surv", ] <- sapply(seq_len(nrow(Xp)), FUN = function(r){ilink.surv(Xp[r,] %*% surv.curves[r,])})
+    # narw.indiv[1, "p_surv", ] <- ilink.surv(Xp %*% surv.mcmc[sample(n.mcmc, 1, replace = TRUE),])
+    
+    # narw.indiv[1, "p_surv", ] <- (surv_preds[["0"]](bc) * (cohort.vec == 0) +
+    #                                 surv_preds[["1"]](bc) * (cohort.vec == 1) +
+    #                                 surv_preds[["2"]](bc) * (cohort.vec == 2) +
+    #                                 surv_preds[["3"]](bc) * (cohort.vec == 3) +
+    #                                 surv_preds[["4"]](bc) * (cohort.vec == 4) +
+    #                                 surv_preds[["5"]](bc) * (cohort.vec == 5) +
+    #                                 surv_preds[["6"]](bc) * (cohort.vec == 6))
     
     # narw.indiv[1, "p_surv", ] <- 0.85
 
@@ -246,8 +293,12 @@ predict.narwsim <- function(obj,
         #' ----------------------------
         # Determine whether the animal survived
         # alive <- rbinom(n = length(ps), size = 1, prob = ps) * (narw.indiv[i-1, "age", ] <=69)
-        alive <- rbinom(n = dim(narw.indiv)[3], size = 1, 
-                        prob = (narw.indiv[i-1, "alive", ] * narw.indiv[i-1, "p_surv", ])) * (narw.indiv[i-1, "age", ] <=69)
+        alive <- rbinom(
+          n = dim(narw.indiv)[3], 
+          size = 1,
+          prob = (narw.indiv[i - 1, "alive", ] * narw.indiv[i - 1, "p_surv", ])
+        ) * (narw.indiv[i - 1, "age", ] <= 69)
+        
         narw.indiv[i, "alive", ] <- alive
         
         #' ----------------------------
@@ -283,14 +334,24 @@ predict.narwsim <- function(obj,
         narw.indiv[i, "lean_mass", ] <- alive * length2mass_vec(narw.indiv[i, "length", ])
         
         # Predict new body condition from current body condition
-        narw.indiv[i, "bc", ] <-
-          alive * (bc_preds[["0"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 0) +
-                     bc_preds[["1"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 1) +
-                     bc_preds[["2"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 2) +
-                     bc_preds[["3"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 3) +
-                     bc_preds[["4"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 4) +
-                     bc_preds[["5"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 5) +
-                     bc_preds[["6"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 6))
+        Xp <- predict(bc.model,
+          data.frame(
+            start_bc = narw.indiv[i - 1, "bc", ],
+            cohort = narw.indiv[i - 1, "cohort", ]
+          ), type = "lpmatrix")
+        
+        bc.curves <- bc.mcmc[sample(n.mcmc, nrow(Xp), replace = TRUE),]
+        narw.indiv[i, "bc", ] <- alive * sapply(seq_len(nrow(Xp)), FUN = function(r){ilink.bc(Xp[r,] %*% bc.curves[r,])})
+        # narw.indiv[i, "bc", ] <- alive * ilink.bc(Xp %*% bc.mcmc[sample(n.mcmc, 1, replace = TRUE),])
+        
+        # narw.indiv[i, "bc", ] <-
+        #   alive * (bc_preds[["0"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 0) +
+        #              bc_preds[["1"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 1) +
+        #              bc_preds[["2"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 2) +
+        #              bc_preds[["3"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 3) +
+        #              bc_preds[["4"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 4) +
+        #              bc_preds[["5"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 5) +
+        #              bc_preds[["6"]](narw.indiv[i-1, "bc", ]) * (narw.indiv[i-1, "cohort", ] == 6))
         
         # Increment total mass
         narw.indiv[i, "tot_mass", ] <- alive * narw.indiv[i, "lean_mass", ] / (1 - narw.indiv[i, "bc", ])
@@ -317,8 +378,16 @@ predict.narwsim <- function(obj,
         
         # Minimum body condition needed to successfully bring fetus to term without starving
         # No evidence of reproductive senescence in right whales - Hamilton et al. (1998)
-        narw.indiv[i, "min_bc", ] <-
-          alive * mbc_preds(narw.indiv[i, "tot_mass", ]) * (narw.indiv[i, "cohort", ] == 6) 
+        Xp <- predict(mbc.model, data.frame(mass = narw.indiv[i, "tot_mass", ]), type = "lpmatrix")
+        mbc.curves <- mbc.mcmc[sample(n.mcmc, nrow(Xp), replace = TRUE),]
+        narw.indiv[i, "min_bc", ] <- alive * (narw.indiv[i, "cohort", ] == 6) *
+          sapply(seq_len(nrow(Xp)), FUN = function(r){ilink.mbc(Xp[r,] %*% mbc.curves[r,])})
+        
+        # narw.indiv[i, "min_bc", ] <- alive * (narw.indiv[i, "cohort", ] == 6) * 
+        #   ilink.mbc(Xp %*% mbc.mcmc[sample(n.mcmc, 1, replace = TRUE),])
+        
+        # narw.indiv[i, "min_bc", ] <-
+        #   alive * mbc_preds(narw.indiv[i, "tot_mass", ]) * (narw.indiv[i, "cohort", ] == 6) 
         # * narw.indiv[i, "rest", ]
         
         # Birth of new calf, conditional on the mother being alive and in pregnant state
@@ -345,18 +414,32 @@ predict.narwsim <- function(obj,
         #' ----------------------------
         
         # Predict survival probability based on body condition
-        ps <- narw.indiv[i, "alive", ] *
-          (surv_preds[["0"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 0) +
-             surv_preds[["1"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 1) +
-             surv_preds[["2"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 2) +
-             surv_preds[["3"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 3) +
-             surv_preds[["4"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 4) +
-             surv_preds[["5"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 5) +
-             surv_preds[["6"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 6))
+        Xp <- predict(surv.model,
+         data.frame(
+           start_bc = narw.indiv[i, "bc", ],
+           cohort = narw.indiv[i, "cohort", ]
+         ), type = "lpmatrix")
         
-          # 0.95 * narw.indiv[i, "alive", ]
-
-        narw.indiv[i, "p_surv", ] <- ps
+        surv.curves <- surv.mcmc[sample(n.mcmc, nrow(Xp), replace = TRUE),]
+        
+        narw.indiv[i, "p_surv", ] <- narw.indiv[i, "alive", ] * 
+          sapply(seq_len(nrow(Xp)), FUN = function(r){ilink.surv(Xp[r,] %*% surv.curves[r,])}) 
+        
+        # narw.indiv[i, "p_surv", ] <- narw.indiv[i, "alive", ] * ilink.surv(Xp %*% surv.mcmc[sample(n.mcmc, 1, replace = TRUE),])
+        
+        
+        # ps <- narw.indiv[i, "alive", ] *
+        #   (surv_preds[["0"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 0) +
+        #      surv_preds[["1"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 1) +
+        #      surv_preds[["2"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 2) +
+        #      surv_preds[["3"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 3) +
+        #      surv_preds[["4"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 4) +
+        #      surv_preds[["5"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 5) +
+        #      surv_preds[["6"]](narw.indiv[i, "bc", ]) * (narw.indiv[i, "cohort", ] == 6))
+        # 
+        #   # 0.95 * narw.indiv[i, "alive", ]
+        # 
+        # narw.indiv[i, "p_surv", ] <- ps
         # narw.indiv[i, "p_surv", ] <-  0.85 * narw.indiv[i, "alive", ]
         
         #' ----------------------------
@@ -410,7 +493,7 @@ predict.narwsim <- function(obj,
   
   # narw.out <- narw.out[is.finite(rowSums(narw.out)),]
   
-  narw.df <- purrr::map(.x = cohorts$name, .f = ~{
+  narw.df <- purrr::map(.x = cohorts.proj$name, .f = ~{
     narw.pop[,,.x] |> 
       tibble::as_tibble() |> 
       tibble::rownames_to_column(var = "prj") |> 
