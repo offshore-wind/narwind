@@ -1,5 +1,6 @@
 # MODEL ------------------------------------------------------
 
+expand <- function (x, ...) UseMethod("expand", x)
 write <- function(x, ...) UseMethod("write")
 
 meta <- function(seed = 215513, 
@@ -780,7 +781,7 @@ consolidate <- function(dtl, nsim, cnames, dates, months){
 optim_feeding <- function(bounds = list(), 
                            err = 0.05,
                            nm = NULL, 
-                          cex = 1.15,
+                           cex = 1.15,
                            linecol = "black",
                            verbose = TRUE){
   
@@ -2074,6 +2075,41 @@ reshape_array <- function(a, value, ..., .id = NULL)
   return(tidy)
 }
 
+find_mortality <- function(rate = 0.02){
+  
+  opt.fun <- function(x, r, verbose = FALSE){
+    
+    r0 <- rbinom(n = 100, size = 365, prob = x) 
+    r0 <- length(r0[r0>0])/100
+    
+    r1 <- rbinom(n = 1000, size = 365, prob = x)
+    r1 <- length(r1[r1>0])/1000
+    
+    r2 <- rbinom(n = 10000, size = 365, prob = x)
+    r2 <- length(r2[r2>0])/10000
+    
+    r3 <- rbinom(n = 100000, size = 365, prob = x)
+    r3 <- length(r3[r3>0])/100000
+    
+    out <- (r0-r)^2 + (r1-r)^2 + (r2-r)^2 + (r3-r)^2
+    
+    if(verbose){
+      cat("Target p:", rate, "\n")
+      cat("-------------------\n")
+      cat("N = 100:", r0, "\n")
+      cat("N = 1,000:", r1, "\n")
+      cat("N = 10,000:", r2, "\n")
+      cat("N = 100,000:", r3, "\n\n")
+    }
+    
+    return(out)
+  }
+  
+  est <- optim(par = 0.001, fn = opt.fun, r = rate)
+  opt.fun(x = est$par, r = rate, verbose = TRUE)
+  return(est$par)
+}
+
 scale_growth <- function(target.max = 45000, maxBC = 0.6586636, age = 69){
   # When lean = 1, length2mass returns the total mass of an animal given its length(age), as per Fortune et al. (2021)
   # By setting lean < 1, we can scale down this relationship to obtain a growth curve for lean mass.
@@ -2085,13 +2121,22 @@ scale_growth <- function(target.max = 45000, maxBC = 0.6586636, age = 69){
   return(out$minimum)
 }
 
-# find_lean <- function(target.max, maxBC = 0.6, age = 69){
-#   opt.fun <- function(x, age, target.max, maxBC){
-#     return((length2mass(age2length(age, agL(age)), mL(), x)/(1-maxBC)-target.max)^2)}
-#   out <- optimize(f = opt.fun, interval = c(0,1), target.max = target.max, maxBC = maxBC, age = age)
-#   return(out$minimum)
-# }
-
+find_lean <- function(max.mass = 45000, maxBC, age = 69){
+  
+  # Mean total mass from published growth curve 
+  mt <- length2mass(age2length(69, agL(69)), mL(), 1)
+  
+  # Maximum lean mass given max total mass and max BC
+  mlm <- (1-maxBC)*maxM
+  
+  # Resulting scalar - we basically
+  return(mlm/mt)
+  
+  # opt.fun <- function(x, age, target.max, maxBC){
+  #   return(((length2mass(age2length(age, agL(age)), mL(), x)/(1-maxBC))-target.max)^2)}
+  # out <- optimize(f = opt.fun, interval = c(0,1), target.max = max.mass, maxBC = maxBC, age = age)
+  # return(out$minimum)
+}
 
 gestation_threshold <- function(){
   
@@ -2387,6 +2432,7 @@ proxy_noise <- function(ambient = 60, source.lvl = 220, mitigation = 10, x, y){
 
 entgl_surface <- function(scalar = 1){
   
+  # Retrieve densityt layer
   d <- targets::tar_read(density_narw)
   regions <- targets::tar_read(regions)
   rd <- raster::raster(d[[1]])
@@ -2397,14 +2443,21 @@ entgl_surface <- function(scalar = 1){
   purrr::map(.x = 1:12, .f = ~{
     
     print(month.abb[.x])
-    
-    # United States
+
+    # Import raster of line numbers for U.S. waters
     lines.r <- raster::raster(x = paste0("data/gear/LineNum_PostAction/DST_LineNum_PostAction_m", 
                                          stringr::str_pad(.x, 2, pad = "0"), ".tif")) |> 
       raster::projectRaster(to = rd)
     
+    # lines.r <- raster::raster(x = paste0("data/gear/LineNum_PostAction/DST_LineNum_PostAction_m", 
+    #                                      stringr::str_pad(.x, 2, pad = "0"), ".tif")) 
     
+    # Rasterize regions polygons
     regions.raster <- raster::rasterize(regions[, "region"], rd)
+    # regions.raster <- raster::rasterize(sp::spTransform(regions[, "region"], sp::proj4string(lines.r)), lines.r)
+    
+    
+    # Sum of line numbers in U.S. waters
     US.waters <- sum(lines.r[], na.rm = TRUE)
     
     # US.waters <- 
@@ -2414,6 +2467,7 @@ entgl_surface <- function(scalar = 1){
     GSL.waters <- GSL_scalar * US.waters
     ELSWC.waters <- ELSWC_scalar * US.waters
     
+    # Identify cells within regions of interest
     GSL.cells <- which(regions.raster[] == which(regions$region == "GSL"))
     ELSWC.cells <- which(regions.raster[] == which(regions$region %in% c("CABOT, SCOS, BOF_lower, BOF_upper")))
     
@@ -2525,7 +2579,7 @@ proxy_fishing <- function(){
 
 # VESSEL TRAFFIC ------------------------------------------------------
 
-proxy_vessels <- function(pmax = 0.05){
+proxy_vessels <- function(pmax = 0.005){
   
   # Data from https://globalmaritimetraffic.org/ - monthly rasters between Jan and Dec 2022
   
@@ -2612,14 +2666,14 @@ proxy_prey <- function(){
   # regions.raster[regions.raster <0] <- 0
   
   gradient.r <- raster::as.data.frame(target.r, xy = TRUE)
-  gradient.r$val <- 1/(1+exp(-0.02*(gradient.r$x-500)))
+  gradient.r$val <- 1/(1+exp(-0.025*(gradient.r$x-150)))
   gradient.r$val[which(is.na(gradient.r$Nhat))] <- NA
   gradient.r <- raster::rasterFromXYZ(xyz = gradient.r[,c("x", "y", "val")], res = raster::res(target.r), crs = narw_crs())
   # plot(world, col = "grey")
   # plot(gradient.r, add = T)
   
   # Create a correlated random field as a dummy prey surface
-  grid <- sp::makegrid(support_poly, cellsize = 15) |>
+  grid <- sp::makegrid(support_poly, cellsize = 5) |>
     dplyr::rename(x = x1, y = x2)
   area.ex <- raster::extent(support_poly)
   grid <- expand.grid(seq(area.ex[1], area.ex[2], length.out = 200),
@@ -2631,26 +2685,65 @@ proxy_prey <- function(){
     seed <- as.numeric(paste0("250", .x))
     set.seed(seed)
     
-    g.dummy <- gstat::gstat(formula = 
-                            z ~ 1 + y, 
-                            locations = ~ x + y, 
-                            dummy = TRUE, 
-                            beta = 12000, 
-                            model = gstat::vgm(psill = 2000, range = 500, model = 'Exp'), 
-                            nmax = 20)
-    
-    yy <- predict(g.dummy, newdata = grid, nsim = 4)
+    xyz <- grid
+    e <- rnorm(nrow(xyz), mean = 0, sd=100)
+    xyz$z <- rlnorm(nrow(xyz), log(-1*xyz$x + 1.2*xyz$y), log(6)) + e
+    xyz$z <- ifelse(xyz$z > 12000, 12000, xyz$z)
+    xyz$z <- ifelse(is.na(xyz$z), 0, xyz$z)
+    yy <- xyz[, c("x", "y", "z")]
     sp::gridded(yy) = ~x+y
     yy <- raster::raster(yy)
-
+    
     # Clip to area of interest
     rout <- raster::resample(yy, target.r) |> 
       raster::crop(target.r) |> 
       raster::mask(target.r)
     
-    rout * gradient.r
-    # r <- rout * gradient.r
-    # plot_raster(r, zero = TRUE)
+    rout[!is.na(rout) & rout<0] <- 0
+    
+    rout
+    
+    # g.dummy <- gstat::gstat(formula = 
+    #                         z ~ 1+y, 
+    #                         locations = ~ x + y, 
+    #                         dummy = TRUE, 
+    #                         beta = 12, 
+    #                         model = gstat::vgm(psill = 10, nugget = 2, range = 50, model = 'Sph'), 
+    #                         nmax = 10)
+    # 
+    # yy <- predict(g.dummy, newdata = grid, nsim = 10)
+    # yy$z <- apply(X = yy[, 3:ncol(yy)], MARGIN = 1, FUN = function(x) min(x, na.rm = TRUE))
+    # yy <- yy[, c("x", "y", "z")]
+    # sp::gridded(yy) = ~x+y
+    # yy <- raster::raster(yy)
+    # 
+    # # Clip to area of interest
+    # rout <- raster::resample(yy, target.r) |> 
+    #   raster::crop(target.r) |> 
+    #   raster::mask(target.r)
+    # 
+    # # plot(rout)
+    # 
+    # g.dummy01 <- gstat::gstat(formula = z ~ x + y, 
+    #                         locations = ~ x + y, 
+    #                         dummy = TRUE, 
+    #                         beta = 12000, 
+    #                         model = gstat::vgm(psill = 10, nugget = 2, range = 100, model = 'Sph'), 
+    #                         nmax = 20)
+    # 
+    # yy01 <- predict(g.dummy01, newdata = grid, nsim = 4)
+    # sp::gridded(yy01) = ~x+y
+    # yy01 <- raster::raster(yy01) |> rescale_raster(new.min = 0.5)
+    # 
+    # # Clip to area of interest
+    # rout01 <- raster::resample(yy01, target.r) |> 
+    #   raster::crop(target.r) |> 
+    #   raster::mask(target.r)
+    # 
+    # # plot(rout01)
+    # 
+    # rout * gradient.r * rout01
+    # plot_raster(rout * gradient.r * rout01, zero = TRUE)
   })
   
   out <- purrr::map(.x = out, .f = ~as(.x, "SpatialGridDataFrame"))
@@ -2661,13 +2754,17 @@ proxy_prey <- function(){
 
 # SPATIAL DATA ------------------------------------------------------
 
-
 #' Projected coordinate system
 #'
 #' @return An object of class \code{CRS}.
 #' 
 narw_crs <- function(){
   sp::CRS("+proj=aea +lat_0=34 +lon_0=-78 +lat_1=27.3333333333333 +lat_2=40.6666666666667 +x_0=0 +y_0=0 +datum=WGS84 +units=km +no_defs")
+}
+
+get_limits <- function(spgdf){
+  out <- sp::coordinates(spgdf)
+  return(c(range(out[,1]), range(out[,2])))
 }
 
 # rescale_raster <- function(x, new.min = 0, new.max = 1, x.min = NULL, x.max = NULL) {
@@ -2703,6 +2800,9 @@ spatial_support <- function(min_density = 0.001){
   map_rasters <- targets::tar_read(density_merge) |> 
     purrr::map(.f = ~as(.x, "SpatialGridDataFrame"))
   
+  world <- targets::tar_read(world)
+  
+  
   # ..........................................
   # Spatial support
   # ..........................................
@@ -2736,10 +2836,10 @@ spatial_support <- function(min_density = 0.001){
   # ..........................................
   
   # Load region boundaries
-  regions.support <- targets::tar_read(regions)
+  regions <- targets::tar_read(regions)
   
   # Filter out Canada
-  regions.support <- regions.support[regions.support@data$region %in% c("GSL", "SCOS", "CABOT"),] 
+  regions.support <- regions[regions@data$region %in% c("GSL", "SCOS", "CABOT"),] 
   
   # Overlay regions onto current spatial support
   regions.raster <- raster::rasterize(
@@ -2763,6 +2863,16 @@ spatial_support <- function(min_density = 0.001){
   
   combined_support <- raster::merge(regions.raster, raster::raster(filtered_support))
 
+  # Need to add small area of GOM back in
+  rastermask <- combined_support
+  rastermask[rastermask == 0] <- NA
+  rastermask <- raster::rasterToPolygons(x = rastermask, dissolve = TRUE)
+  w1 <- raster::intersect(world, regions[regions$region == "GOM",])
+  combined_area <- rgeos::gUnion(w1, rastermask)
+  combined_area <- smoothr::fill_holes(combined_area, 100000)
+  
+  combined_area <- raster::rasterize(x = combined_area, y = combined_support)
+  combined_support <- raster::merge(combined_area, combined_support)
   
   # ..........................................
   # Mask out land
@@ -3691,6 +3801,98 @@ get_world <- function(sc = "medium"){
   return(wrld)
 }
 
+
+# POSTERIOR SAMPLING ------------------------------------------------------
+
+# https://github.com/dill/GAMsampling
+
+# taken from mgcv source code
+
+## Simple post fit mcmc for mgcv.
+## (c) Simon N. Wood (2020)
+
+
+## some functions to extract important components of joint density from
+## fitted gam...
+
+## evaluate penalty for fitted gam, possibly with new beta
+# patched to include parapen
+bSb <- function(b,beta=coef(b)) {
+  bSb <- k <-  0
+  sp <- if (is.null(b$full.sp)) b$sp else b$full.sp ## handling linked sp's
+  
+  
+  # the parapen bits
+  # need to do something clever with L at some point
+  if(!is.null(b$paraPen)){
+    for (i in 1:length(b$paraPen$S)) {
+      k <- k + 1
+      # get indices
+      ii <- b$paraPen$off[i]
+      ii <- ii:(ii+ncol(b$paraPen$S[[i]])-1)
+      # add to penalty
+      bSb <- bSb + sp[b$paraPen$full.sp.names[i]]*
+        (t(beta[ii])%*%b$paraPen$S[[i]]%*%beta[ii])
+    }
+  }
+  
+  
+  for (i in 1:length(b$smooth)) {
+    m <- length(b$smooth[[i]]$S)
+    if (m) {
+      ii <- b$smooth[[i]]$first.para:b$smooth[[i]]$last.para
+      for (j in 1:m) {
+        k <- k + 1
+        bSb <- bSb + sp[k]*(t(beta[ii])%*%b$smooth[[i]]$S[[j]]%*%beta[ii])
+      }
+    }
+  }
+  
+  
+  bSb
+} ## bSb
+
+devg <- function(b,beta=coef(b),X=model.matrix(b)) {
+  ## evaluate the deviance of a fitted gam given possibly new coefs, beta
+  ## for general families this is simply -2*log.lik
+  if (inherits(b$family,"general.family")) {
+    -2*b$family$ll(b$y,X,beta,b$prior.weights,b$family,offset=b$offset)$l
+  } else { ## exp or extended family
+    sum(b$family$dev.resids(b$y,b$family$linkinv(X%*%beta+b$offset),b$prior.weights))
+  }
+} ## devg
+
+lpl <- function(b,beta=coef(b),X=model.matrix(b)) {
+  ## log joint density for beta, to within uninteresting constants
+  -(devg(b,beta,X)/b$sig2+bSb(b,beta)/b$sig2)/2
+}
+
+## t-distribution stuff for mgcv.
+## (c) Simon N. Wood (2020)
+
+## some useful densities (require mgcv::rmvn)...
+
+rmvt <- function(n,mu,V,df) {
+  ## simulate multivariate t variates  
+  y <- rmvn(n,mu*0,V)
+  v <- rchisq(n,df=df)
+  t(mu + t(sqrt(df/v)*y))
+}
+
+r.mvt <- function(n,mu,V,df) rmvt(n,mu,V,df)
+
+dmvt <- function(x,mu,V,df,R=NULL) {
+  ## multivariate t log density...
+  p <- length(mu);
+  if (is.null(R)) R <- chol(V)
+  z <- forwardsolve(t(R),x-mu)
+  k <- - sum(log(diag(R))) - p*log(df*pi)/2 + lgamma((df+p)/2) - lgamma(df/2)
+  k - if (is.matrix(z)) (df+p)*log1p(colSums(z^2)/df)/2 else (df+p)*log1p(sum(z^2)/df)/2
+}
+
+d.mvt <- function(x,mu,V,df,R=NULL) dmvt(x,mu,V,df,R)
+
+
 # BIOENERGETICS ------------------------------------------------------
 # 
 # body_condition <- function(n, cohorts, alpha = 6, beta = 20){
@@ -3892,6 +4094,8 @@ theme_narw <- function(vertical = FALSE){
 
 plot_raster <- function(r, duke = FALSE, zero = FALSE, breaks = NULL){
   
+  world <- targets::tar_read(world)
+  
   if(class(r) == "SpatialGridDataFrame") r <- raster::raster(r)
   
   dat <- raster::as.data.frame(r, xy = TRUE)
@@ -3957,8 +4161,314 @@ gape_size_R <- function(L, omega, alpha){
   (deg2radians_R(alpha) * ((omega^2)/4 + (0.2077*L - 1.095)^2))/2
 }
 
+# FIGURES -----------------------------------------------------------------
+
+figures <- function(obj = NULL, cex = 1){
+  
+  regions <- targets::tar_read(regions)
+  density_narw <- targets::tar_read(density_narw)
+  world <- targets::tar_read(world)
+  
+  # ............................................................
+  # Distribution of body mass
+  # ............................................................
+  
+  if(!is.null(obj)){
+    
+    mass <- purrr::map(.x = obj$sim, .f = ~{
+      .x[day > 0 & alive == 1, mass]
+    }) |> tibble::enframe() |> 
+      tidyr::unnest(cols = c(value))
+    
+    massplot <- ggplot2::ggplot(data = mass, aes(x = value)) + 
+     ggplot2::geom_histogram(aes(y =..density..), position = "identity", fill = "grey", color = "black") +
+      ggplot2::geom_density(col = "black") + 
+      theme_narw() + 
+      theme(panel.background = element_rect(fill = "transparent", colour = "black", size = 1),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank()) +
+      ggplot2::facet_wrap(~name) + 
+      xlab("Total mass (kg)")
+    
+  quiet(ggplot2::ggsave(filename = file.path("out/total_mass.jpeg"), plot = massplot))
+    
+  }
+  
+  # ............................................................
+  # Estimated density surface within Canadian waters - June ----
+  # ............................................................
+  
+  JunDens <- raster::raster(density_narw$Jun)
+  JunDens <- raster::mask(JunDens, mask = regions[regions$country == "Canada",])
+  JunDens <- raster::crop(JunDens, regions[regions$country == "Canada",])
+  JuneDens.plot <- plot_raster(JunDens, duke = TRUE)
+  
+  quiet(ggplot2::ggsave(filename = file.path("out/NARW_density_Canada_June.jpeg"), plot = JuneDens.plot))
+  
+  # ............................................................
+  # Feeding / nursing effort ----
+  # ............................................................
+  
+  x <- seq(0, 1, length.out = 100)
+  fcolors <- c("#104E8B","#EEB422")
+  
+  jpeg(filename = file.path("out/feeding_nursing_effort.jpeg"), res = 300, width = 2500, height = 1500)
+  
+  plot(x, feeding_effort_vec(10, 0.41718, x), 
+       lwd = 2, 
+       col = fcolors[1],
+       type = "l", 
+       ylab = "Feeding effort",
+       lty = 1, 
+       xlab = "Body condition (relative blubber mass, %)", 
+       cex.axis = cex, 
+       cex.lab = cex)
+  
+  lines(x, feeding_effort_vec(30, 0.6, x), lwd = 2, col = fcolors[2])
+  abline(v = 0.41718, lty = 2, col = fcolors[1])
+  abline(v = 0.6, lty = 2, col = fcolors[2])
+  legend("topright", lty = c(1,1), col = fcolors, legend = c("Calves/pregnant females", "Other cohorts"))
+  
+  dev.off()
+  
+  # f <- function(x, A = 1, D = 0, B, C, S) A + (D-A) / (1 + exp(B*(C-x)))^S
+
+ #  plot(x, f(x, B = 29.04823, C = 0.3607178, S = 1.000036),
+ #   lwd = 3, col = "#872E1C",
+ #   type = "l", ylab = "Feeding effort", lty = 2, xlab = "Body condition (relative blubber mass, %)", cex.axis = 1.5, cex.lab = 1.5
+ # )
+ # lines(x, f(x, B = 21.02454, C = 0.4408761, S = 1.000066),
+ #   lwd = 3, col = "#872E1C", lty = 1,
+ #   type = "l", ylab = "Feeding effort", xlab = "Body condition (relative blubber mass, %)"
+ # )
+
+  # ............................................................
+  # Foraging response to prey concentration ----
+  # ............................................................
+  
+  jpeg(filename = file.path("out/foraging_response.jpeg"), res = 300, width = 2500, height = 1500)
+  
+  par(mfrow = c(1, 2))
+
+ quiet(draw("tnorm", 1979.970, 1001.192, 0, Inf, 
+       xlab = expression(Prey ~ concentration ~ (ind / m^3)), 
+       ylab = "Density", 
+       col = fcolors[1],
+       main = "Minimum prey concentration", lwd = 2))
+  
+ abline(v = 2500, lty = 2, col = fcolors[1])
+ prey <- seq(0, 10000, length.out = 10000)
+ plot(prey, feeding_threshold_vec(2500, prey),
+      type = "l", 
+      col = fcolors[2],
+      lwd = 2,
+      ylab = "Feeding response",
+      main = "Foraging response",
+      xlab = expression(Prey ~ concentration ~ (ind / m^3)))
+
+ par(mfrow = c(1, 1))
+ dev.off()
+  
+  # ............................................................
+  # Milk assimilation ----
+  # ............................................................
+  
+  jpeg(filename = file.path("out/milk_assimilation.jpeg"), res = 300, width = 1500, height = 1500)
+  
+  days <- 1:365
+  plot(days, milk_assimilation_vec(days, 365, 288, 0.9),
+       xlab = "Day", 
+       ylab = "Milk assimilation rate", 
+       type = "l",
+       lwd = 2, 
+       col = fcolors[1],
+       main = "Milk assimilation")
+  
+  dev.off()
+  
+  # ............................................................
+  # Milk supply ----
+  # ............................................................
+  
+  jpeg(filename = file.path("out/milk_supply.jpeg"), res = 300, width = 1500, height = 1500)
+  
+  bc <- seq(0.05, 1, by = 0.001)
+  mass <- 30000
+  plot(bc, milk_supply_vec(0.05, 0.41718, rep(mass, length(bc)), bc*mass, -2),
+       type = 'l', 
+       col = fcolors[1],
+       lwd = 2, 
+       xlab = "Body condition",
+       main = "Milk provisioning", 
+       ylab = "")
+  
+  dev.off()
+  
+  # ............................................................
+  # Mass-at-length ----
+  # ............................................................
+  
+  jpeg(filename = file.path("out/mass_at_length.jpeg"), res = 300, width = 1500, height = 1500)
+
+  ages <- seq(0,30,by = 0.1)
+  lengths <- age2length_vec(ages)
+  plot(ages, length2mass_vec(lengths, lean = 1), 
+       type = "l", 
+       lwd = 2, 
+       xlab = "Age (years)",
+       ylab = "Mass (kg)")
+  lines(ages, length2mass_vec(lengths), lty = 2, lwd = 2)
+  legend("bottomright", 
+         c("Total mass (Fortune et al. 2020)", "Lean mass (narwind)"), 
+         lty = c(1,2), bty = "n", y.intersp = 1.25)
+  
+  dev.off()
+  
+  # ............................................................
+  # Initial body condition ----
+  # ............................................................
+  
+  jpeg(filename = file.path("out/calf_bodycondition.jpeg"), res = 300, width = 2000, height = 1500)
+  
+  bc_calf <- matrix(nrow = 100000, ncol = 7)
+  colnames(bc_calf) <- c("Lg", "Mm", "Mv", "Mbo", "BCi", "Mbu", "BC")
+  for(i in 1:10000){
+    a <- numeric(4)
+    length.b <- runif(1, 4.1, 5.3)
+    a[1] <- fetal_tissue_mass(0.282, length.b) # muscle
+    a[2] <- fetal_tissue_mass(0.102, length.b) # viscera
+    a[3] <- fetal_tissue_mass(0.125, length.b) # bones
+    bc <- rtnorm(-0.0061, 0.0049*sqrt(992), -0.4, 0.4)
+    a[4] <- fetal_blubber_mass(length.b,bc, a[1], a[2], a[3], 700, 960, 930, 720)
+    
+    bc_calf[i, 1] <- length.b
+    bc_calf[i, 2] <- a[1]
+    bc_calf[i, 3] <- a[2]
+    bc_calf[i, 4] <- a[3]
+    bc_calf[i, 5] <- bc
+    bc_calf[i, 6] <- a[4]
+    bc_calf[i, 7] <- a[4]/sum(a)
+  }
+  hist(bc_calf[,"BC"], breaks = 50, xlab = "Relative fat mass (%))", main = "Body condition at birth", freq = FALSE)
+  lines(density(bc_calf[,"BC"], adjust = 2, na.rm = TRUE))
+  lines(seq(min(bc_calf[,"BC"], na.rm = TRUE), max(bc_calf[,"BC"], na.rm = TRUE), by = 0.01), 
+        dnorm(seq(min(bc_calf[,"BC"], na.rm = TRUE), max(bc_calf[,"BC"], na.rm = TRUE), by = 0.01),
+              mean = mean(bc_calf[,"BC"], na.rm = TRUE),
+              sd = sd(bc_calf[,"BC"], na.rm = TRUE)), col = fcolors[2], lwd = 2)
+  legend("topleft", legend = c("Simulated", "Normal"), lty = 1, lwd = 2, col = c("black", fcolors[2]), bty = "n")
+  
+  dev.off()
+  
+  jpeg(filename = file.path("out/initial_bodycondition.jpeg"), res = 300, width = 2000, height = 1500)
+  
+  # Pregnant / lactating females
+  quiet(draw("tnorm", 0.6, 0.05, 0.05, 0.6, main = "", 
+       xlab = "Body condition (% fat mass)", 
+       xlim = c(0,1),
+       ylab = "Density", 
+       cex.lab = cex, 
+       cex.axis = cex, 
+       cex.main = cex, 
+       lwd = 1.5, 
+       col = "deepskyblue4", 
+       from = 0, 
+       to = 1))
+  
+  # Adults
+  quiet(draw("tnorm", 0.35, 0.075, 0.05, 0.6, main = "", 
+       xlab = "Body condition (% fat mass)", 
+       xlim = c(0,1),
+       ylab = "Density", 
+       cex.lab = cex, 
+       cex.axis = cex,
+       cex.main = cex, 
+       lwd = 1.5, 
+       add = TRUE,
+       col = "goldenrod1",
+       from = 0, 
+       to = 1))
+  
+  # Calves
+  quiet(draw("tnorm", 0.3539697, 0.08844279, 0.05, 0.6, 
+       main = "", 
+       xlab = "Body condition (% fat mass)", 
+       xlim = c(0,1), 
+       ylab = "Density", 
+       cex.lab = cex, 
+       cex.axis = cex, 
+       cex.main = cex, 
+       lwd = 1.5, 
+       col = "grey30", 
+       add = TRUE, 
+       from = 0, 
+       to = 1))
+  
+  legend("topleft", 
+         bty = "n",
+         lty = 1, 
+         col = c(rep("deepskyblue4", 1), rep("goldenrod1", 1), "grey30"), 
+         legend = c("Pregnant females", "Juv/adults", "Calves"))
+  
+  dev.off()
+  
+  # ............................................................
+  # Birth probability ----
+  # ............................................................
+  
+  jpeg(filename = file.path("out/prob_birth.jpeg"), res = 300, width = 1500, height = 1500)
+  
+  days <- seq(40, 135, 1)
+  plot(days, pbirth_vec(days, 69, 40),
+       type = "l", 
+       xlab = "Day",
+       ylab = "p(birth)", 
+       cex.axis = cex, 
+       cex.lab = cex,
+       lwd = 1.5)
+  abline(v = 69, col = fcolors[2], lty = 2, lwd = 2)
+  legend("topleft", legend = "Enter calving\n grounds", lty = 2, lwd = 1.5, col = fcolors[2], bty = "n")
+  
+  dev.off()
+  
+  # x <- 0:100
+  # plot(x, survivorship_vec(x), ylab = "p(survival)", xlab = "Age (years)", type = "l", lwd = 1.5)
+  # lines(x, survivorship_vec(x, a1 = 2, a2 = 0, a3 = 0.01, b1 = 60, b3 = 8), lty = 2)
+  # # lines(x, survivorship_vec(x, a1 = 0.1, a2 = 0, a3 = 0.01, b1 = 60, b3 = 8), lty = 2)
+  # lines(x, survivorship_vec(x, a1 = 10, a2 = 0.5, b1 = 10, b3 = 4), lty = 2)
+  # lines(x, survivorship_vec(x, a1 = 14, a2 = 0.1, b1 = 20, b3 = 7), lty = 2)
+  # lines(x, survivorship_vec(x, a1 = 1, a2 = 0.12, b1 = 30, b3 = 12), lty = 2)
+  # lines(x, survivorship_vec(x, a1 = 1, a2 = 0.12, b1 = 30, b3 = 25), lty = 2)
+  # abline(v = 69, lty = 1, lwd = 1.5, col = "firebrick")
+  
+  # entgl_check <- purrr::map(.x = 1:100000, .f = ~entanglement_event(1)) |> do.call(what = rbind) |> data.table::as.data.table()
+  # names(entgl_check) <- c("entgl", "severity", "head", "gape", "duration", "start", "end", "dead")
+  # 
+  # table(entgl_check$head)
+  # entgl_check[head == 1, .(gape = mean(gape), min = min(gape), max = max(gape)), severity]
+  
+  
+  # 
+  # estRayleighParams(6.5, 150)
+  # # 45 km as target mean
+  # # 45/sqrt(pi) = sigma
+  # # 
+  # target.mean = 5.4
+  # rn <- extraDistr::rrayleigh(1000000, sigma = sqrt(2)*target.mean/sqrt(pi))
+  # hist(rn, main = "Rayleigh distribution (sigma = 3.807)", xlab = "Step lengths (km)")
+  # abline(v = 5, col = "firebrick", lwd = 1.5)
+  # mean(rn)
+  # max(rn)
+  # sum(rn<=5)/length(rn)
+  
+}
 
 # UTILITIES ------------------------------------------------------
+
+quiet <- function(x) { 
+  sink(tempfile()) 
+  on.exit(sink()) 
+  invisible(force(x)) 
+} 
 
 fix_paths_vignettes <- function(vignette.name = "narwind"){
   vignette.path <- paste0("/Volumes/GoogleDrive/My Drive/Documents/git/narwind/docs/articles/", vignette.name, ".html")
