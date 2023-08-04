@@ -20,6 +20,7 @@
 narw <- function(nsim = 1e3,
                  scenario = NULL,
                  n.cores = NULL,
+                 piling.hrs = 4,
                  progress = TRUE,
                  ...){
   
@@ -31,7 +32,8 @@ narw <- function(nsim = 1e3,
   cohortID <- 1:6
   stressors <- TRUE
   growth <- TRUE
-  cease.nursing <- FALSE
+  cease.nursing <- c(FALSE, piling.hrs)
+  ambient.dB <- 60
   
   # Starvation threshold expressed as relative blubber mass
   # As per Pirotta et al. (2018) - to test extreme conditions of leanness
@@ -48,7 +50,7 @@ narw <- function(nsim = 1e3,
     if("cease.nursing" %in% names(args)) cease.nursing <- args[["cease.nursing"]]
   }
 
-  cohortID <- cohortID[cohortID > 0]
+  if(length(cease.nursing)<2) stop("<cease.nursing> is not of length 2")
   
   # Step size for movement model
   step.size = 120
@@ -56,6 +58,8 @@ narw <- function(nsim = 1e3,
   # Number of proposals when sampling new location
   # In line with sample sizes used in case studies from Michelot (2020)
   n.prop = 50
+  
+  cohortID <- cohortID[cohortID > 0]
   
   if(any(!cohortID %in% 1:6)) stop("Unrecognized cohort")
   
@@ -123,13 +127,19 @@ narw <- function(nsim = 1e3,
   # ............................................................
   
   preymaps <- lapply(dummy_prey, raster::as.matrix)
+  
+  # Test coarser resolution
+  # preymaps <- lapply(dummy_prey, FUN = function(x){
+  #   raster::as.matrix(as(raster::aggregate(raster::raster(x), fact = 2), "SpatialGridDataFrame"))
+  # })
+  
   fishingmaps <- lapply(fishing_layer, raster::as.matrix)
 
   if(is.null(scenario)){
     vesselmaps <- lapply(dummy_vessels, raster::as.matrix)
     noisemaps <- lapply(dummy_noise, FUN = function(x) {
       n <- raster::as.matrix(x)
-      n[!is.na(n)] <- 60
+      n[!is.na(n)] <- ambient.dB
       n})
   } else {
     vesselmaps <- lapply(dummy_vessels, raster::as.matrix)
@@ -169,8 +179,23 @@ narw <- function(nsim = 1e3,
   
   coords <- sp::coordinates(density_narw[[1]])
   colnames(coords) <- c("x", "y")
-  map_limits <- c(range(coords[,1]), range(coords[,2]))
+  
+  map_limits <- get_limits(density_narw[[1]])
+  map_limits_daylight <- get_limits(daylight[[1]])
+  map_limits_regions <- get_limits(regions_m)
+  map_limits_prey <- get_limits(dummy_prey[[1]])
+  map_limits_fishing <- get_limits(fishing_layer[[1]])
+  map_limits_vessels <- get_limits(dummy_vessels[[1]])
+  map_limits_noise <- get_limits(noise_layer[[1]][[1]])
+  
+  # Resolution of input surfaces
   map_resolution <- density_narw[[1]]@grid@cellsize
+  map_resolution_daylight <- daylight[[1]]@grid@cellsize
+  map_resolution_regions <- regions_m@grid@cellsize
+  map_resolution_prey <- dummy_prey[[1]]@grid@cellsize
+  map_resolution_fishing <- fishing_layer[[1]]@grid@cellsize
+  map_resolution_vessels <- dummy_vessels[[1]]@grid@cellsize
+  map_resolution_noise <- noise_layer[[1]][[1]]@grid@cellsize
   
   # ............................................................
   # Set up simulation parameters
@@ -339,11 +364,24 @@ narw <- function(nsim = 1e3,
                                 yinit = matrix(data = coords[init.inds[[i]], 'y'], nrow = nrow(init.inds[[i]])),
                                 support = geomap,
                                 limits = map_limits,
+                                limits_daylight = map_limits_daylight,
+                                limits_regions = map_limits_regions,
+                                limits_prey = map_limits_prey,
+                                limits_fishing = map_limits_fishing,
+                                limits_vessels = map_limits_vessels,
+                                limits_noise = map_limits_noise,
                                 resolution = map_resolution,
+                                resolution_daylight = map_resolution_daylight,
+                                resolution_regions = map_resolution_regions,
+                                resolution_prey = map_resolution_prey,
+                                resolution_fishing = map_resolution_fishing,
+                                resolution_vessels = map_resolution_vessels,
+                                resolution_noise = map_resolution_noise,
                                 stressors = stressors,
                                 growth = growth,
                                 starvation = starvation,
                                 nursing_cessation = cease.nursing,
+                                piling_hrs = piling.hrs,
                                 progress = FALSE
                                 )
                               } # End foreach loop
@@ -389,11 +427,24 @@ narw <- function(nsim = 1e3,
       yinit = matrix(data = coords[init.inds[[1]], "y"], nrow = nrow(init.inds[[1]])),
       support = geomap,
       limits = map_limits,
+      limits_daylight = map_limits_daylight,
+      limits_regions = map_limits_regions,
+      limits_prey = map_limits_prey,
+      limits_fishing = map_limits_fishing,
+      limits_vessels = map_limits_vessels,
+      limits_noise = map_limits_noise,
       resolution = map_resolution,
+      resolution_daylight = map_resolution_daylight,
+      resolution_regions = map_resolution_regions,
+      resolution_prey = map_resolution_prey,
+      resolution_fishing = map_resolution_fishing,
+      resolution_vessels = map_resolution_vessels,
+      resolution_noise = map_resolution_noise,
       stressors = stressors,
       growth = growth,
       starvation = starvation,
       nursing_cessation = cease.nursing,
+      piling_hrs = piling.hrs,
       progress = ifelse(progress, TRUE, FALSE)
     ))
     
@@ -434,10 +485,19 @@ narw <- function(nsim = 1e3,
   # MORTALITY AND BODY CONDITION
   # ............................................................
   
+  for(k in cohortID){
+    outsim[["sim"]][[cohorts[id == k, abb]]][, date_died:= date_died[which.max(date_died)], whale]
+    if (k == 5) {
+      outsim[["sim"]][[cohorts[id == k, abb]]][, date_died_calf:= date_died_calf[which.max(date_died_calf)], whale]
+      outsim[["sim"]][[cohorts[id == k, abb]]][, dob:= dob[which.max(dob)], whale]
+    }
+  }
+  
+  
   gam.dt <- purrr::map(.x = seq_along(cohortID), .f = ~ {
 
-   outsim[["sim"]][[.x]][, death:= `if`(all(alive==0), 1, max(which(alive==1))+1), whale] # This is the row not the day
-   outsim[["sim"]][[.x]][, death:= `if`(death > length(date_seq), NA, death), list(whale, day)]
+   # outsim[["sim"]][[.x]][, death:= `if`(all(alive==0), 1, max(which(alive==1))+1), whale] # This is the row not the day
+   # outsim[["sim"]][[.x]][, death:= `if`(death > length(date_seq), NA, death), list(whale, day)]
     
    dt_adjuv <- 
      
@@ -449,37 +509,40 @@ narw <- function(nsim = 1e3,
      # Finishing conditions
      outsim[["sim"]][[.x]][day == length(date_seq)-1, list(end_bc = bc, alive, abort, strike, starve, died), whale],
      
-     # Date, day, region and coordinates of when death occurred
-     outsim[["sim"]][[.x]][, .SD[death], .SDcols = c("date", "day", "easting", "northing", "region"), whale] |> dplyr::distinct()
+     # Date, day, region and coordinates of when death occurred if relevant
+     # Add +1 to .SD call as need row number rather than day nunber
+     outsim[["sim"]][[.x]][, .SD[unique(date_died) + 1], .SDcols = c("date", "day", "easting", "northing", "region"), whale]
     
      ), dplyr::left_join, by = "whale") |> 
-     dplyr::mutate(born = 1, event = "death")
+     dplyr::mutate(born = 1)
+   
+   dt_adjuv$event <- ifelse(dt_adjuv$alive == 1, "none", "death")
 
-   outsim[["sim"]][[.x]]$death <- NULL
+   # outsim[["sim"]][[.x]]$death <- NULL
    
   if (cohortID[.x] == 5) {
     
-    outsim[["sim"]][[.x]][, dob:= `if`(all(born==0), 1, min(which(born==1))), whale]
-    outsim[["sim"]][[.x]][, death_calf:= `if`(all(alive_calf==0) & sum(born)>1, dob, max(which(alive_calf==1))), whale]
+    # outsim[["sim"]][[.x]][, dob:= `if`(all(born==0), 1, min(which(born==1))), whale]
+    # outsim[["sim"]][[.x]][, death_calf:= `if`(all(alive_calf==0), dob, NA), whale]
+    
+    # outsim[["sim"]][[.x]][, .(d = unique(death_calf), n = as.numeric(sum(born)>1)), whale] # Check
     # outsim[["sim"]][[.x]][, death_calf:= `if`(death_calf > length(date_seq), NA, death_calf), list(whale, day)]
     
-    calf_columns <- c("cohort_calf", "cohort_name", "alive_calf", "bc_calf", "born", "date", "day", "easting", "northing", "region")
+    calf_columns <- c("cohort_calf", "cohort_name", "alive_calf", "born", "date", "day", "easting", "northing", "region")
     
     dt_calves <- purrr::reduce(list(
       
       dplyr::bind_rows(
         
         # Births
-        outsim[["sim"]][[.x]][, .SD[dob], .SDcols = calf_columns, whale] |>
-          dplyr::distinct() |>
+        outsim[["sim"]][[.x]][, .SD[unique(dob) + 1], .SDcols = calf_columns, whale] |>
           dplyr::mutate(event = "birth") |>
-          dplyr::rename(start_bc = bc_calf, cohort = cohort_calf, alive = alive_calf),
+          dplyr::rename(cohort = cohort_calf, alive = alive_calf),
         
         # Deaths
-        outsim[["sim"]][[.x]][, .SD[death_calf], .SDcols = calf_columns, whale] |>
-          dplyr::distinct() |>
+        outsim[["sim"]][[.x]][, .SD[unique(date_died_calf) + 1], .SDcols = calf_columns, whale] |>
           dplyr::mutate(event = "death") |>
-          dplyr::rename(start_bc = bc_calf, cohort = cohort_calf, alive = alive_calf) |> 
+          dplyr::rename(cohort = cohort_calf, alive = alive_calf) |> 
           dplyr::mutate(date = replace(date, alive == 1, NA),
                         day = replace(day, alive == 1, NA),
                         easting = replace(easting, alive == 1, NA),
@@ -487,16 +550,21 @@ narw <- function(nsim = 1e3,
                         region = replace(region, alive == 1, NA))
       ) |> dplyr::select(-alive),
       
+      # Body condition
+      outsim[["sim"]][[.x]][, .SD[unique(dob) + 1], .SDcols = "bc_calf", whale] |> dplyr::rename(start_bc = bc_calf),
+      # outsim[["sim"]][[.x]][, .SD[ifelse(unique(date_died_calf) == 0, unique(dob) + 1, unique(date_died_calf) + 1)], .SDcols = "bc_calf", whale] |> dplyr::rename(end_bc = bc_calf),
+      
       # Finishing conditions
-      outsim[["sim"]][[.x]][day == length(date_seq) - 1, list(end_bc = bc_calf, alive_calf, abort, strike_calf, starve_calf, died_calf), whale] |> 
-        dplyr::rename(alive = alive_calf, strike = strike_calf, starve = starve_calf, died = died_calf)
+      outsim[["sim"]][[.x]][day == length(date_seq) - 1, list(bc_calf, alive_calf, abort, strike_calf, starve_calf, died_calf), whale] |> 
+        dplyr::rename(alive = alive_calf, end_bc = bc_calf, strike = strike_calf, starve = starve_calf, died = died_calf)
     ),
     
     dplyr::left_join,
-    by = "whale")
+    by = "whale") |> 
+      dplyr::filter(born > 0)
       
-      outsim[["sim"]][[.x]]$dob <- NULL
-      outsim[["sim"]][[.x]]$death_calf <- NULL
+      # outsim[["sim"]][[.x]]$dob <- NULL
+      # outsim[["sim"]][[.x]]$death_calf <- NULL
     
   } else {
     dt_calves <- data.table::data.table()
@@ -507,14 +575,33 @@ narw <- function(nsim = 1e3,
   # Add full cohort information
   gam.dt <- data.table::merge.data.table(x = gam.dt, y = cohorts, by.x = "cohort", by.y = "id", all.x = TRUE)
   
-  data.table::setcolorder(gam.dt, c("cohort", "cohort_name", "name", "class", "abb", "whale", "alive", "start_bc", "end_bc", "starve", "strike", "date", "day", "easting", "northing", "region"))
+  # Reorder columns
+  data.table::setcolorder(gam.dt, c("cohort", "name", "cohort_name", "class", "abb", "whale", "alive", "start_bc", "end_bc", "starve", "strike", "date", "day", "easting", "northing", "region"))
+  
+  # Update values
   gam.dt[cohort == 0, cohort_name:= "Calves (male, female)"]
- 
-   gam.dt[, cause_death:= ifelse(strike == 1, "strike",
-                               ifelse(starve == 1, "starve", 
-                                      ifelse(died == 1, "other", "none")))]
-   
-   gam.dt <- gam.dt |> dplyr::mutate(date = lubridate::as_date(date))
+  gam.dt[event == "death", cause_death:= ifelse(strike == 1, "strike", ifelse(starve == 1, "starve", ifelse(died == 1, "other", "none")))]
+  
+  if(5 %in% cohortID){
+
+  gam.dt <- split(gam.dt, f = factor(gam.dt$cohort))
+
+  gam.dt[["0"]][event == "death"] <- gam.dt[["5"]][, c("whale", "cause_death")] |>
+  dplyr::rename(
+    cause_mother = cause_death
+  ) |>
+  dplyr::left_join(x = gam.dt[["0"]][event == "death", ], by = "whale") |>
+  dplyr::mutate(cause_death = dplyr::case_when(
+    !is.na(cause_mother) ~ cause_mother,
+    .default = cause_death
+  )) |>
+  dplyr::select(-cause_mother)
+
+  gam.dt <- data.table::rbindlist(gam.dt)
+
+  }
+  
+  gam.dt <- suppressWarnings(gam.dt |> dplyr::mutate(date = lubridate::as_date(date)))
   
   # ............................................................
   # Deaths
@@ -529,15 +616,7 @@ narw <- function(nsim = 1e3,
   # ............................................................
   
   if (5 %in% cohortID) {
-    
    locs.birth <- gam.dt[event == "birth" & cohort == 0 & born == 1]
-   # if (nrow(locs.birth) == 0) locs.birth <- list(NULL)
-   
-    # locs.birth <-
-    #   outsim[["sim"]][[cohorts[id == 5, abb]]][day > 0, .SD[ifelse(which.max(born) == 1, 0, which.max(born))],
-    #     .SDcols = c("date", "day", "cohort_calf", "easting", "northing", "region"), whale
-    #   ] |> dplyr::mutate(event = "birth", date = lubridate::as_date(date)) |> data.table::as.data.table()
-
   } else {
     locs.birth <- list(NULL)
   }
@@ -559,101 +638,248 @@ narw <- function(nsim = 1e3,
   # https://stats.stackexchange.com/questions/403772/different-ways-of-modelling-interactions-between-continuous-and-categorical-pred
   
   # print(gam.dt)
+  if(length(cohortID) > 1){
+    cat("Fitting terminal functions ...\n")
+  } else {
+    cat("\nFitting terminal functions ...")
+  }
   
-  # Standard GAM formulation
-  # surv.fit <- suppressWarnings(
-  #   tryCatch(
-  #     {mgcv::gam(alive ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "tp"),
-  #         data = gam.dt,
-  #         method = "REML",
-  #         family = binomial("logit"))},
-  #     error = function(cond) {
-  #       return(NA)
-  #     }))
-  
-  # Shape-constrained GAM formulation
-  surv.fit <- 
-    suppressWarnings(
-    tryCatch(
-      {
-        scam::scam(alive ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "mpi"),
-                 data = gam.dt,
-                 family = binomial("logit"))
+  surv.fit <- suppressWarnings(
+      tryCatch(
+        {
+          scam::scam(alive ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "mpi"),
+                    data = gam.dt[born == 1,],
+                    family = binomial(link = "logit")
+          )
         },
-      error = function(cond) {
-        return(NA)
-      }))
+        error = function(cond) {
+          return(NA)
+        }
+      )
+    )
   
-  # In case all animals in a cohort are dead
+  # # Standard GAM formulation
+  # surv.fit <- list(
+  #   "gam" = suppressWarnings(
+  #     tryCatch(
+  #       {
+  #         mgcv::gam(alive ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "tp"),
+  #                   data = gam.dt,
+  #                   method = "REML",
+  #                   family = binomial("logit")
+  #         )
+  #       },
+  #       error = function(cond) {
+  #         return(NA)
+  #       }
+  #     )
+  #   ),
+  #   
+  #   
+  #   # Shape-constrained GAM formulation
+  #   "scam" =
+  #     suppressWarnings(
+  #       tryCatch(
+  #         {
+  #           scam::scam(alive ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "mpi"),
+  #                      data = gam.dt,
+  #                      family = binomial("logit")
+  #           )
+  #         },
+  #         error = function(cond) {
+  #           return(NA)
+  #         }
+  #       )
+  #     )
+  # )
+  
+  # Failsafes in the event that all animals in a cohort are dead
   n.dead <- gam.dt[, .(alive = sum(alive)), cohort]
-
   gam.alive <- gam.dt[gam.dt$alive == 1, ]
+
+  # cohort.check <- which(!c(0, cohortID) %in% unique(gam.dt$cohort)) # Which cohort(s) is(are) missing?
+  # if(length(cohort.check) > 0){
+  #   
+  #   dt <- purrr::map(.x = c(0, cohortID)[cohort.check],
+  #   .f = ~{
+  #         nt <- 10
+  #         lapply(X = seq_len(nt), FUN = function(x) {
+  #           data.table::data.table(cohort = .x, 
+  #                                name = cohorts[id == .x, name],
+  #                                cohort_name = cohorts[id == .x, name],
+  #                                class = cohorts[id == .x, class], 
+  #                                abb = cohorts[id == .x, abb],
+  #                                whale = 0, 
+  #                                alive = 0, 
+  #                                start_bc = 0, 
+  #                                end_bc = 0, 
+  #                                starve = 0, 
+  #                                strike = 0, 
+  #                                date = lubridate::as_date(NA), 
+  #                                day = 0, 
+  #                                easting = NA,
+  #                                northing = NA, 
+  #                                region = NA, 
+  #                                abort = 0, 
+  #                                died = 0,
+  #                                born = 0,
+  #                                event = "impute",
+  #                                cause_death = NA)
+  #         }) |> data.table::rbindlist()
+  #   }) |> data.table::rbindlist()
+  #   
+  #   gam.alive <- rbind(gam.alive, dt)
+  #   
+  # }
+
   gam.dead <- gam.dt[cohort %in% n.dead[alive == 0, cohort]]
-  gam.dead[,start_bc:=0.001]
-  gam.dead[,end_bc:=0.001]
+  gam.dead[,start_bc:=0]
+  gam.dead[,end_bc:=0]
   
-  gam.alive <- rbindlist(list(gam.alive, gam.dead))
+  gam.bc <- rbindlist(list(gam.alive, gam.dead))
                               
-  # Standard GAM formulation
-  # bc.fit <- suppressWarnings(
+  bc.fit <- suppressWarnings(
+      tryCatch(
+        {
+          mgcv::gam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "tp"),
+                     data = gam.bc,
+                     family = betar(link = "logit"))
+        },
+        error = function(cond) {
+          return(NA)
+        }
+      )
+    )
+
+  
+ # bc.fit <- list(
+ #   "gam" = suppressWarnings(
+ #     tryCatch(
+ #       {
+ #         mgcv::gam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "tp"),
+ #           data = gam.alive,
+ #           method = "REML",
+ #           family = "Gamma"
+ #         )
+ #       },
+ #       error = function(cond) {
+ #         return(NA)
+ #       }
+ #     )
+ #   ),
+ # 
+ #   # Shape-constrained GAM formulation
+ #   "scam" =
+ #     suppressWarnings(
+ #       tryCatch(
+ #         {
+ #           scam::scam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort)),
+ #             data = gam.alive,
+ #             family = "Gamma"
+ #           )
+ #         },
+ #         error = function(cond) {
+ #           return(NA)
+ #         }
+ #       )
+ #     )
+ # )
+  
+
+  
+  # surv_preds <- purrr::map(.x = c("gam", "scam"),
+  #            .f = ~{
+  #              
+  #              suppressWarnings(
+  #                tryCatch(
+  #                  {purrr::map(.x = unique(cohorts$id), 
+  #                              .f = ~{
+  #                                x <- seq(0,1,by = 0.01)
+  #                                p <- tryCatch(
+  #                                  {predict(object = surv.fit[[.x]], 
+  #                                           newdata = data.frame(start_bc = x, cohort = .x), 
+  #                                           type = "response", 
+  #                                           newdata.guaranteed = TRUE)
+  #                                  }, error = function(cond){return(rep(0, length(x)))})
+  #                                splinefun(x = x, y = p)}) |> 
+  #                      purrr::set_names(nm = unique(cohorts$id))},
+  #                  error = function(cond) {
+  #                    return(NA)
+  #                  }))
+  #              
+  #              
+  #            })
+  
+  # surv_preds_gam <- suppressWarnings(
   #   tryCatch(
-  #     {mgcv::gam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "tp", k = 3),
-  #                data = gam.alive,
-  #                method = "REML",
-  #                family = "Gamma")},
+  #     {purrr::map(.x = unique(cohorts$id), 
+  #                 .f = ~{
+  #                   x <- seq(0,1,by = 0.01)
+  #                   p <- tryCatch(
+  #                     {predict(object = surv.fit.scam, 
+  #                              newdata = data.frame(start_bc = x, cohort = .x), 
+  #                              type = "response", 
+  #                              newdata.guaranteed = TRUE)
+  #                     }, error = function(cond){return(rep(0, length(x)))})
+  #                   splinefun(x = x, y = p)}) |> 
+  #         purrr::set_names(nm = unique(cohorts$id))},
   #     error = function(cond) {
   #       return(NA)
   #     }))
   
-  # Shape-constrained GAM formulation
-  bc.fit <- 
-    suppressWarnings(
-    tryCatch(
-      {
-        scam::scam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "mpi"),
-                 data = gam.alive,
-                 family = "Gamma")
-        },
-      error = function(cond) {
-        return(NA)
-      }))
+  # surv_preds_scam <- suppressWarnings(
+  #   tryCatch(
+  #     {purrr::map(.x = unique(cohorts$id), 
+  #                 .f = ~{
+  #                   x <- seq(0,1,by = 0.01)
+  #                   p <- tryCatch(
+  #                     {predict(object = surv.fit.scam, 
+  #                                newdata = data.frame(start_bc = x, cohort = .x), 
+  #                                type = "response", 
+  #                                newdata.guaranteed = TRUE)
+  #                     }, error = function(cond){return(rep(0, length(x)))})
+  #                   splinefun(x = x, y = p)}) |> 
+  #         purrr::set_names(nm = unique(cohorts$id))},
+  #     error = function(cond) {
+  #       return(NA)
+  #     }))
   
-  # Spline interpolation of the fitted GAM relationships
-  mbc_preds <- splinefun(x = gam_gest$mod[,2], y = gam_gest$fitted.values)
+  # bc_preds <- purrr::map(.x = c("gam", "scam"),
+  #                        .f = ~{
+  #                          bc_preds_scam <- suppressWarnings(
+  #                            tryCatch(
+  #                              {purrr::map(.x = unique(cohorts$id), 
+  #                                          .f = ~{
+  #                                            x <- seq(0,1,by = 0.01)
+  #                                            p <- tryCatch(
+  #                                              {predict(object = bc.fit[[.x]], 
+  #                                                       newdata = data.frame(start_bc = x, cohort = .x), 
+  #                                                       type = "response", 
+  #                                                       newdata.guaranteed = TRUE)
+  #                                              }, error = function(cond){return(rep(0, length(x)))})
+  #                                            splinefun(x = x, y = p)}) |> 
+  #                                  purrr::set_names(nm = unique(cohorts$id))},
+  #                              error = function(cond) {
+  #                                return(NA)
+  #                              }))
+  #                        })
   
-  surv_preds <- suppressWarnings(
-    tryCatch(
-      {purrr::map(.x = unique(cohorts$id), 
-                  .f = ~{
-                    x <- seq(0,1,by = 0.01)
-                    p <- tryCatch(
-                      {predict(object = surv.fit, 
-                                 newdata = data.frame(start_bc = x, cohort = .x), 
-                                 type = "response", 
-                                 newdata.guaranteed = TRUE)
-                      }, error = function(cond){return(rep(0, length(x)))})
-                    splinefun(x = x, y = p)}) |> 
-          purrr::set_names(nm = unique(cohorts$id))},
-      error = function(cond) {
-        return(NA)
-      }))
-  
-  bc_preds <- suppressWarnings(
-    tryCatch(
-      {purrr::map(.x = unique(cohorts$id), 
-                  .f = ~{
-                    x <- seq(0,1,by = 0.01)
-                    p <- tryCatch(
-                      {predict(object = bc.fit, 
-                                 newdata = data.frame(start_bc = x, cohort = .x), 
-                                 type = "response", 
-                                 newdata.guaranteed = TRUE)
-                      }, error = function(cond){return(rep(0, length(x)))})
-                    splinefun(x = x, y = p)}) |> 
-          purrr::set_names(nm = unique(cohorts$id))},
-      error = function(cond) {
-        return(NA)
-      }))
+  # bc_preds_scam <- suppressWarnings(
+  #   tryCatch(
+  #     {purrr::map(.x = unique(cohorts$id), 
+  #                 .f = ~{
+  #                   x <- seq(0,1,by = 0.01)
+  #                   p <- tryCatch(
+  #                     {predict(object = bc.fit, 
+  #                                newdata = data.frame(start_bc = x, cohort = .x), 
+  #                                type = "response", 
+  #                                newdata.guaranteed = TRUE)
+  #                     }, error = function(cond){return(rep(0, length(x)))})
+  #                   splinefun(x = x, y = p)}) |> 
+  #         purrr::set_names(nm = unique(cohorts$id))},
+  #     error = function(cond) {
+  #       return(NA)
+  #     }))
   
   # Separate GAMS for each cohort
   
@@ -689,13 +915,108 @@ narw <- function(nsim = 1e3,
   # 
   # if(!all.fitted) simwarn <- "Warning: Some terminal functions could not be fitted. Insufficient data available." else simwarn <- NULL
   
+  # // ...............................
+  # // Constants
+  # // ...............................
+  
+  constants <- data.table::data.table(param = c(
+    "p_died",
+    "captEff",
+    "digestEff",
+    "metabEff_ad",
+    "metabEff_juv",
+    "water_content",
+    "lip_anab",
+    "lip_catab",
+    "eta_lwrBC",
+    "eta_upprBC",
+    "milk_lip",
+    "milk_pro",
+    "mammEff",
+    "zeta",
+    "milk_drop",
+    "eta_milk",
+    "t_lac",
+    "EDlip",
+    "EDpro",
+    "prop_mu",
+    "prop_visc",
+    "prop_bones",
+    "dens_blu",
+    "dens_mu",
+    "dens_visc",
+    "dens_bo",
+    "entgl_cost",
+    "perc_muscle",
+    "perc_viscera",
+    "perc_bones",
+    "muscle_lip",
+    "muscle_pro",
+    "visc_lip", 
+    "visc_pro",
+    "blubber_lip",
+    "blubber_pro",
+    "bone_lip",
+    "bone_pro"
+    ),
+  description = c(
+    "Mortality rate (other sources)",
+    "Capture efficiency",
+    "Digestive efficiency",
+    "Prey water content",
+    "Metabolizing efficiency (adults)",
+    "Metabolizing efficiency (juveniles)",
+    "Anabolism efficiency",
+    "Catabolism efficiency",
+    "Steepness of feeding/nursing effort curve (lower BC)",
+    "Steepness of feeding/nursing effort curve (higher BC)",
+    "Proportion of lipids in milk",
+    "Proportion of protein in milk",
+    "Mammary gland efficiency",
+    "Non-linearity between milk supply and the body condition of the mother",
+    "Age at which milk consumption starts to decrease",
+    "Non-linearity between milk assimilation and calf age",
+    "Lactation duration",
+    "Energy density of lipids",
+    "Energy density of protein",
+    "Proportion of the body volume comprising muscle in fetus",
+    "Proportion of the body volume comprising viscera in fetus",
+    "Proportion of the body volume comprising bones in fetus",
+    "Density of blubber",
+    "Density of muscle",
+    "Density of viscera",
+    "Density of bones",
+    "Daily energetic cost of entanglement",
+    "Relative mass of muscle",
+    "Relative mass of viscera",
+    "Relative mass of bones",
+    "Proportion of lipids in muscles",
+    "Proportion of protein in muscles",
+    "Proportion of lipids in viscera",
+    "Proportion of protein in viscera",
+    "Proportion of lipids in blubber",
+    "Proportion of protein in blubber",
+    "Proportion of lipids in bones",
+    "Proportion of protein in bones"
+  ))
+  
+  constants$value <- purrr::map(.x = constants$param, .f = ~{
+    ifelse(.x %in% names(outsim[["sim"]][[1]]),
+           max(unique(unlist(outsim[["sim"]][[1]][day > 0 & alive == 1, .x, with = FALSE]))),
+           NA)
+    })
+  
+  constants <- constants[!is.na(value),]
+  
   # ............................................................
   # Add parameters to list output
   # ............................................................
   
   outsim$gam <- list(fit = list(surv = surv.fit, bc = bc.fit), 
-                     dat = gam.dt, 
-                     pred = list(bc_gest = mbc_preds, bc = bc_preds, surv = surv_preds))
+                     dat = gam.dt)
+                     # pred = list(bc_gest = mbc_preds, 
+                     #             bc = bc_preds, 
+                     #             surv = surv_preds))
   
   outsim[["dead"]] <- locs.dead
   outsim[["birth"]] <- locs.birth
@@ -703,9 +1024,18 @@ narw <- function(nsim = 1e3,
 
   outsim$param <- list(nsim = nsim, 
                        cohortID = cohortID,
-                       cohorts = cohorts)
+                       cohorts = cohorts,
+                       date_seq = date_seq,
+                       starvation = starvation,
+                       stepsize = step.size,
+                       nprop = n.prop,
+                       nurse_cease = cease.nursing,
+                       const = constants)
 
-  outsim$init <- list(month = init.month, xy = init.inds, dest = migration.df)
+  outsim$init <- list(month = init.month, 
+                      xy = init.inds, 
+                      dest = migration.df)
+  
   outsim$run <- run_time
   if(is.null(scenario)){
   outsim$scenario <- list(scenario)
@@ -720,4 +1050,4 @@ narw <- function(nsim = 1e3,
   cat(paste0("Time elapsed: ", run_time))
   gc()
   return(outsim)
-}
+  }
