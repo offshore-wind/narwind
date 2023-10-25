@@ -26,7 +26,7 @@ The `narwind` R package provides methods to forecast the abundance of critically
 
 ## Getting started
 
-If you are just getting started with `narwind`, we recommend reading the [tutorial vignette](https://pjbouchet.github.io/narwind/articles/narwind.html), which provides a detailed introduction to the package.
+If you are just getting started with `narwind`, we recommend reading the [tutorial vignette](https://offshore-wind.github.io/narwind/articles/narwind.html), which provides a detailed introduction to the package.
 
 ## Installation
 
@@ -34,10 +34,10 @@ Install the GitHub development version to access the latest features and patches
 
 ```{r, eval = FALSE}
 # install.packages("remotes")
-remotes::install_github("pjbouchet/narwind") # OR
+remotes::install_github("offshore-wind/narwind") # OR
 
 # install.packages("devtools")
-devtools::install_github("pjbouchet/narwind")
+devtools::install_github("offshore-wind/narwind")
 ```
 
 The package relies on compiled code (C++) and functionality provided by the [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) package. The `Rtools` software may be needed on Windows machines.
