@@ -42,7 +42,7 @@ devtools::install_github("offshore-wind/narwind")
 
 Note that the package relies on compiled code (C++) and functionality provided by the [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) package. The `Rtools` software may be needed on Windows machines.
 
-Installation instructions can be found at <https://cran.r-project.org/bin/windows/Rtools/rtools40.html>.
+Installation instructions can be found at <https://cran.r-project.org/bin/windows/Rtools/rtools40.html>
 
 ## Background
 

@@ -6304,7 +6304,7 @@ update_pkg <- function(){
   
   # Data files
   dat.files <- list.files(path = "data/", recursive = FALSE)
-  dat.files <- dat.files[!dat.files %in% c("calanus", "densitymaps", "dirichlet", "elicitation", "gear", "parameters", "regions", "regions", "sightings", "vessels", "windfarms", "basemap")]
+  dat.files <- dat.files[!dat.files %in% c("calanus", "densitymaps", "dirichlet", "elicitation", "gear", "parameters", "regions", "regions", "sightings", "vessels", "windfarms", "basemap", "popviability", "vignettes")]
   dat.files <- file.path("data", dat.files)
   
   # Web files
@@ -6314,8 +6314,12 @@ update_pkg <- function(){
   # Package files
   root.files <- c("README.md", "README.Rmd", "_targets.yaml", "_targets.R", "DESCRIPTION")
   
+  # Vignette files
+  vig.files <- list.files(path = "vignettes/", recursive = FALSE)
+  vig.files <- file.path("vignettes", vig.files)
+  
   # All files
-  allfiles <- c(R.files, C.files, man.files, dat.files, pkgdown.files, root.files)
+  allfiles <- c(R.files, C.files, man.files, dat.files, pkgdown.files, root.files, vig.files)
   
   pb <- progress::progress_bar$new(total = length(allfiles), 
                                    width = 80, 
@@ -6470,7 +6474,7 @@ quiet <- function(x) {
 } 
 
 fix_paths_vignettes <- function(vignette.name = "narwind"){
-  vignette.path <- paste0("/Users/philbouchet/Library/CloudStorage/GoogleDrive-pjbouchet@gmail.com/My Drive/Documents/git/narwinddev/docs/articles", vignette.name, ".html")
+  vignette.path <- file.path("./docs/articles", paste0(vignette.name, ".html"))
   tx  <- readLines(vignette.path)
   tx_mod  <- gsub(pattern = "../../../../../My%20Drive/Documents/git/narwind/articles/", replace = "", x = tx)
   writeLines(tx_mod, con = vignette.path)

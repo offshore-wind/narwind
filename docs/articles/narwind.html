@@ -113,6 +113,13 @@ construction, and (3) mortality and increased energy expenditure
 resulting from entanglement in fishing gear.</p>
 <p>This vignette is a step-by-step tutorial designed to showcase the
 main features of <code>narwind</code>.</p>
+<blockquote>
+<p><strong>Note:</strong> Model calibration is still ongoing as of
+January 31, 2024. The model outputs presented below are therefore
+provisional and only shown for instructional purposes; results should
+not presently be used to make inferences about wind farm effects on
+right whale population size.</p>
+</blockquote>
 </div>
 <div class="section level2">
 <h2 id="package-installation">Package installation<a class="anchor" aria-label="anchor" href="#package-installation"></a>
@@ -139,6 +146,10 @@ what a piece of code does), and are ignored by the program.</p>
 <span><span class="co"># narwind can be downloaded using the &lt;install_github&gt; command</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"offshore-wind/narwind"</span><span class="op">)</span> <span class="co"># OR</span></span>
 <span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"offshore-wind/narwind"</span><span class="op">)</span></span></code></pre></div>
+<p>Note that the package relies on compiled code (C++) and functionality
+provided by the <a href="https://cran.r-project.org/web/packages/Rcpp/index.html" class="external-link">Rcpp</a>
+package. The <code>Rtools</code> software may be needed on Windows
+machines. Installation instructions can be found at <a href="https://cran.r-project.org/bin/windows/Rtools/rtools40.html" class="external-link uri">https://cran.r-project.org/bin/windows/Rtools/rtools40.html</a></p>
 </div>
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
@@ -169,7 +180,7 @@ method.</li>
 <p><code>narwind</code> implements a spatially-explicit bioenergetic
 model which is informed by several raster surfaces relating to key model
 parameters, namely:</p>
-<table class="table">
+<table style="width:99%;" class="table">
 <colgroup>
 <col width="7%">
 <col width="7%">
@@ -429,13 +440,18 @@ Shiny app can be passed to <code><a href="../reference/narw.html">narw()</a></co
 in each population cohort under baseline conditions.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> This took 11 min 47 sec to run on a 2021 iMac
+(M1) running Mac OS Sonoma 14.1.2. However, run times may vary between
+operating systems.</p>
+</blockquote>
 <p>The arguments that can be passed to <code><a href="../reference/narw.html">narw()</a></code> are listed
 below.</p>
-<table class="table">
+<table style="width:100%;" class="table">
 <colgroup>
 <col width="4%">
 <col width="4%">
-<col width="91%">
+<col width="90%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
@@ -537,11 +553,11 @@ simulation, for the first animal in each population cohort. Optional
 arguments allow users to override these default settings and display
 data for specific days, animals, and/or cohorts. The
 <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method has the following arguments:</p>
-<table class="table">
+<table style="width:100%;" class="table">
 <colgroup>
 <col width="3%">
 <col width="5%">
-<col width="91%">
+<col width="90%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
@@ -755,11 +771,11 @@ movements, (3) habitat use, (4) behavior (i.e., activity budgets), (5)
 stressor exposure, and (6) energy intake vs. expenditure (see Table 1
 below).</p>
 <p>The function takes the following arguments:</p>
-<table class="table">
+<table style="width:100%;" class="table">
 <colgroup>
-<col width="3%">
 <col width="4%">
-<col width="91%">
+<col width="5%">
+<col width="90%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
@@ -811,14 +827,14 @@ identifiers are listed in an object called <code>cohorts</code>.</td>
 </tr>
 </tbody>
 </table>
-<table class="table">
+<table style="width:99%;" class="table">
 <caption>Table 1. Overview of model diagnostics and summary statistics
 returned by the <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> command.</caption>
 <colgroup>
 <col width="4%">
 <col width="12%">
 <col width="2%">
-<col width="80%">
+<col width="79%">
 </colgroup>
 <thead><tr class="header">
 <th>Category</th>
@@ -1571,11 +1587,11 @@ for multiple, alternative scenarios, e.g. involving different schedules
 of piling, different wind farm sites etc.</p>
 <p>The table below details the arguments that <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>
 accepts.</p>
-<table class="table">
+<table style="width:100%;" class="table">
 <colgroup>
-<col width="4%">
+<col width="5%">
 <col width="6%">
-<col width="88%">
+<col width="87%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
@@ -1636,7 +1652,7 @@ console during execution.</td>
 #&gt; --------------------------------------------------------------------------------
 #&gt; 
 #&gt; Date: 2024-01-31 
-#&gt; Time: 14:07:06 
+#&gt; Time: 16:11:27 
 #&gt; 
 #&gt; ––– Projections:
 #&gt; 
@@ -1659,7 +1675,7 @@ Running projections ✔
 Summarizing outputs ...
 Summarizing outputs ✔  
 #&gt; ---------------------------------
-#&gt; Done | Time elapsed: 00:00:17</code></pre>
+#&gt; Done | Time elapsed: 00:00:16</code></pre>
 <blockquote>
 <p><strong>Note:</strong> <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> returns an object of
 class <code>narwproj</code>, which contains several datasets and model
@@ -1675,11 +1691,11 @@ trend. Setting the <code>noaa</code> argument to <code>TRUE</code> will
 overlay the population trend estimated by Runge <em>et al.</em> (2023).
 Other parameters can be modified to adjust plot aesthetics (see
 below).</p>
-<table class="table">
+<table style="width:99%;" class="table">
 <colgroup>
 <col width="6%">
-<col width="7%">
-<col width="85%">
+<col width="8%">
+<col width="84%">
 </colgroup>
 <thead><tr class="header">
 <th>Argument</th>
@@ -1756,12 +1772,12 @@ short simulation runs (<code>nsim = 100</code>) or less, or to use the
 specific individuals/cohorts. If the simulation run was given a label
 when using <code><a href="../reference/narw.html">narw()</a></code>, then this label is appended to the
 output file name.</p>
-<table class="table">
+<table style="width:99%;" class="table">
 <colgroup>
 <col width="8%">
 <col width="6%">
 <col width="9%">
-<col width="76%">
+<col width="74%">
 </colgroup>
 <thead><tr class="header">
 <th>Object class</th>
