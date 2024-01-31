@@ -147,6 +147,11 @@ h6:hover .anchor {
   float: none;
 }
 
+.figcaption{
+    margin-bottom: 3rem;
+    margin-top: 2rem;
+}
+
 .dropdown-submenu.pull-left>.dropdown-menu {
   left: -100%;
   margin-left: 10px;

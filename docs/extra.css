@@ -144,6 +144,11 @@ nav[data-toggle='toc'] .nav > .active > a, nav[data-toggle='toc'] .nav > .active
     background-color: #e8f7e1 !important;
 }
 
+.figcaption{
+    margin-bottom: 3rem;
+    margin-top: 2rem;
+}
+
 p{text-align: justify;}
 
 ul > li {
