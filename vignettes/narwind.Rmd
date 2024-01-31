@@ -59,7 +59,9 @@ remotes::install_github("offshore-wind/narwind") # OR
 devtools::install_github("offshore-wind/narwind")
 ```
 
-Note that the package relies on compiled code (C++) and functionality provided by the [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) package. The `Rtools` software may be needed on Windows machines. Installation instructions can be found at <https://cran.r-project.org/bin/windows/Rtools/rtools40.html>
+Note that the package relies on compiled code (C++) and functionality provided by the [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) package. The `Rtools` software may be needed on Windows machines.
+
+Installation instructions can be found [here](https://cran.r-project.org/bin/windows/Rtools/rtools40.html).
 
 ## Overview
 
@@ -109,7 +111,7 @@ A typical workflow, as described in the [Example analysis] below, consists of fi
 6.  Optionally, using the `write()` method to export data for further analysis/reporting.
 
 ::: {style="width:550px"}
-![Figure 1. Schematic representation of a typical `narwind` workflow. Package functions and object classes are indicated in coloured font.](narwind_workflow.jpg)
+![**Figure 1.** Schematic representation of a typical `narwind` workflow. Package functions and object classes are indicated in coloured font.](narwind_workflow.jpg)
 :::
 
 ## Example analysis
@@ -136,7 +138,7 @@ library(narwind)
 The package ships with three preset offshore wind scenario objects, which summarize different phases of development at two sites off the Southern New England coast and a third off the Virginia coast (Figure 2). These are provided as objects of class `narwscenario` (`scenario_01`, `scenario_02`, and `scenario_03).`
 
 ::: {style="width:850px"}
-![Figure 2. Locations of wind farm sites included in the default `narwind` scenarios.](windfarm_sites.jpg)
+![**Figure 2.** Locations of wind farm sites included in the default `narwind` scenarios.](windfarm_sites.jpg)
 :::
 
 > **Note:** Throughout this document, we refer to the R objects describing construction or operation activities as **scenarios**. Multiple scenarios (e.g., relating to successive phases of development) together form a **scenario bundle**.
@@ -154,7 +156,7 @@ This scenario involves shutdowns of installation operations during the main righ
 In this scenario, we assume that all three wind farms are in simultaneous and continuous operation (Figure 3). The primary footprint for operations is taken to be vessel traffic to and from wind farm sites; we do not consider vessel movements within farm areas.
 
 ::: {style="width:650px"}
-![Figure 2. Location of wind farm sites included in the default narwind scenarios.](piling_schedule.jpg)
+![**Figure 3.** Location of wind farm sites included in the default narwind scenarios.](piling_schedule.jpg)
 :::
 
 As can be seen below, `narwscenario` objects consist of several elements:
@@ -231,9 +233,9 @@ class(m)[1]
 
 ### Pairing simulations
 
-It is important to note that the bioenergetic model is stochastic, such that successive runs of the model will return different results (e.g., different simulated movement tracks for each animal). However, meaningful comparisons of population projections between contrasting offshore wind scenario bundles are only possible if simulated conditions are maintained between model runs. The `pair` argument was designed to enable this using random seed matching, and allows users to supply an existing `narwsim` object that can act as a "template" for the current simulation.
+It is important to note that the bioenergetic model is stochastic, such that successive runs of the model will return different results (e.g., different simulated movement tracks for each animal). However, meaningful comparisons of population projections between contrasting offshore wind scenario bundles are only possible if simulated conditions are maintained between model runs. The `pair` argument was designed to enable this using random seed matching, and allows users to supply an existing `narwsim` object that can act as a "template" for the current simulation (Figure 4).
 
-For instance, the below code performs another run of the model whereby piling takes place at three sites (see Figure 2) -- as defined in the `scenario_01` object. The run is paired with the baseline scenario stored in `m`. With the exception of wind farm-related parameters, all simulated conditions are identical between `m` and `m2`.
+For instance, the code below performs another run of the model with piling taking place at three sites as defined in the `scenario_01` object (Figure 2). The run is paired with the baseline scenario stored in `m`. With the exception of wind farm-related parameters, all simulated conditions are identical between `m` and `m2`.
 
 ```{r model_match, eval = FALSE}
 m2 <- narw(nsim = 50, scenario = scenario_01, pair = m)
@@ -241,7 +243,7 @@ m3 <- narw(nsim = 50) # Compare to an additional baseline run with no pairing
 ```
 
 ::: {style="width:850px"}
-![Figure 2. Location of wind farm sites included in the default narwind scenarios.](simulation_pairing.jpg)
+![**Figure 4.** Location of wind farm sites included in the default narwind scenarios.](simulation_pairing.jpg)
 :::
 
 ### Viewing data

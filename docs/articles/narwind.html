@@ -149,7 +149,8 @@ what a piece of code does), and are ignored by the program.</p>
 <p>Note that the package relies on compiled code (C++) and functionality
 provided by the <a href="https://cran.r-project.org/web/packages/Rcpp/index.html" class="external-link">Rcpp</a>
 package. The <code>Rtools</code> software may be needed on Windows
-machines. Installation instructions can be found at <a href="https://cran.r-project.org/bin/windows/Rtools/rtools40.html" class="external-link uri">https://cran.r-project.org/bin/windows/Rtools/rtools40.html</a></p>
+machines.</p>
+<p>Installation instructions can be found <a href="https://cran.r-project.org/bin/windows/Rtools/rtools40.html" class="external-link">here</a>.</p>
 </div>
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
@@ -266,9 +267,10 @@ further analysis/reporting.</li>
 </ol>
 <div style="width:550px">
 <div class="float">
-<img src="narwind_workflow.jpg" alt="Figure 1. Schematic representation of a typical narwind workflow. Package functions and object classes are indicated in coloured font."><div class="figcaption">Figure 1. Schematic representation of a typical
-<code>narwind</code> workflow. Package functions and object classes are
-indicated in coloured font.</div>
+<img src="narwind_workflow.jpg" alt="Figure 1. Schematic representation of a typical narwind workflow. Package functions and object classes are indicated in coloured font."><div class="figcaption">
+<strong>Figure 1.</strong> Schematic
+representation of a typical <code>narwind</code> workflow. Package
+functions and object classes are indicated in coloured font.</div>
 </div>
 </div>
 </div>
@@ -314,8 +316,9 @@ Southern New England coast and a third off the Virginia coast (Figure
 <code>scenario_03).</code></p>
 <div style="width:850px">
 <div class="float">
-<img src="windfarm_sites.jpg" alt="Figure 2. Locations of wind farm sites included in the default narwind scenarios."><div class="figcaption">Figure 2. Locations of wind farm sites included
-in the default <code>narwind</code> scenarios.</div>
+<img src="windfarm_sites.jpg" alt="Figure 2. Locations of wind farm sites included in the default narwind scenarios."><div class="figcaption">
+<strong>Figure 2.</strong> Locations of wind
+farm sites included in the default <code>narwind</code> scenarios.</div>
 </div>
 </div>
 <blockquote>
@@ -350,8 +353,9 @@ for operations is taken to be vessel traffic to and from wind farm
 sites; we do not consider vessel movements within farm areas.</p>
 <div style="width:650px">
 <div class="float">
-<img src="piling_schedule.jpg" alt="Figure 2. Location of wind farm sites included in the default narwind scenarios."><div class="figcaption">Figure 2. Location of wind farm sites included
-in the default narwind scenarios.</div>
+<img src="piling_schedule.jpg" alt="Figure 3. Location of wind farm sites included in the default narwind scenarios."><div class="figcaption">
+<strong>Figure 3.</strong> Location of wind farm
+sites included in the default narwind scenarios.</div>
 </div>
 </div>
 <p>As can be seen below, <code>narwscenario</code> objects consist of
@@ -517,11 +521,11 @@ offshore wind scenario bundles are only possible if simulated conditions
 are maintained between model runs. The <code>pair</code> argument was
 designed to enable this using random seed matching, and allows users to
 supply an existing <code>narwsim</code> object that can act as a
-“template” for the current simulation.</p>
-<p>For instance, the below code performs another run of the model
-whereby piling takes place at three sites (see Figure 2) – as defined in
-the <code>scenario_01</code> object. The run is paired with the baseline
-scenario stored in <code>m</code>. With the exception of wind
+“template” for the current simulation (Figure 4).</p>
+<p>For instance, the code below performs another run of the model with
+piling taking place at three sites as defined in the
+<code>scenario_01</code> object (Figure 2). The run is paired with the
+baseline scenario stored in <code>m</code>. With the exception of wind
 farm-related parameters, all simulated conditions are identical between
 <code>m</code> and <code>m2</code>.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
@@ -529,8 +533,9 @@ farm-related parameters, all simulated conditions are identical between
 <span><span class="va">m3</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">50</span><span class="op">)</span> <span class="co"># Compare to an additional baseline run with no pairing</span></span></code></pre></div>
 <div style="width:850px">
 <div class="float">
-<img src="simulation_pairing.jpg" alt="Figure 2. Location of wind farm sites included in the default narwind scenarios."><div class="figcaption">Figure 2. Location of wind farm sites included
-in the default narwind scenarios.</div>
+<img src="simulation_pairing.jpg" alt="Figure 4. Location of wind farm sites included in the default narwind scenarios."><div class="figcaption">
+<strong>Figure 4.</strong> Location of wind farm
+sites included in the default narwind scenarios.</div>
 </div>
 </div>
 </div>
@@ -1652,7 +1657,7 @@ console during execution.</td>
 #&gt; --------------------------------------------------------------------------------
 #&gt; 
 #&gt; Date: 2024-01-31 
-#&gt; Time: 16:11:27 
+#&gt; Time: 16:20:46 
 #&gt; 
 #&gt; ––– Projections:
 #&gt; 
