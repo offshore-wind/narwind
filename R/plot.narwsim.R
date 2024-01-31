@@ -1,10 +1,9 @@
-#' Plot
+#' Model plots
 #'
 #' Make plots
 #'
 #' @param obj Object returned by run_model
-#' @param n.ind Number of animals to plot.
-#' @param id ID of animals to plot
+#' @param what 
 #' @param animate Logical. If TRUE, creates a .gif animation of the tracks.
 #' @param web If TRUE, returns a plotly graph
 #' @import ggplot2
@@ -12,19 +11,16 @@
 #' @import ggnewscale
 #'
 #' @export
-#' 
 #' @author Phil J. Bouchet
 #' @examples
 #' \dontrun{
 #' library(narwind)
-#' 
-#' animals <- run_model(10)
-#' plot(animals)
+#' m <- narw(10000)
+#' plot(m)
 #' }
 
 plot.narwsim <- function(obj,
                          what = "map",
-                         whaleID = NULL,
                          animate = FALSE,
                          web = FALSE,
                          ...
@@ -34,31 +30,24 @@ plot.narwsim <- function(obj,
   args <- list(...)
   
   # Default optional arguments
-  nmax <- 100
-  lwd <- 0.2
-  bymonth <- FALSE
-  bywhale <- FALSE
-  cohortID <- obj$param$cohortID
-  if(is.null(whaleID)) whaleID <- 1:obj$param$nsim
-  
-  if(bymonth & bywhale) stop("<bymonth> and <bywhale> cannot both be set to TRUE")
-  if(!what %in% c("inits", "map", "gam", "feed", "migrate")) stop("Unrecognized input to <what> argument")
+  if(!what %in% c("inits", "map", "pred", "feed", "migrate")) stop("Unrecognized input to <what> argument")
   if(!inherits(obj, "narwsim")) stop("Object must be of class <narwsim>")
   
   # Default values
-  if(length(args) > 0){
-    if("nmax" %in% names(args)) nmax <- args[["nmax"]]
-    if("lwd" %in% names(args)) lwd <- args[["lwd"]]
-    if("bymonth" %in% names(args)) bymonth <- args[["bymonth"]]
-    if("bywhale" %in% names(args)) bywhale <- args[["bywhale"]]
-    if("cohortID" %in% names(args)) cohortID <- args[["cohortID"]]
-    if("whaleID" %in% names(args)) whaleID <- args[["whaleID"]]
-  }
+  if("nL" %in% names(args)) nL <- args[["nL"]] else nL <- 100
+  if("lwd" %in% names(args)) lwd <- args[["lwd"]] else lwd <- 0.2
+  if("bymonth" %in% names(args)) bymonth <- args[["bymonth"]] else bymonth <- FALSE
+  if("bywhale" %in% names(args)) bywhale <- args[["bywhale"]] else bywhale <- FALSE
+  if("cohort" %in% names(args)) cohort <- args[["cohort"]] else  cohort <- obj$param$cohort
+  if("whale" %in% names(args)) whaleID <- args[["whale"]] else whaleID <- 1:obj$param$nsim
+  if("vid" %in% names(args)) vid <- args[["vid"]] else vid <- "gif"
+  
+  if(bymonth & bywhale) stop("<bymonth> and <bywhale> cannot both be set to TRUE")
   
   cohorts <- obj$param$cohorts
-  cohort.ab <- cohorts[id %in% cohortID, abb]
-  cohort.names <- cohorts[id %in% cohortID, name]
-  n.ind <- obj$param$nsim
+  cohort.ab <- cohorts[id %in% cohort, abb]
+  cohort.names <- cohorts[id %in% cohort, name]
+  n.ind <- length(whaleID)
 
   #' -------------------------------------------------------
   # INITIAL LOCATIONS ---- 
@@ -85,7 +74,7 @@ plot.narwsim <- function(obj,
       for (k in 1:length(obj$init$xy)) {
         xinit <- matrix(data = coords[obj$init$xy[[k]], "x"], nrow = nrow(obj$init$xy[[k]]))
         yinit <- matrix(data = coords[obj$init$xy[[k]], "y"], nrow = nrow(obj$init$xy[[k]]))
-        sp::plot(regions, main = paste0(cohort.names[k], " -- Individual # ", whaleID))
+        sp::plot(regions, main = paste0(cohort.names[k], " -- Individual # ", whale))
         sp::plot(world, col = "grey", add = TRUE)
         points(xinit[, whaleID], yinit[, whaleID], pch = 16, col = month.colours)
         legend("bottomright", legend = month.abb, fill = month.colours)
@@ -96,11 +85,120 @@ plot.narwsim <- function(obj,
     # FITTED GAMs ----
     #' -------------------------------------------------------  
     
-    } else if (what == "gam") {
+    } else if (what == "pred") {
 
-      plot(obj$gam$fit$surv, scheme = 1, scale = 0, pages = 1)
-      plot(obj$gam$fit$bc, scheme = 1, scale = 0, pages = 1)
-    
+      if(!"post" %in% names(obj)){
+       
+      plot(obj$gam$fit$surv, scheme = 1, scale = 0, pages = 1, ylab = "s(start_bc)", main = "Survival")
+      plot(obj$gam$fit$bc, scheme = 1, scale = 0, pages = 1, ylab = "s(start_bc)", main = "Body condition")
+      
+      } else {
+        
+        # Extract objects
+        modlist <- obj$gam$fit
+        pred.x <- obj$post$pred.x
+        bc.range <- obj$post$bc.range
+        nsamples <- obj$post$nsamples
+        mbc.x <- obj$post$mbc.x
+        preds.surv <- obj$post$preds$survbc$surv
+        preds.bc <- obj$post$preds$survbc$bc
+        preds.mbc <- obj$post$preds$mbc
+        
+        # Create prediction data.frame
+        pred.df <- expand.grid(start_bc = seq(bc.range[1], bc.range[2], length.out = 100), 
+                               cohort = cohorts$id, 
+                               mcmc = seq_len(nsamples))
+        
+        pred.df$pred_surv <- as.numeric(t(preds.surv))
+        pred.df$pred_bc <- as.numeric(t(preds.bc))
+        
+        linewidth <- 0.65
+        
+        sample.of.five <- purrr::map(.x = obj$post$samples, .f = ~sample(1:ncol(.x), size = 5, replace = FALSE))
+        par(mfrow = c(5,2))
+        plot(coda::as.mcmc(obj$post$samples$surv[, sample.of.five$surv]), auto.layout = FALSE, main = "Survival")
+        plot(coda::as.mcmc(obj$post$samples$bc[, sample.of.five$bc]), auto.layout = FALSE, main = "Body condition")
+        plot(coda::as.mcmc(obj$post$samples$mbc[, sample.of.five$mbc]), auto.layout = FALSE, main = "Gestation")
+        par(mfrow = c(1,1))
+        
+        # plot(1:1, xaxt='n', yaxt = 'n', type = 'n', xlab = '', ylab = '', frame.plot=F)
+        # text(1,1, "Survival model", cex = 2)
+        # par(mfrow = c(5,3))
+        # for(pp in sample.of.nine$surv){plot(obj$post$samples$surv[, pp], type = "l", xlab = "", ylab = "")}
+        # par(mfrow = c(1,1))
+        # 
+        # plot(1:1, xaxt='n', yaxt = 'n', type = 'n', xlab = '', ylab = '', frame.plot=F)
+        # text(1,1, "Health model", cex = 2)
+        # par(mfrow = c(3,3))
+        # for(pp in sample.of.nine$bc){plot(obj$post$samples$bc[, pp], type = "l", xlab = "", ylab = "")}
+        # par(mfrow = c(1,1))
+        # 
+        # plot(1:1, xaxt='n', yaxt = 'n', type = 'n', xlab = '', ylab = '', frame.plot=F)
+        # text(1,1, "Gestation model", cex = 2)
+        # par(mfrow = c(3,3))
+        # for(pp in sample.of.nine$mbc){plot(obj$post$samples$mbc[, pp], type = "l", xlab = "", ylab = "")}
+        # par(mfrow = c(1,1))
+        
+        # Create plots for survival and body condition
+        p <- purrr::map(
+          .x = names(modlist),
+          .f = ~ {
+            
+            # Add predictions to data.frame
+            mean_pred <- cbind(pred.x, pred = predict(modlist[[.x]], pred.x, "response"))
+            
+            # Sample a subset of predictions
+            sample.df <- pred.df[pred.df$mcmc %in% sample(nsamples, nL, replace = FALSE), ] |> 
+              dplyr::select(start_bc, cohort, mcmc, paste0("pred_", .x))
+            
+            # Rename columns (remove pred_)
+            lookup <- c(pred = paste0("pred_", .x))
+            sample.df <- dplyr::rename(sample.df, all_of(lookup))
+            
+            # Define facet names
+            facet.names <- cohorts$name
+            names(facet.names) <- cohorts$id
+            
+            ggplot2::ggplot(data = sample.df, aes(x = start_bc, y = pred)) +
+              ggplot2::geom_line(aes(group = mcmc), colour = "grey", alpha = 0.2) +
+              ggplot2::geom_line(data = mean_pred, linewidth = linewidth) +
+              ggplot2::facet_wrap(vars(cohort), scales = "free_y", 
+                                  labeller = ggplot2::labeller(cohort = facet.names)) +
+              # ggplot2::scale_y_continuous(limits = c(0,1)) +
+              theme_narw() +
+              xlab("Starting body condition (%)") +
+              ylab(dplyr::case_when(
+                .x == "surv" ~ "p(survival)",
+                .x == "bc" ~ "Final body condition (%)",
+                .default = ""
+              ))
+          }
+        ) |> purrr::set_names(nm = names(modlist))
+        
+        purrr::walk(.x = p, .f = ~print(.x))
+        
+        # Create plot for minimum BC required for gestation
+        mbc.df <- expand.grid(mass = mbc.x, mcmc = seq_len(nsamples))
+        mbc.df$min_bc <- as.numeric(t(preds.mbc))
+        
+        # Sample a subset of predictions 
+        mbc.df <- mbc.df[mbc.df$mcmc %in% sample(nsamples, nL, replace = FALSE), ]
+        
+        # Add mean response
+        pdf <- data.frame(mass = mbc.x, min_bc = predict(gam_gest, data.frame(mass = mbc.x), "response"))
+        
+        # Create plot
+        gp <- ggplot2::ggplot(data = mbc.df, aes(x = mass, y = min_bc)) +
+          ggplot2::geom_line(aes(group = mcmc), colour = "grey", alpha = 0.2) +
+          ggplot2::geom_line(data = pdf, linewidth = linewidth) +
+          theme_narw() +
+          scale_x_continuous(labels = function(x) format(x, big.mark = ",", scientific = FALSE)) +
+          xlab("Total mass (kg)") +
+          ylab("Min body condition (%)")
+        
+        print(gp)
+
+      }
   # } else if (what == "prob") {
   #   
   #   cohorts <- obj$param$cohorts
@@ -110,7 +208,7 @@ plot.narwsim <- function(obj,
   #   bc_preds <- obj$gam$pred$bc
   #   surv_preds <- obj$gam$pred$surv
   #   
-  #   if(5 %in% cohortID) which.cohorts <- c(0, cohortID) else which.cohorts <- cohortID
+  #   if(5 %in% cohort) which.cohorts <- c(0, cohort) else which.cohorts <- cohort
   #   
   #   pred.df <- tibble::tibble(cohort = factor(do.call(c, purrr::map(.x = which.cohorts, .f = ~rep(.x, each = length(x_axis))))),
   #                             start_bc = rep(x_axis, length(which.cohorts)))
@@ -142,8 +240,7 @@ plot.narwsim <- function(obj,
     
   } else if (what %in% c("map", "feed", "migrate")) {
   
-  if(n.ind > nmax) {warning("Plotting only the first ", nmax, " tracks"); n.ind <- nmax}
-  if(is.null(whaleID)) whaleID <- seq_len(n.ind)
+  if(n.ind > nL & length(whaleID) > nL) {warning("Plotting only the first ", nL, " tracks"); n.ind <- nL}
 
   sim <- obj$sim
   locs.dead <- obj$dead
@@ -153,6 +250,7 @@ plot.narwsim <- function(obj,
     purrr::map(.f = ~sim[[.x]][day > 0, list(date, month, whale, easting, northing, region, cohort_name, feed, north)])
   
   tracks <- data.table::rbindlist(locations)
+  tracks <- tracks[whale %in% whaleID]
 
   # ....................................
   # Load required objects
@@ -176,7 +274,7 @@ plot.narwsim <- function(obj,
   COLORS <- c('starve' = 'firebrick', 'strike' = 'deepskyblue4', 'birth' = "#15A471", 'other' = 'darkorange')
   SHAPES <- c('Calves' = 1, 'Juveniles' = 16, 'Adults' = 16)
   
-  plot.list <- purrr::set_names(cohortID) |>
+  plot.list <- purrr::set_names(cohort) |>
   purrr::map(.f = ~ {
 
     # Extract movement tracks
@@ -229,7 +327,7 @@ plot.narwsim <- function(obj,
                 mapping = ggplot2::aes(x = easting, y = northing, group = whale, 
                                        col = factor(whale)), alpha = 0.7, linewidth = lwd) } +
         
-        {if(bywhale & length(whaleID) <= 10) ggplot2::scale_color_manual(values = whaleID)} +
+        {if(bywhale & length(whaleID) <= 10) ggplot2::scale_color_manual(values = whale)} +
         
         {if(bywhale & length(whaleID) <= 10) ggnewscale::new_scale_colour() }
       
@@ -313,87 +411,86 @@ plot.narwsim <- function(obj,
   }
   
   if(animate){
+
+    # Prepare data for animation
+    dates <- data.frame(date = get_dates(strip = TRUE), fulldate = get_dates(strip = FALSE))
+    animxy <- dplyr::left_join(x = tracks, y = dates, by = "date")
+    animxy$fulldate <- lubridate::parse_date_time(animxy$fulldate, "Ymd")
+    animxy$individual <- paste0(animxy$cohort_name, "_", animxy$whale)
+    animxy <- add_latlon(animxy)
     
-    # ....................................
-    # If multiple individuals 
-    # ....................................
+    # Convert data into moveStack object
+    animxy.mstack <- suppressWarnings(moveVis::df2move(df = animxy,
+                                 proj = narw_crs(latlon = TRUE), 
+                                 x = "long", 
+                                 y = "lat",
+                                 time = "fulldate", 
+                                 track_id = "individual"))
     
-    # Create all combinations of data
-    # track.df <- tidyr::expand_grid(
-    #   id = unique(locs$trackID),
-    #   date = seq.Date(from = min(locs$date), to = max(locs$date), by = 1))
+    # Align movement data to a uniform time scale with a uniform temporal resolution throughout 
+    # the complete movement sequence -- to prepare the movement data to be interpretable by famres_sp
+    animxy.align <- suppressWarnings(alignmove(animxy.mstack))
     
-    # # Create complete dataset
-    # df_all <- dplyr::left_join(track.df, locs)
+    # Correct time stamps
+    animxy.align$time <- animxy.align$time + lubridate::years(lubridate::year(lubridate::now())-2021)    
+
+    # Define animat colours
+    coh <- gsub("_", "", unique(gsub("[0-9]+", "", animxy.align@trackId)))
+    path_colours <- data.frame(name = coh, cohort = gsub("\\.", ")", gsub("\\.\\.", " (", coh)))
+    path_colours$cohort <- gsub(pattern = "female \\(", replacement = "female, ", x = path_colours$cohort)
+    path_colours <- dplyr::left_join(path_colours, cohorts[, c("name", "colour")], by = dplyr::join_by(cohort == name))
+    animxy.align$colour <- sapply(X = gsub("_", "", gsub("[0-9]+", "", animxy.align@trackId)), FUN = function(x) path_colours[path_colours$name == x, "colour"])
     
-    # mov <- 
-    #   
-    #   # Base map
-    #   base_p + 
-    #   
-    #   # Simulated track
-    #   ggplot2::geom_path(
-    #     data = locs,
-    #     mapping = ggplot2::aes(x = easting, y = northing, group = trackID, fill = trackID), alpha = 0.3) +
-    #   
-    #   geom_point(data = locs,
-    #              aes(x = easting, y = northing, group = trackID, fill = trackID), alpha = 0.7, shape = 21, size = 2)
+    # Code to download basemap tiles
+    # basemap <- basemaps::basemap_png(ext = sf::st_bbox(sf::st_as_sf(world)),
+    #                                  map_service = "esri",
+    #                                  map_type = "world_ocean_base",
+    #                                  map_res = 1,
+    #                                  map_dir = getwd())
     
-    # lines and points
-    # geom_path(data = df_all, 
-    #           aes(x=lon,y=lat,group=id,color=spd), 
-    #           alpha = 0.3)+
-    # geom_point(data = df_all, 
-    #            aes(x=lon,y=lat,group=id,fill=spd),
-    #            alpha = 0.7, shape=21, size = 2)+
+    # Create frames of spatial movement maps for animation
+    frames <- suppressWarnings(frames_sp(mobj = animxy.align,
+                        map_service = "esri",
+                        map_type = "world_ocean_base",
+                        path_size = 2, 
+                        path_legend = FALSE,
+                        alpha = 1, 
+                        maxpixels = 5e8)) # maxpixels controls basemap resolution
     
-    # anim <- mov + 
-    #   
-    #   # Reveal data along given dimension - here, allows data to gradually appear through time.
-    #   gganimate::transition_reveal(along = date) +
-    #   
-    #   # Control easing of aesthetics – easing defines how a value changes to another during tweening
-    #   gganimate::ease_aes('linear') +
-    #   
-    #   # Use date as title
-    #   ggplot2::ggtitle("Date: {frame_along}")
-    # 
-    # anim.out <- gganimate::animate(anim, 
-    #                                nframes = 5, 
-    #                                fps = 10,
-    #                                height = 2, 
-    #                                width = 3, 
-    #                                units = "in", 
-    #                                res = 150)
+    path_colours$longitude <- 0
+    path_colours$latitude <- 0
+    path_colours$cohort <- factor(path_colours$cohort)
     
+    fcol <- sapply(X = levels(path_colours$cohort), FUN = function(x) path_colours$colour[which(path_colours$cohort == x)])
+
+    # print(path_colours)
     
-    # movevis
+    frames.out <- frames |>
+      moveVis::add_labels(x = "", y = "") |>  # add some customizations
+      addtimestamps(animxy.align, type = "label", size = 4, alpha = 0.5) |> 
+      moveVis::add_progress(size = 4, colour = "#104E8B")
     
-    locs$time <- as.POSIXct(locs$date)
-    locs$date <- lubridate::parse_date_time(locs$date, "Ymd")
-    locs.m <- moveVis::df2move(df = locs, proj = narw_crs(), x = "easting", y = "northing", time = "date") 
-    m <- moveVis::align_move(locs.m, res = 1, digit = 0, unit = "days", spaceMethod = "greatcircle")
-    frames <- moveVis::frames_spatial(m,  # move object
-                                      map_service = "carto",
-                                      map_type = "light",  # base map
-                                      # map_token = "pk.eyJ1IjoicGIyODIiLCJhIjoiY2xhc2I3ZmNzMW50azNvbnYxZ3M4NDZyeCJ9.0ECTFIih0onl92DP4-ZosA",
-                                      path_size = 2, 
-                                      path_colours = c("orange"), 
-                                      alpha = 0.5) |>   # path
-      moveVis::add_labels(x = "Longitude", y = "Latitude") |>  # add some customizations
-      moveVis::add_northarrow(colour = "black", position = "bottomright") |>  
-      moveVis::add_scalebar(colour = "black", position = "bottomleft") |>  
-      moveVis::add_timestamps(m, type = "label") |> 
-      moveVis::add_progress(size = 2)
-    
-    # world_sf <- get_world() |> sf::st_as_sf()
-    # frames.gg <- moveVis::add_gg(frames, gg = ggplot2::expr(ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", size = 0.25)))
-    # moveVis::animate_frames(frames.gg, out_file = "animation2.gif", overwrite = TRUE, display = FALSE)
+    frames.out <- moveVis::add_gg(frames.out,
+      gg = expr(geom_point(aes(x = longitude, y = latitude, colour = cohort), data = path_colours)), data = path_colours)
+
+    frames.out <- moveVis::add_gg(frames.out, gg = expr(scale_color_manual(values = fcol, name = "")), data = path_colours)
+
+    frames.out <- moveVis::add_gg(frames.out, gg = expr(theme(
+      legend.position = c(0.75, 0.2),
+      legend.text = element_text(face = "bold"),
+      legend.key = element_blank(),
+      legend.background = element_rect(fill = "transparent", colour = "transparent")
+    )), data = path_colours)
     
     stamp <- gsub(pattern = "-", replacement = "", x = Sys.time()) |> 
       gsub(pattern = " ", replacement = "_") |> 
       gsub(pattern = ":", replacement = "")
-    moveVis::animate_frames(frames, out_file = paste0("NARW_animation_", stamp, ".gif"), overwrite = TRUE, display = FALSE)
+    
+    # Export animation as GIF
+    moveVis::animate_frames(frames.out, 
+                            out_file = paste0("NARW_animation_", stamp, ".", vid), 
+                            overwrite = TRUE, 
+                            display = FALSE)
   }
   }
 }

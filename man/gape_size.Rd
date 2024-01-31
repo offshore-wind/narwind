@@ -3,6 +3,25 @@
 \name{gape_size}
 \alias{gape_size}
 \title{Area of the gape}
+\usage{
+gape_size(L, omega, alpha)
+}
+\arguments{
+\item{L}{Total body length (m)}
+
+\item{omega}{Width of the mouth (m)}
+
+\item{alpha}{Angle between the tip of the baleen plates and outer edge of the baleen racks (rad)}
+}
+\value{
+Estimated gape area
+}
 \description{
-Area of the gape
+Provides an estimate of the area of the mouth gape
+}
+\note{
+The gape is assumed to be a disk sector defined by the height of the tallest baleen plate 
+and the width of the mouth. The central angle can be estimated based on 3D models 
+of right whales and bowhead whales developed from measurements taken during whaling,
+necropsies, and aerial photogrammetry studies
 }

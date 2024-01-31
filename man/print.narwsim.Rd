@@ -7,19 +7,16 @@
 \method{print}{narwsim}(obj, ...)
 }
 \arguments{
-\item{obj}{Object returned by run_model}
-
-\item{rows}{Number of rows to print}
+\item{obj}{An object of class \code{narwsim}, as returned by \code{\link{narw}}.}
 }
 \description{
-Overview of model results
+Prints a subset of model data to the R console.
 }
 \examples{
 \dontrun{
 library(narwind)
-
-animals <- run_model(10)
-plot(animals)
+m <- narw(1000)
+print(m)
 }
 
 }

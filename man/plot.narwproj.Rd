@@ -2,23 +2,50 @@
 % Please edit documentation in R/plot.narwproj.R
 \name{plot.narwproj}
 \alias{plot.narwproj}
-\title{Plot}
+\title{Plot population trends}
 \usage{
-\method{plot}{narwproj}(obj, cohort = FALSE, scales = "free")
+\method{plot}{narwproj}(
+  ...,
+  interval = TRUE,
+  cohort = FALSE,
+  noaa = FALSE,
+  scales = "free",
+  ncol = 3,
+  nx = 5,
+  ny = 5
+)
 }
 \arguments{
-\item{obj}{Object returned by run_model}
+\item{...}{One or more objects of class \code{narwproj}, as returned by \link{predict.narwsim}.}
+
+\item{interval}{Logical. If \code{TRUE}, percentile confidence intervals are shown on the plots. Defaults to \code{TRUE}.}
+
+\item{cohort}{Logical. If \code{TRUE}, separate plots are returned for each cohort. If \code{FALSE}, a single plot for the whole population is shown. Defaults to \code{FALSE}.}
+
+\item{noaa}{Logical. If \code{TRUE}, the population trajectory predicted as part of NOAA's population viability analysis (Runge et al., 2023) is also plotted. Defaults to \code{FALSE}.}
+
+\item{scales}{Character. Defines whether axis scales should be constant or vary across plots. Can be one of "fixed" or "free" (the default).}
+
+\item{ncol}{Integer. Number of columns for the plot layout when \code{cohort = TRUE}. Defaults to \code{3}.}
+
+\item{nx}{Integer. Desired number of x-axis intervals. Non-integer values are rounded down. Defaults to \code{5}. See \link[base]{pretty} for details.}
+
+\item{ny}{Integer. Desired number of y-axis intervals. Non-integer values are rounded down. Defaults to \code{5}. See \link[base]{pretty} for details.}
 }
 \description{
-Make plots
+Takes one or more \code{narwproj} object(s) and creates plots of the estimated population trajectories.
 }
 \examples{
 \dontrun{
 library(narwind)
-
-animals <- run_model(10)
-plot(animals)
+m <- narw(1000)
+m <- augment(m)
+p <- predict(m)
+plot(p)
 }
+}
+\references{
+Runge MC, Linden DW, Hostetler JA, Borggaard DL, Garrison LP, Knowlton AR, Lesage V, Williams R, Pace III RM (2023). A management-focused population viability analysis for North Atlantic right whales. US Dept Commer Northeast Fish Sci Cent Tech Memo 307, 93 p. Available at \url{https://www.fisheries.noaa.gov/s3/2023-10/TM307-508-1-.pdf}.
 }
 \author{
 Phil J. Bouchet

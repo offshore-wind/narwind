@@ -2,24 +2,54 @@
 % Please edit documentation in R/narw.R
 \name{narw}
 \alias{narw}
-\title{Run the bioenergetic model}
+\title{Individual-based model of North Atlantic right whales}
 \usage{
-narw(nsim = 1000, scenario = NULL, n.cores = NULL, progress = TRUE, ...)
+narw(
+  nsim = 1000,
+  scenario = NULL,
+  pair = NULL,
+  label = "",
+  piling.hrs = 4,
+  n.cores = NULL,
+  progress = TRUE,
+  ...
+)
 }
 \arguments{
-\item{nsim}{Number of simulated animals}
+\item{nsim}{Integer. Number of simulated animals.}
 
-\item{n.prop}{Number of proposals used in the importance sampler (Michelot, 2019)}
+\item{scenario}{An object of class \code{narwscenario}, as returned by \code{\link{scenario}}.}
+
+\item{pair}{An object of class \code{narwsim}, to which the current simulation must be matched. With the exception of wind farm parameters, simulation conditions between paired runs are identical; pairing is therefore useful for comparative assessments of competing offshore wind scenarios.}
+
+\item{label}{Character. Text label assigned to the simulation object; used for plotting.}
+
+\item{piling.hrs}{Numeric. Length of time (hours) during which whales cease foraging following a response to pile-driving noise exposure.}
+
+\item{n.cores}{Integer. Number of cores to use for parallel processing. By default, each population cohort is assigned to a separate worker if enough cores are available. If not, N-2 cores are used, where N is the number of cores available.}
+
+\item{progress}{Logical. Whether a progress bar should be printed to the R console during execution. Defaults to \code{TRUE}.}
+
+\item{...}{Additional arguments passed to the simulator.}
+}
+\value{
+A list object of class \code{narwsim}.
 }
 \description{
-Simulate right whale movements and behavior across a calendar year.
+Simulates the movements, behavior, and energy budgets of North Atlantic right whales (Eubalaena glacialis) exposed to offshore wind development activities within U.S. waters. The model operates in daily time steps and runs for a full calendar year.
 }
 \examples{
 \dontrun{
 library(narwind)
-
-narw(10)
+m <- narw(1000)
 }
+...............................
+'...............................
+...............................
+'...............................
+allowing progress bar to be used in foreach -----------------------------
+...............................
+................................
 }
 \seealso{
 \code{\link{initialize}}

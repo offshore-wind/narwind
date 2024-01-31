@@ -4,7 +4,7 @@
 \alias{narw_crs}
 \title{Projected coordinate system}
 \usage{
-narw_crs()
+narw_crs(latlon = FALSE)
 }
 \value{
 An object of class \code{CRS}.

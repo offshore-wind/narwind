@@ -98,7 +98,7 @@ inline progressbar::progressbar() :
     update_is_called(false),
     done_char("="),
     todo_char(" "),
-    opening_bracket_char("["),
+    opening_bracket_char("Running simulations ["),
     closing_bracket_char("]\n"),
     output(std::cerr) {}
 
@@ -110,7 +110,7 @@ inline progressbar::progressbar(int n, bool showbar, std::ostream& out) :
     update_is_called(false),
     done_char("="),
     todo_char(" "),
-    opening_bracket_char("["),
+    opening_bracket_char("Running simulations ["),
     closing_bracket_char("]"),
     output(out) {}
 

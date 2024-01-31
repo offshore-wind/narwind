@@ -2,20 +2,18 @@
 % Please edit documentation in R/plot.narwsim.R
 \name{plot.narwsim}
 \alias{plot.narwsim}
-\title{Plot}
+\title{Model plots}
 \usage{
-\method{plot}{narwsim}(obj, what = "map", whaleID = NULL, animate = FALSE, web = FALSE, ...)
+\method{plot}{narwsim}(obj, what = "map", animate = FALSE, web = FALSE, ...)
 }
 \arguments{
 \item{obj}{Object returned by run_model}
 
+\item{what}{}
+
 \item{animate}{Logical. If TRUE, creates a .gif animation of the tracks.}
 
 \item{web}{If TRUE, returns a plotly graph}
-
-\item{n.ind}{Number of animals to plot.}
-
-\item{id}{ID of animals to plot}
 }
 \description{
 Make plots
@@ -23,10 +21,15 @@ Make plots
 \examples{
 \dontrun{
 library(narwind)
-
-animals <- run_model(10)
-plot(animals)
+m <- narw(10000)
+plot(m)
 }
+-------------------------------------------------------
+-------------------------------------------------------
+-------------------------------------------------------
+-------------------------------------------------------  
+-------------------------------------------------------
+-------------------------------------------------------  
 }
 \author{
 Phil J. Bouchet

@@ -6,10 +6,10 @@
 #include <cmath>
 #include <cstdio>
 #include <vector>
-#include "spline.h"
 #include <algorithm>    // std::all_of
 #include <array>        // std::array
 
+// [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(cpp11)]]
 
 // [[Rcpp::export]]
@@ -149,13 +149,40 @@ Rcpp::NumericVector prob_migration(int n, std::string destination, int cohortID)
 //   return(R::rbinom(1,p));
 // }
 
+// // [[Rcpp::export]]
+// double response_threshold(Rcpp::NumericVector db){
+//   std::random_device rd;     // Only used once to initialize (seed) engine
+//   std::mt19937 rng(rd());    // Random-number engine used (Mersenne-Twister in this case)
+//   std::uniform_int_distribution<int> uniform(0,9999);
+//   int d = uniform(rd);
+//   return(db[d]);
+// }
+
+// // [[Rcpp::export]]
+// Rcpp::NumericVector testseed(int seed){
+//   std::random_device rd;     // Only used once to initialize (seed) engine
+//   std::mt19937 mt;    // Random-number engine used (Mersenne-Twister in this case)
+//   mt.seed(seed);
+//   std::uniform_int_distribution<int> uniform(0,9999);
+//   Rcpp::NumericVector db(366);
+//   for(int i = 0; i <366; ++i){
+//     db[i] = uniform(mt);
+//   }
+//   return(db);
+// }
+
 // [[Rcpp::export]]
-double response_threshold(Rcpp::NumericVector db){
-  std::random_device rd;     // Only used once to initialize (seed) engine
-  std::mt19937 rng(rd());    // Random-number engine used (Mersenne-Twister in this case)
+double response_threshold(Rcpp::NumericVector dose, int day, int simduration, int seed){
+  std::random_device rd; // Only used once to initialize (seed) engine
+  std::mt19937 mt; // Random-number engine used (Mersenne-Twister in this case)
+  mt.seed(seed); // Set the seed
   std::uniform_int_distribution<int> uniform(0,9999);
-  int d = uniform(rd);
-  return(db[d]);
+  Rcpp::NumericVector db(simduration);
+  for(int i = 0; i <simduration; ++i){
+    db[i] = uniform(mt);
+  }
+  double thresh = dose[db(day)];
+  return(thresh);
 }
 
 // // [[Rcpp::export]]
@@ -182,7 +209,7 @@ double response_threshold(Rcpp::NumericVector db){
 // }
 
 //' Random deviate from a truncated Normal distribution
-//' 
+//' @name rtnorm
 //' @param location Location parameter
 //' @param scale Scale parameter
 //' @param L Lower bound
@@ -199,13 +226,13 @@ double rtnorm(double location,
 }
 
 //' Random deviate from a truncated Normal distribution
- //' 
- //' @param location Location parameter
- //' @param scale Scale parameter
- //' @param L Lower bound
- //' @param U Upper bound
- // [[Rcpp::export]]
- Rcpp::NumericVector rtnorm_vec(int n,
+//' @name rtnorm_vec
+//' @param location Location parameter
+//' @param scale Scale parameter
+//' @param L Lower bound
+//' @param U Upper bound
+// [[Rcpp::export]]
+Rcpp::NumericVector rtnorm_vec(int n,
                                 double location,
                                 double scale,
                                 double L,
@@ -221,6 +248,17 @@ double rtnorm(double location,
 
    return out;
  }
+
+// [[Rcpp::export]]
+double is_female(int cohort){
+  if(cohort == 0){
+    return R::rbinom(1, 0.46);
+  } else if(cohort == 1 | cohort == 3){
+    return 0;
+  } else {
+    return 1;
+  }
+}
 
 
 //' Initialize age
@@ -333,18 +371,17 @@ Rcpp::NumericVector survivorship_vec(Rcpp::NumericVector age,
 
 //' Entanglement event
 //' @name entanglement_event
- //' @param p_head Probability that the entanglement involves the anterior region of the body (mouth, head, rostrum)
- // [[Rcpp::export]]
+//' @param p_head Probability that the entanglement involves the anterior region of the body (mouth, head, rostrum)
+// [[Rcpp::export]]
  
  Rcpp::NumericVector entanglement_event(double p_entangled = 0,
                                         double p_head = 0.732, 
-                                        double p_mortality = 0,
                                         Rcpp::NumericVector p_severity = Rcpp::NumericVector::create(0.819, 0.140, 0.041)
                                         ){       
    
    // p(head) weighted mean of entries in spreadsheet of model parameters,
    
-   Rcpp::NumericVector out (8); // Store results
+   Rcpp::NumericVector out (7); // Store results
    
    // Is the animal entangled?
    // Annual entanglement rate = 0.259 -- Knowlton et al. (2012)
@@ -366,9 +403,9 @@ Rcpp::NumericVector survivorship_vec(Rcpp::NumericVector age,
        if(out(1)==0){
          out(3) = R::runif(0,0.15);  // Fourth value
        } else if(out(1)==1){
-         out(3) = R::runif(0.15,0.3);  // Fourth value
+         out(3) = R::runif(0.15,0.3);
        } else if(out(1)==2){
-         out(3) = R::runif(0.3,0.5);  // Fourth value
+         out(3) = R::runif(0.3,0.5);
        }
      } 
      
@@ -379,12 +416,10 @@ Rcpp::NumericVector survivorship_vec(Rcpp::NumericVector age,
      if(out(1) == 0){
        out(4) = Rf_rnbinom_mu(0.7363271, 111.3911746); // Fifth value
      } else if(out(1) == 1){
-       out(4) = Rf_rnbinom_mu(0.7493824, 124.2184062); // Fifth value
+       out(4) = Rf_rnbinom_mu(0.7493824, 124.2184062);
      } else {
-       out(4) = Rf_rnbinom_mu(0.6527522, 211.8187153); // Fifth value
+       out(4) = Rf_rnbinom_mu(0.6527522, 211.8187153);
      }
-     
-     out(7) = R::rbinom(1, p_mortality); // Last value
      
    }
    
@@ -420,14 +455,13 @@ Rcpp::NumericVector survivorship_vec(Rcpp::NumericVector age,
 
 //' Initialize body condition
 //' @name start_bcondition
- //' @description Performs a random draw from a beta distribution to initialize 
- //' the body condition of simulated animals, taken as the ration of fat mass to total mass.
- //' @param age Age in years
- //' @param shape1 First shape parameter of the beta distribution
- //' @param shape2 Second shape parameter of the beta distribution
- // [[Rcpp::export]]
- 
- long double start_bcondition(double cohort){
+//' @description Performs a random draw from a beta distribution to initialize 
+//' the body condition of simulated animals, taken as the ration of fat mass to total mass.
+//' @param age Age in years
+//' @param shape1 First shape parameter of the beta distribution
+//' @param shape2 Second shape parameter of the beta distribution
+// [[Rcpp::export]]
+long double start_bcondition(double cohort){
    
    long double bc;
    
@@ -441,46 +475,15 @@ Rcpp::NumericVector survivorship_vec(Rcpp::NumericVector age,
    }
    return bc;
  }
- 
- // long double start_bcondition(double cohort, int month = 10){
- //   
- //   long double bc;
- //   
- //   // Calves
- //   if(cohort == 0){
- //     bc = rtnorm(0.06, 0.01, 0.06, 1);
- //     
- //     // Pregnant and lactating females
- //   } else if(cohort == 4 | cohort == 5){
- //     
- //     if(month >= 6 & month <= 10){ // During the foraging season
- //       bc = rtnorm(0.4, 0.05, 0.05, 0.6586636); 
- //     } else {
- //       bc = rtnorm(0.3, 0.05, 0.05, 0.6586636); // Other time of year
- //     }
- //     
- //     // All other individuals
- //   } else {
- //     
- //     if(month >= 6 & month <= 10){ // During the foraging season
- //       bc = rtnorm(0.35, 0.075, 0.05, 0.5188374); 
- //     } else {
- //       bc = rtnorm(0.15, 0.075, 0.05, 0.5188374); // Other time of year
- //     }
- //     
- //   }
- //   return bc;
- // }
 
-//' Initialize body condition
- //' @name start_bodycondition
- //' @description Performs a random draw from a beta distribution to initialize
- //' the body condition of simulated animals, taken as the ration of fat mass to total mass.
- //' @param age Age in years
- //' @param shape1 First shape parameter of the beta distribution
- //' @param shape2 Second shape parameter of the beta distribution
- // [[Rcpp::export]]
-
+//' Initialize body condition 
+//' @name start_bcondition_vec
+//' @description Performs a random draw from a beta distribution to initialize
+//' the body condition of simulated animals, taken as the ration of fat mass to total mass.
+//' @param age Age in years
+//' @param shape1 First shape parameter of the beta distribution
+//' @param shape2 Second shape parameter of the beta distribution
+// [[Rcpp::export]]
 Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month = 10){
 
   int n = cohort.size();
@@ -701,9 +704,9 @@ Eigen::MatrixXd mL(int n = 1, bool sd = false){
 // [[Rcpp::export]]
 double length2mass(double L,
                    Eigen::MatrixXd param,
-                   double lean = 0.5435686){
+                   double lean = 0.5554227){
   
-  // lean determined by find_lean(45000, 0.6) or
+  // lean determined by find_lean()
   
   double a = param(0,0);
   double b = param(0,1);
@@ -799,86 +802,104 @@ Rcpp::NumericVector length2mass_vec(Rcpp::NumericVector L, double lean = 0.54356
 // } 
 
 // [[Rcpp::export]]
-Rcpp::NumericVector increment_cohort(Rcpp::NumericVector cohort, 
+Rcpp::NumericVector increment_cohort(Rcpp::NumericVector alive,
+                                     Rcpp::NumericVector cohort, 
                                      Rcpp::NumericVector age, 
                                      Rcpp::NumericVector female,
-                                     Rcpp::NumericVector rest,
+                                     Rcpp::NumericVector bc,
+                                     Rcpp::NumericVector min_bc,
+                                     Rcpp::NumericVector reprod,
                                      double abort){
+  int nal = alive.size();
   int nc = cohort.size();
   int na = age.size();
   int nf = female.size();
-  int nr = rest.size();
+  int nbc = bc.size();
+  int nmin = min_bc.size();
+  int nrep = reprod.size();
   
   // Check that all vectors have the same size
-  std::array<int,4> sizes = {nc, na, nf, nr};
+  std::array<int,7> sizes = {nal, nc, na, nf, nbc, nmin, nrep};
   int allequal = std::equal(sizes.begin() + 1, sizes.end(), sizes.begin());
   if(allequal == 0) Rcpp::stop("Arguments have different lengths");
+  
   Rcpp::NumericVector coh(nc);
   
   for(int i = 0; i < nc; i++) {
     
+    if(alive[i] == 0){
+      
+      coh[i] = cohort[i];
+      
+    } else {
+      
       // ----------------------
       // Growth and maturity
       // ----------------------
-
-    if(cohort[i] == 0 & age[i] >= 1 & female[i] == 0){              // Calves (m) -> Juveniles (m)
-      coh[i] = 1;
-    } else if (cohort[i] == 0 & age[i] >= 1 & female[i] == 1){      // Calves (f) -> Juveniles (f)
-      coh[i] = 2;
-    } else if (cohort[i] == 1 & age[i] >= 9 & female[i] == 0){      // Juveniles (m) -> Adults (m)
-      coh[i] = 3;
-    } else if (cohort[i] == 2 & age[i] >= 9 & female[i] == 1){      // Juveniles (f) -> Adults, resting (f)
-      coh[i] = 6;
       
-      // ----------------------
-      // Transitions between reproductive states
-      // ----------------------
-      
-    } else if (cohort[i] == 5) {                                    // Lactating (f) -> Resting (f)
-      coh[i] = 6;
-    } else if(cohort[i] == 6 & rest[i] == 0){                       // Resting (f) -> Pregnant (f)
-      coh[i] = 4;
-    } else if(cohort[i] == 4){                                      // Pregnant (f) -> Lactating (f)
-      int has_aborted = R::rbinom(1, abort);
-      if(has_aborted){
+      if(cohort[i] == 0 & age[i] >= 1 & female[i] == 0){              // Calves (m) -> Juveniles (m)
+        coh[i] = 1;
+      } else if (cohort[i] == 0 & age[i] >= 1 & female[i] == 1){      // Calves (f) -> Juveniles (f)
+        coh[i] = 2;
+      } else if (cohort[i] == 1 & age[i] >= 9 & female[i] == 0){      // Juveniles (m) -> Adults (m)
+        coh[i] = 3;
+      } else if (cohort[i] == 2 & age[i] >= 9 & female[i] == 1){      // Juveniles (f) -> Adults, resting (f)
         coh[i] = 6;
+        
+        // ----------------------
+        // Transitions between reproductive states
+        // ----------------------
+        
+      } else if (cohort[i] == 5) {                                    // Lactating (f) -> Resting (f)
+        coh[i] = 6;
+      } else if(cohort[i] == 6){  
+        if(bc[i] > min_bc[i] & reprod[i] == 1){                                        // Resting (f) -> Pregnant (f)
+          coh[i] = 4; 
+        } else {
+          coh[i] = 6;                                                 // Resting (f) -> Resting (f)
+        }
+      } else if(cohort[i] == 4){                                      // Pregnant (f) -> Lactating (f)
+        int has_aborted = R::rbinom(1, abort);
+        if(has_aborted){
+          coh[i] = 6;
+        } else {
+          coh[i] = 5;
+        }
       } else {
-        coh[i] = 5;
+        coh[i] = cohort[i];
       }
-    } else {
-      coh[i] = cohort[i];
+      
     }
     
   }
+    
   return coh;
 }
 
 //' Incidence of foraging behavior
 //' @name feeding_threshold
- //' @description Determines whether the prey concentration encountered by an animal
- //' is sufficient to support foraging
- //' @param min_prey Minimum prey density threshold that triggers foraging (\ifelse{html}{\out{copepods/m<sup>3</sup>}}{\eqn{copepods/m^3})
- //' @param D Prey concentration (\ifelse{html}{\out{copepods/m<sup>3</sup>}}{\eqn{copepods/m^3})
- // [[Rcpp::export]]
- 
- double feeding_threshold(double min_prey, double D){
-   return std::round(1/(1 + exp(min_prey - D)));
+//' @description Determines whether the prey concentration encountered by an animal
+//' is sufficient to support foraging
+//' @param min_prey Minimum prey density threshold that triggers foraging 
+//' @param D Prey concentration
+// [[Rcpp::export]]
+double feeding_threshold(double min_prey, double prey_concentration){
+   return std::round(1/(1 + exp(min_prey - prey_concentration)));
  }
 
-//' Incidence of foraging behavior
- //' @name feeding_threshold
- //' @description Determines whether the prey concentration encountered by an animal
- //' is sufficient to support foraging
- //' @param min_prey Minimum prey density threshold that triggers foraging (\ifelse{html}{\out{copepods/m<sup>3</sup>}}{\eqn{copepods/m^3})
- //' @param D Prey concentration (\ifelse{html}{\out{copepods/m<sup>3</sup>}}{\eqn{copepods/m^3})
- // [[Rcpp::export]]
- 
- Rcpp::NumericVector feeding_threshold_vec(double min_prey, 
-                                           Rcpp::NumericVector D){
-   int n = D.size();
+//' Incidence of foraging behavior (vectorized)
+//' @name feeding_threshold_vec
+//' @description Determines whether the prey concentration encountered by an animal
+//' is sufficient to support foraging
+//' @param min_prey Minimum prey density threshold that triggers foraging
+//' @param D Prey concentration
+// [[Rcpp::export]]
+Rcpp::NumericVector feeding_threshold_vec(double min_prey, 
+                                           Rcpp::NumericVector prey_concentration){
+   int n = prey_concentration.size();
    Rcpp::NumericVector out(n);
      for(int i = 0; i < n; i++) {
-       out(i) = std::round(1/(1 + exp(min_prey - D(i))));
+       out(i) = std::round(1/(1 + exp(min_prey - prey_concentration(i))));
      };
    return out;
  }
@@ -966,28 +987,27 @@ Rcpp::NumericVector feeding_effort_vec(double eta, double rho, Rcpp::NumericVect
 }
 
 //' Convert degrees to radians
- //' @name deg2radians
- //' @param angle Input angle in degrees
- //' @return Equivalent angle in radians
- // [[Rcpp::export]]
+//' @name deg2radians
+//' @param angle Input angle in degrees
+//' @return Equivalent angle in radians
+// [[Rcpp::export]]
  double deg2radians(double angle){
    return angle * M_PI / 180;
  }
 
 //' Area of the gape
 //' @name gape_size
- //' @description Provides an estimate of the area of the mouth gape
- //' @param L Total body length (m)
- //' @param omega Width of the mouth (m)
- //' @param alpha Angle between the tip of the baleen plates and outer edge of the baleen racks (rad)
- //' @note The gape is assumed to be a disk sector defined by the height of the tallest baleen plate 
- //' and the width of the mouth. The central angle can be estimated based on 3D models 
- //' of right whales and bowhead whales developed from measurements taken during whaling,
- //' necropsies, and aerial photogrammetry studies
- //' @return Estimated gape area (\ifelse{html}{\out{m<sup>2</sup>}}{\eqn{m^2})
- // [[Rcpp::export]]
- 
- double gape_size(double L, double omega, double alpha){ 
+//' @description Provides an estimate of the area of the mouth gape
+//' @param L Total body length (m)
+//' @param omega Width of the mouth (m)
+//' @param alpha Angle between the tip of the baleen plates and outer edge of the baleen racks (rad)
+//' @note The gape is assumed to be a disk sector defined by the height of the tallest baleen plate 
+//' and the width of the mouth. The central angle can be estimated based on 3D models 
+//' of right whales and bowhead whales developed from measurements taken during whaling,
+//' necropsies, and aerial photogrammetry studies
+//' @return Estimated gape area
+// [[Rcpp::export]]
+double gape_size(double L, double omega, double alpha){ 
    double a = deg2radians(alpha);
    return a * (std::pow(omega,2)/4 + std::pow((0.2077*L - 1.095),2))/2;
  }
@@ -1328,6 +1348,20 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
 //    
 //  }  
 
+//' Energetic cost of placental maintenance during pregnancy (vectorised)
+ //' @name placental_maintenance
+ //' @param G Energetic cost of fetal growth (kJ)
+ // [[Rcpp::export]]
+ 
+ Rcpp::NumericVector placental_maintenance_vec(Rcpp::NumericVector G){ 
+   int n = G.size();
+   Rcpp::NumericVector out(n);
+   for(int i = 0; i < n; i++){
+     out(i) = (G(i)/0.807)*(1-0.807);
+   }
+   return(out);
+ } 
+
 //' Energetic cost of placental maintenance during pregnancy
 //' @name placental_maintenance
  //' @param G Energetic cost of fetal growth (kJ)
@@ -1347,6 +1381,23 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
    return 18409.6 * std::pow(birth_mass, 1.2) * (delta_m/birth_mass);
  }  
 
+//' Heat increment of gestation (vectorised)
+ //' @name heat_gestation
+ //' @param birth_mass Birth mass of the fetus (kg)
+ //' @param delta_m Daily growth rate of the fetus (kg/day)
+ // [[Rcpp::export]]
+ 
+ Rcpp::NumericVector heat_gestation_vec(double birth_mass,
+                                        Rcpp::NumericVector delta_m){ 
+   int n = delta_m.size();
+   Rcpp::NumericVector out(n);
+   for(int i = 0; i < n; i++){
+    out(i) = 18409.6 * std::pow(birth_mass, 1.2) * (delta_m(i)/birth_mass);
+   }
+   return(out);
+ }  
+
+
 //' Fetal tissue mass
 //' @name fetal_tissue_mass
  //' @param P_b Proportion of the body volume comprised of tissue b
@@ -1357,6 +1408,24 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
  double fetal_tissue_mass(double P_b, double L){ 
    return 1000 * P_b * std::exp(-4.115 + 3.016 * std::log(L));
  }  
+
+//' Fetal tissue mass (vectorised)
+ //' @name fetal_tissue_mass
+ //' @param P_b Proportion of the body volume comprised of tissue b
+ //' @param L Length of the fetus (m)
+ //' @note This relationship only applies to muscles, bones, and viscera
+ // [[Rcpp::export]]
+ 
+ Rcpp::NumericVector fetal_tissue_mass_vec(double P_b, 
+                                           Rcpp::NumericVector L){ 
+   int n = L.size();
+   Rcpp::NumericVector out(n);
+   for(int i = 0; i < n; i++){
+     out(i) = 1000 * P_b * std::exp(-4.115 + 3.016 * std::log(L(i)));
+   }
+   return(out);
+ }  
+
 
 //' Fetal blubber mass
 //' @name fetal_blubber_mass
@@ -1386,6 +1455,51 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
    return D_blubber * (std::exp(-4.115 + 3.016 * std::log(L)) * (1+BC) - (M_muscle/D_muscle) - (M_viscera/D_viscera) - (M_bones/D_bones));
  }  
 
+//' Fetal blubber mass (vectorised)
+ //' @name fetal_blubber_mass
+ //' @param L Length of the fetus (m)
+ //' @param M_muscle Mass of muscles in the fetus (kg)
+ //' @param M_viscera Mass of viscera in the fetus (kg)
+ //' @param M_bones Mass of bone tissues in the fetus (kg)
+ //' @param D_blubber Average blubber density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
+ //' @param D_muscle Average muscle density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
+ //' @param D_viscera Average density of viscera (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
+ //' @param D_bones Average bone density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
+ //' @note The original equation from Christiansen et al. (2022) (DOI: 10.3354/meps14009) includes an additional term
+ //' designed to account for the calf's body condition at birth. However, Christiansen et al. rely on a metric of body condition (BC)
+ //' that differs from, and is not readily comparable to, ours. Here, we assume that BC = 0, which corresponds to an animal of average
+ //' body condition. 
+ // [[Rcpp::export]]
+ 
+ Rcpp::NumericVector fetal_blubber_mass_vec(Rcpp::NumericVector L,
+                                            double BC,
+                                            Rcpp::NumericVector M_muscle, 
+                                            Rcpp::NumericVector M_viscera, 
+                                            Rcpp::NumericVector M_bones,
+                                            double D_blubber,
+                                            double D_muscle, 
+                                            double D_viscera, 
+                                            double D_bones){ 
+   
+   int n = L.size();
+   int mn = M_muscle.size();
+   int mv = M_viscera.size();
+   int mb = M_bones.size();
+   
+   // Check that all vectors have the same size
+   std::array<int,4> sizes = {n, mn, mv, mb};
+   int allequal = std::equal(sizes.begin() + 1, sizes.end(), sizes.begin());
+   if(allequal == 0) Rcpp::stop("Arguments have different lengths");
+   
+   Rcpp::NumericVector out(n);
+   for(int i = 0; i < n; i++){
+     out(i) = D_blubber * (std::exp(-4.115 + 3.016 * std::log(L(i))) * 
+       (1+BC) - (M_muscle(i)/D_muscle) - (M_viscera(i)/D_viscera) - (M_bones(i)/D_bones));
+   }
+   
+   return(out);
+ }  
+
 //' Fetal mass 
 //' @name fetal_mass
  //' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
@@ -1399,6 +1513,43 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
    return (std::exp(-4.115 + 3.016 * std::log((std::exp(-1.050376 + 0.007685 * days_to_birth) + (0.021165/365)*days_to_birth)*mother_length))*(1+bbc))*body_density;
  }
 
+//' Fetal mass 
+ //' @name fetal_mass (vectorised)
+ //' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
+ //' @param mother_length Body length of the mother (m)
+ //' @param bbc Body condition, as defined by Christiansen et al. (2022). Defaults to 0 for an individual of average condition.
+ //' @param body_density Average body density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
+ //' @note In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
+ // [[Rcpp::export]]
+ 
+ Rcpp::NumericVector fetal_mass_vec(Rcpp::NumericVector days_to_birth, 
+                                    Rcpp::NumericVector mother_length, 
+                                    int bbc = 0, 
+                                    double body_density = 805.07){
+   int n = days_to_birth.size();
+   int m = mother_length.size();
+   double ML;
+   
+   if(m > 1){
+     // Check that all vectors have the same size
+     std::array<int,2> sizes = {n, m};
+     int allequal = std::equal(sizes.begin() + 1, sizes.end(), sizes.begin());
+     if(allequal == 0) Rcpp::stop("Arguments have different lengths");
+   }
+   
+   Rcpp::NumericVector out(n);
+   for(int i = 0; i < n; i++){
+     if(m > 1){
+       ML = mother_length(i);
+     } else {
+       ML = mother_length(0);
+     }
+     out(i) = (std::exp(-4.115 + 3.016 * std::log((std::exp(-1.050376 + 0.007685 * days_to_birth(i)) + 
+       (0.021165/365)*days_to_birth(i))*ML))*(1+bbc))*body_density;
+   }
+   return(out);
+ }
+
 //' Fetal length 
 //' @name fetal_length
  //' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
@@ -1409,6 +1560,39 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
  double fetal_length(int days_to_birth, double mother_length){
    return (std::exp(-1.050376 + 0.007685 * days_to_birth) + (0.021165/365) * days_to_birth) * mother_length;
  }
+
+//' Fetal length (vectorised)
+//' @name fetal_length
+//' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
+//' @param mother_length Body length of the mother (m)
+//' @note In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
+// [[Rcpp::export]]
+ 
+Rcpp::NumericVector fetal_length_vec(Rcpp::NumericVector days_to_birth, 
+                                     Rcpp::NumericVector mother_length){
+  int n = days_to_birth.size();
+  int m = mother_length.size();
+  double ML;
+  
+  // Check that all vectors have the same size
+  if(m > 1){
+  std::array<int,2> sizes = {n, m};
+  int allequal = std::equal(sizes.begin() + 1, sizes.end(), sizes.begin());
+  if(allequal == 0) Rcpp::stop("Arguments have different lengths");
+  }
+  
+  Rcpp::NumericVector out(n);
+  for(int i = 0; i < n; i++){
+    if(m > 1){
+      ML = mother_length(i);
+    } else {
+      ML = mother_length(0);
+    }
+    out(i) = (std::exp(-1.050376 + 0.007685 * days_to_birth(i)) + (0.021165/365) * days_to_birth(i)) * ML;
+  }
+  return(out);
+}
+
 
 // // [[Rcpp::export]]
 // double fetal_growth(double L0, double L1, 
@@ -1511,7 +1695,7 @@ double fatdeposition_cost(double fatmass_increment,
 }
 
 
-// newind[year,"alive", 1] <- 1
+// §newind[year,"alive", 1] <- 1
 // newind[year,"cohort", 1] <- 0
 // newind[year,"female", 1] <- rbinom(n = 1, size = 1, prob = 0.5) # 1:1 sex ratio at birth
 // newind[year, "age", 1] <- 0
@@ -1539,33 +1723,43 @@ double fatdeposition_cost(double fatmass_increment,
 // newind[year,"p_surv",] <- 1
 
 // [[Rcpp::export]]
-Rcpp::NumericMatrix add_calf(int n, Rcpp::StringVector attr, double nonreprod){
+Rcpp::NumericMatrix add_calf(int n, 
+                             Rcpp::StringVector attr, 
+                             Rcpp::NumericVector sex,
+                             Rcpp::NumericVector nonreprod){
   
   int nattr = attr.size();
   Rcpp::NumericMatrix out(nattr,n);
   
+  // Alive vs. dead
   Rcpp::NumericMatrix::Row alive = out.row(0);
   alive = alive + 1;
   
-  out(2,Rcpp::_) = Rcpp::rbinom(n, 1, 0.5); // Sex
+  // Sex (male, female)
+  out(2,Rcpp::_) = sex;
 
+  // Body length
   Rcpp::NumericVector L = age2length_vec(out.row(3));
   out(4,Rcpp::_) = L;
   
+  // Lean_mass
   Rcpp::NumericVector M = length2mass_vec(L);
-  out(6,Rcpp::_) = M; // Lean_mass
+  out(6,Rcpp::_) = M;
   
+  // Body condition
   Rcpp::NumericVector BC = start_bcondition_vec(out(3,Rcpp::_));
-  out(7,Rcpp::_) = BC; // Body condition
+  out(7,Rcpp::_) = BC;
   
-  out(5,Rcpp::_) = M / (1-BC); // Total mass
+  // Total mass
+  out(5,Rcpp::_) = M / (1-BC);
   
+  // Probability of survival
   Rcpp::NumericMatrix::Row psurv = out.row(8);
   psurv = psurv + 1;
   
-  out(13,Rcpp::_) = Rcpp::rbinom(n, 1, 1-nonreprod); // Reproductive females
-  // Rcpp::NumericMatrix::Row reprod = out.row(13); 
-  // reprod = reprod + 1;
+  // Sterility
+  out(12,Rcpp::_) = nonreprod;
+  // out(12,Rcpp::_) = Rcpp::rbinom(n, 1, 1-nonreprod);
   
   Rcpp::rownames(out) = attr;
   
@@ -1674,6 +1868,22 @@ double pbirth(float now,
   return out;
 }
 
+// [[Rcpp::export]]
+double pleave(float now, 
+              float enter,
+              float cohortID,
+              float factor,
+              Rcpp::NumericMatrix resid){
+  
+  int days_in_SEUS = now - enter;
+  double resid_m = resid(cohortID - 1,0);
+  double resid_sd = resid(cohortID - 1,1);
+  double q = std::round(days_in_SEUS*factor);
+  double out = R::pnorm5(q, resid_m, resid_sd, 1, 0);
+
+  return out;
+}
+
 
 // [[Rcpp::export]]
 
@@ -1701,5 +1911,159 @@ Rcpp::NumericVector seq_cpp(double start,
   }
   return out;
 }
+
+// [[Rcpp::export]]
+double starvation_mortality(double bc,
+                            double starve_start, 
+                            double starve_threshold,
+                            double starve_scalar){
   
+  double out;
+  
+  if(bc < starve_threshold){
+    out = 1.0L;
+  } else if(bc > starve_start) {
+    out = 0.0L;
+  } else {
+    out = starve_scalar *(starve_start * (1/bc) - 1);
+  }
+  
+  if(out < 0) out = 0;
+  if(out > 1) out = 1  ;
+  
+  return out;
+}  
+  
+// [[Rcpp::export]]
+Rcpp::NumericVector starvation_mortality_vec(Rcpp::NumericVector bc,
+                                             double starve_start, 
+                                             double starve_threshold,
+                                             double starve_scalar){
+  
+  int n = bc.size();
+  Rcpp::NumericVector out(n);
+  for (int i = 0; i<n; i++){
+    if(bc(i) < starve_threshold){
+      out(i) = 1.0L;
+    } else if(bc(i) > starve_start) {
+      out(i) = 0.0L;
+    } else {
+      out(i) = starve_scalar *(starve_start * (1/bc(i)) - 1);
+    }
+    if(out(i) < 0) out(i) = 0;
+    if(out(i) > 1) out(i) = 1;
+  }
+
+return out;
+  }  
+
+// [[Rcpp::export]]
+double entanglement_effect(double prob_survival,
+                           int severity,
+                           int ndays,
+                           Rcpp::NumericVector entgl_hit){
+  
+  double p_surv3mo = 0.0L;
+  double p_surv3mo_cloglog;
+  double surv_drop = entgl_hit(severity);
+
+  // If the entanglement effect estimated under PCoMS is zero, then
+  // return 0; otherwise, calculate the modified survival probability
+  if(surv_drop != 0){
+  
+  // If the daily probability of a mortality event (starving) is p,
+  // then the daily probability of survival is (1-p). 
+  // The probability of survival over 3 months (taken to be 90 days) is then given 
+  // by (1-p)^90. Incidentally, the probability of starving during the 3-month period is
+  // is p_3mo = 1-((1-p)^90). 
+  // It follows that p = 1-((1-p_3mo)^(1/90))
+  
+  p_surv3mo = std::pow(prob_survival, ndays);
+
+  // Convert complementary log-log scale
+  p_surv3mo_cloglog = std::log(-std::log(1.0L - p_surv3mo));
+  
+  if(std::isinf(p_surv3mo_cloglog)) throw std::invalid_argument("Argument out of bounds; reduce --p or change --ndays");
+
+  // Add effect of entanglement estimated from PCoMS (Pirotta et al. 2023)
+  p_surv3mo_cloglog += entgl_hit(severity);
+  // if(severity == 0) p_surv3mo_cloglog += minor;
+  // if(severity == 1) p_surv3mo_cloglog += moderate;
+  // if(severity == 2) p_surv3mo_cloglog += severe;
+
+  // Apply inverse cloglog
+  p_surv3mo = 1.0L - std::exp(-std::exp(p_surv3mo_cloglog));
+  
+  // Convert back to daily probability
+  // double out = std::pow(p_surv3mo, 1.0L/ndays);
+  
+  }
+
+  return p_surv3mo;
+}
+
+
+// [[Rcpp::export]]
+double survival(double age,
+                int female){
+  
+  // Linden (2023). Population size estimation of North Atlantic right whales from 1990-2022
+  // https://www.fisheries.noaa.gov/s3/2023-10/TM314-508-0.pdf
+  
+  // This function gives the following survival estimates:
+  // Calves (0.5 yrs): 0.920195
+  // Yearlings (1.5 yrs): 0.9340726
+  // Year 2 (2.5 yrs): 0.9456794
+  // Year 3 (3.5 yrs): 0.9553405
+  // Year 4 (4.5 years):  0.9633499
+  // Adult males: 0.9668179
+  // Adult females: 0.9521659
+  
+  // These are comparable to Pace (2021):
+  // https://repository.library.noaa.gov/view/noaa/50567
+  // Calves: 0.924234
+  // Yearlings: 0.937877
+  // Year 2: 0.949159
+  // Year 3: 0.958477
+  // Year 4: 0.966181
+  // Adult males: 0.972534
+  // Adult females: 0.956194
+  
+  // And to Reed et al. (2023)
+  // https://www.frontiersin.org/articles/10.3389/fmars.2022.994481/full
+  // Pre-breeders: 0.96 (range: 0.92-0.98)
+  // Breeders: 0.97 (range: 0.94-0.99) 
+  // Calves: 0.79 (range: 0.50-0.92)
+  
+  // logit-linear coefficients for survival probability -- Table 1
+  double b_age = 0.206; // Linear effect of age from 0–5
+  double b_female = -0.381; // Effect of being an adult female
+  double b_regime = -0.718; // Regime effect for years after 2010
+  double b0 = 3.060; // Intercept
+  
+  int is_adult = 0;
+  if(age > 9.5) is_adult += 1;
+  
+  double age_5 = std::min(age, 5.0); // Daytime foraging
+  
+  double y = b0 + b_female * female * is_adult + b_regime + b_age * age_5;
+  double out = std::exp(y)/(1+exp(y));
+  return out;
+}
+
+
+// [[Rcpp::export]]
+Rcpp::NumericVector clamp(Rcpp::NumericVector v, double threshold){
+  int n = v.size();
+  Rcpp::NumericVector out(n);
+  for (int i = 0; i < n; i++){
+    if(v(i) > threshold){
+      out(i) = threshold;
+    } else{
+      out(i) = v(i);
+    }
+  }
+  return out;
+}
+
 #endif

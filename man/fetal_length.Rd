@@ -2,7 +2,21 @@
 % Please edit documentation in R/RcppExports.R
 \name{fetal_length}
 \alias{fetal_length}
+\alias{fetal_length_vec}
 \title{Fetal length}
+\usage{
+fetal_length_vec(days_to_birth, mother_length)
+}
+\arguments{
+\item{days_to_birth}{Number of days until birth, assuming a 365-day gestation period (d)}
+
+\item{mother_length}{Body length of the mother (m)}
+}
 \description{
 Fetal length
+
+Fetal length (vectorised)
+}
+\note{
+In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
 }

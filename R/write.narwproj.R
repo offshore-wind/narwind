@@ -1,39 +1,45 @@
-#' Summary
+#' Export population projection data
 #'
-#' Summary information
-#' @export
+#' Writes outputs from the stochastic population model to an .xlsx file on disk.
 #' 
+#' @param obj An object of class \code{narwproj}, as returned by \code{\link{predict.narwsim}}.
+#' @param filename Character. Output file name. Defauls to \code{"narwproj"}.
+#' @param ... Additional arguments passed to \code{\link[openxlsx]{write.xlsx}}.
+#' @return An Excel file containing four sheets:
+#' \itemize{
+#' \item \code{Abundance}: Estimated mean right whale abundance (calculated across replicate projections), summarized by year and cohort. Lower and upper bounds of the associated confidence interval are also reported.
+#' \item \code{Projection}: Estimated right whale abundance, by year, cohort, and projection.
+#' \item \code{Births}: Numbers of calving events, summarized by year and projection.
+#' \item \code{Deaths}: Numbers of mortality events, summarized by year and projection.
+#' }
+#' @export
 #' @author Phil J. Bouchet
 #' @examples
 #' \dontrun{
 #' library(narwind)
-#' 
-#' animals <- run_model(10)
-#' plot(animals)
+#' m <- narw(1000)
+#' m <- augment(m)
+#' prj <- predict(m)
+#' write(m)
 #' }
 
-write.narwproj <- function(obj, ...){
+write.narwproj <- function(obj, 
+                           filename = "narwproj",
+                           ...){
   
   
   # Function ellipsis –– optional arguments
   args <- list(...)
   
-  # Default values for optional arguments
-  filename <- "narwproj"
-  overwrite <- TRUE
-
-  # Default values
-  if(length(args) > 0) {
-    if("filename" %in% names(args)) prefix <- args[["filename"]]
-    if("overwrite" %in% names(args)) overwrite <- args[["overwrite"]]
-  }
-
-  if(!"narwproj" %in% class(obj)) stop("Input must be of class <narwproj>")
-
-  cat("Saving ...\n")
-
+  # Function check
+  if(!inherits(obj, "narwproj")) stop("Object must be of class <narwproj>")
+  
+  console("Saving")
+  
+  # Retrieve column names
   matt.attribs <- colnames(obj$dat$ind[[1]])
   
+  # Extract population data
   narw.out <- purrr::map(.x = 1:obj$param$n, .f = ~{
     reshape_array(obj$dat$ind[[.x]], value, yr, attr, whale) |>
       dplyr::mutate(attr = mat.attribs[attr]) |>
@@ -43,54 +49,24 @@ write.narwproj <- function(obj, ...){
   }) |> do.call(what = rbind) |>
     data.table::data.table()
   
-  births.df <- purrr::map(.x = 1:n, .f = ~{
-    m <- matrix(rowSums(obj$dat$ind[[.x]][2:(yrs+1),"birth",], na.rm = TRUE), ncol = 1)
-    colnames(m) <- .x
-    m
-  }) |> do.call(what = cbind) |>
-    tibble::as_tibble() |>
-    tibble::rownames_to_column(var = "year") |>
-    dplyr::mutate(year = as.numeric(year)) |>
-    tidyr::pivot_longer(!year, names_to = "prj", values_to = "birth") |>
-    dplyr::select(prj, year, birth) |>
-    dplyr::arrange(prj, year) |>
-    data.table::data.table() |> 
-    dplyr::mutate(prj = as.numeric(prj))
-
-  deaths.df <- purrr::map(.x = 1:n, .f = ~{
-    m <- matrix(apply(X = obj$dat$ind[[.x]][2:(yrs+1),"alive",],
-                      MARGIN = 1,
-                      FUN = function(x) {
-      r <- x[!is.na(x)]
-      r <- sum(r == 0)
-      r
-      }), ncol = 1)
-    colnames(m) <- .x
-    m
-  }) |> do.call(what = cbind) |>
-    tibble::as_tibble() |>
-    tibble::rownames_to_column(var = "year") |>
-    dplyr::mutate(year = as.numeric(year)) |>
-    tidyr::pivot_longer(!year, names_to = "prj", values_to = "death") |>
-    dplyr::select(prj, year, death) |>
-    dplyr::arrange(prj, year) |>
-    data.table::data.table() |> 
-    dplyr::mutate(prj = as.numeric(prj))
-    
-    sheet.list <- list(
-      "Abundance" = obj$prj$mean,
-      "Projection" = obj$prj$proj,
-      "Births" = births.df,
-      "Deaths" = deaths.df
-    )
-    
-    openxlsx::write.xlsx(x = sheet.list,
-      file = paste0(tolower(filename), ".xlsx"), 
-      asTable = TRUE,
-      overwrite = overwrite,
-      firstRow = TRUE, 
-      tableStyle = "TableStyleMedium1",
-      bandedRows = TRUE,
-      withFilter = FALSE)
+  # Name sheets in output .xlsx file
+  sheet.list <- list(
+    "Abundance" = obj$prj$mean,
+    "Projection" = obj$prj$proj,
+    "Births" = obj$dat$birth$tot,
+    "Deaths" = obj$dat$death
+  )
+  
+  # Write to disk
+  openxlsx::write.xlsx(x = sheet.list,
+                       file = paste0(tolower(filename), ifelse(!is.null(obj$param$label), paste0("_", obj$param$label)), ".xlsx"), 
+                       asTable = TRUE,
+                       firstRow = TRUE, 
+                       tableStyle = "TableStyleMedium1",
+                       bandedRows = TRUE,
+                       withFilter = FALSE,
+                       ...)
+  
+  console("Saving", suffix = tickmark())
   
 }

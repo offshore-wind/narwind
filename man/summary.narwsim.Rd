@@ -2,19 +2,95 @@
 % Please edit documentation in R/summary.narwsim.R
 \name{summary.narwsim}
 \alias{summary.narwsim}
-\title{Summary}
+\title{Model summary and diagnostics}
 \usage{
-\method{summary}{narwsim}(obj, what = "all", plot = FALSE, ...)
+\method{summary}{narwsim}(obj, what = "all", relative = FALSE, plot = FALSE, ...)
+}
+\arguments{
+\item{obj}{An object of class \code{narwsim}, as returned by \code{\link{narw}}.}
+
+\item{what}{Character, or character vector, defining which data to summarize. The default (\code{"all"}) returns a full summary of all model components. See Details for further information.}
+
+\item{plot}{Logical. If \code{TRUE}, additional plots are produced.}
+
+\item{...}{Optional arguments for subsetting.}
 }
 \description{
-Summary information
+Prints a text-based summary of outputs from the individual-based model to the R console.
+}
+\details{
+An overview of individual model components can be obtained as follows:
+\itemize{
+ \item{\code{what = "health"}}{
+ \itemize{
+ \item Mortality rates by cohort, source, and region
+ \item Abortion rates (pregnant females)
+ \item Number of calving events and mean/range of birthing dates
+ }
+ }
+ \item{\code{what = "movements"}}{
+ \itemize{
+ \item Migratory destinations, by cohort
+ \item Step lengths (i.e., daily travel distances) and migration distances
+ }
+ }
+ \item{\code{what = "habitat"}}{
+ \itemize{
+ \item Proportion of daily locations by cohort, region, and country
+ \item Numbers of animals visiting each region, by cohort
+ \item Days spent in each region, by cohort
+ \item Total number of regions visited by each individual, by cohort
+ }
+ }
+ \item{\code{what = "behavior"}}{
+ \itemize{
+ \item Activity budgets (i.e., time spent traveling vs. feeding vs. resting/nursing), by region and cohort
+ }
+ }
+ \item{\code{what = "strike"}}{
+ \itemize{
+ \item Overall strike rates
+ \item Strike rates by cohort
+ \item Strike probabilities by cohort
+ }
+ }
+ \item{\code{what = "gear"}}{
+ \itemize{
+ \item Overall entanglement rates
+ \item Entanglement rates by cohort
+ \item Attachment sites of gear (body vs. head)
+ \item Entanglement frequencies by cohort
+ \item Entanglement probabilities by cohort
+ \item Entanglement severity by cohort
+ }
+ }
+ \item{\code{what = "noise"}}{
+ \itemize{
+ \item Received noise levels, by cohort
+ \item Behavioral response thresholds, by cohort
+ \item Response durations, by cohort
+ }
+ }
+ \item{\code{what = "other"}}{
+ \itemize{
+ \item Overall mortality rates from other sources
+ \item Mortality rates from other sources, by cohort
+ }
+ }
+ \item{\code{what = "stressors"}} All outputs from \code{"gear"}, \code{"strike"}, \code{"noise"}, and \code{"other"}
+ \item{\code{what = "energy"}}{
+ \itemize{
+ \item Daily energy intake vs. expenditure, by cohort
+ \item Daily energy deficit vs. surplus, by cohort
+ }
+ }
+}
 }
 \examples{
 \dontrun{
 library(narwind)
-
-animals <- run_model(10)
-plot(animals)
+m <- narw(1000)
+summary(m)
 }
 ---------------------------------------
 ---------------------------------------

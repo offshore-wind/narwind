@@ -3,7 +3,50 @@
 #include <queue>
 #include <iostream>
 #include <string>
-#include "parallel_hashmap/phmap.h"
+
+// [[Rcpp::export]]
+std::int64_t create_hash (double x0, double y0, double x1, double y1){
+  auto d0 = (x0 * y0) + std::floor(std::pow((std::abs(x0 - y0) - 1), 2))/4;
+  auto d1 = (x1 * y1) + std::floor(std::pow((std::abs(x1 - y1) - 1), 2))/4;
+  return std::trunc(d0 * d1);
+}
+
+// std::vector<double> cellFromXY (std::vector<double> x, std::vector<double> y, double missing) {
+//   // size of x and y should be the same
+//   
+//   size_t size = x.size();
+//   std::vector<double> cells(size);
+//   
+//   SpatExtent extent = getExtent();
+//   double yr_inv = nrow() / (extent.ymax - extent.ymin);
+//   double xr_inv = ncol() / (extent.xmax - extent.xmin);
+//   
+//   for (size_t i = 0; i < size; i++) {
+//     // cannot use trunc here because trunc(-0.1) == 0
+//     long row = std::floor((extent.ymax - y[i]) * yr_inv);
+//     // points in between rows go to the row below
+//     // except for the last row, when they must go up
+//     if (y[i] == extent.ymin) {
+//       row = nrow()-1 ;
+//     }
+//     
+//     long col = std::floor((x[i] - extent.xmin) * xr_inv);
+//     // as for rows above. Go right, except for last column
+//     if (x[i] == extent.xmax) {
+//       col = ncol() - 1 ;
+//     }
+//     long nr = nrow();
+//     long nc = ncol();
+//     if (row < 0 || row >= nr || col < 0 || col >= nc) {
+//       cells[i] = missing;
+//     } else {
+//       cells[i] = row * ncol() + col;
+//     }
+//   }
+//   
+//   return cells;
+// }
+
 
 // QItem for current location and distance 
 // from source location 
@@ -215,21 +258,6 @@ int geoDist(Eigen::MatrixXd mat,
   
   return -1;
   
-}
-
-// [[Rcpp::export]]
-int geo_hash(int cell){
-
-  phmap::flat_hash_map<int, int> geo = 
-    {
-    // std::int64_t
-    {3, 1},
-    {4, 1},
-    {6, 1}
-    
-    };
-  
-  return geo[cell];
 }
 
 #endif

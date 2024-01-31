@@ -1,31 +1,48 @@
-#' Plot
+#' Plot population trends
 #'
-#' Make plots
+#' Takes one or more \code{narwproj} object(s) and creates plots of the estimated population trajectories.
 #'
-#' @param obj Object returned by run_model
+#' @param ... One or more objects of class \code{narwproj}, as returned by \link{predict.narwsim}.
+#' @param interval Logical. If \code{TRUE}, percentile confidence intervals are shown on the plots. Defaults to \code{TRUE}.
+#' @param cohort Logical. If \code{TRUE}, separate plots are returned for each cohort. If \code{FALSE}, a single plot for the whole population is shown. Defaults to \code{FALSE}.
+#' @param noaa Logical. If \code{TRUE}, the population trajectory predicted as part of NOAA's population viability analysis (Runge et al., 2023) is also plotted. Defaults to \code{FALSE}.
+#' @param scales Character. Defines whether axis scales should be constant or vary across plots. Can be one of "fixed" or "free" (the default).
+#' @param ncol Integer. Number of columns for the plot layout when \code{cohort = TRUE}. Defaults to \code{3}.
+#' @param nx Integer. Desired number of x-axis intervals. Non-integer values are rounded down. Defaults to \code{5}. See \link[base]{pretty} for details. 
+#' @param ny Integer. Desired number of y-axis intervals. Non-integer values are rounded down. Defaults to \code{5}. See \link[base]{pretty} for details.
 #' @import ggplot2
-#'
+#' @references Runge MC, Linden DW, Hostetler JA, Borggaard DL, Garrison LP, Knowlton AR, Lesage V, Williams R, Pace III RM (2023). A management-focused population viability analysis for North Atlantic right whales. US Dept Commer Northeast Fish Sci Cent Tech Memo 307, 93 p. Available at \url{https://www.fisheries.noaa.gov/s3/2023-10/TM307-508-1-.pdf}.
 #' @export
-#' 
 #' @author Phil J. Bouchet
 #' @examples
 #' \dontrun{
 #' library(narwind)
-#' 
-#' animals <- run_model(10)
-#' plot(animals)
+#' m <- narw(1000)
+#' m <- augment(m)
+#' p <- predict(m)
+#' plot(p)
 #' }
-
-plot.narwproj <- function(obj, 
+plot.narwproj <- function(...,
+                          interval = TRUE,
                           cohort = FALSE, 
+                          noaa = FALSE,
                           scales = "free", 
                           ncol = 3,
                           nx = 5,
-                          n.breaks = 5,
-                          vignette = FALSE){
+                          ny = 5){
   
-  if(!inherits(obj, "narwproj")) stop("Object must be of class <narwproj>")
+  # Function ellipsis –– optional arguments
+  args <- list(...)
   
+  # Identify <narwproj> objects 
+  which.obj <- which(purrr::map_lgl(.x = args, .f = ~inherits(.x, "narwproj")))
+  if(length(which.obj)==0) stop("No object of class <narwproj> found.")
+ 
+  obj <- args[which.obj]
+
+  if("vignette" %in% names(args)) vignette <- args[["vignette"]] else vignette <- FALSE
+  
+  # Function to remove some of the axis labels in ggplot faceted plots
   gtable_filter_remove <- function (x, name, trim = TRUE){
     matches <- !(x$layout$name %in% name)
     x$layout <- x$layout[matches, , drop = FALSE]
@@ -34,27 +51,58 @@ plot.narwproj <- function(obj,
       x <- gtable::gtable_trim(x)
     x
   }
+
   
+  # Color scale for plotting
+  if ("colour" %in% names(args)){
+    colour <- args[["colour"]] 
+    } else {
+      if(noaa){
+        colour <- c("#0098A0", "black", "#BF0B98", "#FF9B19FA", "#289DE0", "#E6124B")
+        } else {
+          colour <- c("#0098A0", "#E0B200", "#BF0B98", "#FF9B19FA", "#289DE0", "#E6124B")}}
+  
+  if (length(obj) > length(colour)) colour <- c(colour, 1:(length(obj) - length(colour)))
+  
+  # Define years for the x-axis
   start.year <- lubridate::year(lubridate::now())
-  end.year <- start.year + obj$param$yrs
+  end.year <- start.year + obj[[1]]$param$yrs
   
-  df <- obj$prj$mean
+  # Extract the data
+  df <- purrr::map(.x = obj, .f = ~{
+    nm <- .x$param$label
+    if(nm == "") nm <- "narwind"
+    dplyr::mutate(.data = .x$prj$mean, label = nm)
+  }) |> do.call(what = rbind)
   
+  if(!length(obj) == length(unique(df$label))) stop("Missing or incorrect labels")
+
+  
+  # Subset the data by cohort
   if(cohort){
     df <- df[cohort != "North Atlantic right whales"]
   } else {
     df <- df[cohort == "North Atlantic right whales"]
   }
   
+  # Generate plot(s)
   p <- ggplot2::ggplot() +
-    ggplot2::geom_path(data = df, aes(x = year, y = mean, group = "cohort"), colour = "#1565C0", na.rm = TRUE) +
-    ggplot2::geom_ribbon(data = df, aes(x = year, y = mean, ymin = lwr, ymax = uppr), alpha = 0.25, fill = "#1565C0") +
-    ggplot2::facet_wrap(~cohort, scales = scales, ncol = ncol) + 
-    ggplot2::scale_y_continuous(breaks = ~ pretty(.x, n = n.breaks)) +
-    ggplot2::scale_x_continuous(breaks = pretty(c(start.year, end.year), n = nx)) +
-    xlab("") + ylab("Abundance") +
-    theme_narw()
+   {
+     if (interval) ggplot2::geom_ribbon(data = df, aes(x = year, y = mean, ymin = lwr, ymax = uppr, fill = label, group = label), alpha = 0.25)
+   } +
+   ggplot2::geom_path(data = df, aes(x = year, y = mean, colour = label, group = label), na.rm = TRUE) +
+   { if (noaa) ggplot2::geom_line(data = noaa_pva$pop, aes(x = year, y = popsize, group = label, fill = label, colour = label))
+} +
+   ggplot2::facet_wrap(~cohort, scales = scales, ncol = ncol) +
+   ggplot2::scale_fill_manual(values = colour, name = "") +
+   ggplot2::scale_colour_manual(values = colour, name = "") +
+   ggplot2::scale_y_continuous(breaks = ~ pretty(.x, n = ny), labels = function(x) format(x, big.mark = ",", scientific = FALSE)) +
+   ggplot2::scale_x_continuous(limits = c(start.year, end.year), breaks = pretty(c(start.year, end.year), n = nx)) +
+   xlab("") +
+   ylab("Abundance") +
+   theme_narw() 
   
+  # Adapt layout for inclusion in package vignette
   if(vignette){
     p <- p + ggplot2::theme(panel.spacing.y = unit(0.0, "pt"))
     p_tab <- suppressWarnings(ggplot2::ggplotGrob(p))
@@ -64,6 +112,7 @@ plot.narwproj <- function(obj,
     grid::grid.newpage()
     grid::grid.draw(p_filtered)
   } else {
-    print(p)
+    suppressWarnings(print(p))
   }
+  
 }

@@ -8,13 +8,10 @@
     "(BOEM Contract No. 140M0121C0008)\n",
     "\n",
     "For more information, see the package website at:\n",
-    "https://pjbouchet.github.io/narwind/index.html "
+    "https://offshore-wind.github.io/narwind/"
   )
   options(tibble.width = Inf)
   options(pillar.sigfig = 5)
   # Rcpp::compileAttributes()
-  # system.file(package = "data.table")
-  # Rcpp::sourceCpp("src/simtools.cpp")
-  # suppressWarnings(source("R/narw.R"))
-  # assign("init.model", value = TRUE, envir = .GlobalEnv)
+
 }

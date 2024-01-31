@@ -2,45 +2,68 @@
 % Please edit documentation in R/predict.narwsim.R
 \name{predict.narwsim}
 \alias{predict.narwsim}
-\title{Forecast NARW abundance}
+\title{Predictions of right whale abundance}
 \usage{
-\method{predict}{narwsim}(obj, n = 100, yrs = 35, ...)
+\method{predict}{narwsim}(..., n = 100, yrs = 35, lpmatrix = TRUE, piling = 1, progress = TRUE)
 }
 \arguments{
-\item{obj}{Object returned by narw()}
+\item{...}{One or more objects of class \code{narwsim}.}
 
-\item{n}{Number of replicate projections}
+\item{n}{Integer. Number of replicate projections. Defaults to \code{100}.}
 
-\item{yrs}{Number of years for the projection}
+\item{yrs}{Integer. Time horizon, specified either as the desired number of years (from current) or the desired target end year. Defaults to \code{35}, which is commensurate with the average lifespan of a typical wind farm.}
+
+\item{lpmatrix}{Logical. If \code{TRUE}, prediction uncertainty includes parameter uncertainty.}
+
+\item{piling}{Integer. Year of construction. Defaults to \code{1}, such that piling occurs on the first year of the projection, followed by O&M for the remainder.}
+
+\item{progress}{Logical. If \code{TRUE}, a progress bar is shown during execution. Defaults to \code{FALSE}}
+}
+\value{
+A list of class \code{narwproj}.
 }
 \description{
-Forecast NARW abundance
+Takes an object of class \code{narwsim} (as returned by \code{\link[narwind]{narw}}) and produces forecasts of right whale population size (by cohort) over a time horizon of interest. Prediction uncertainty is estimated from both process variance (i.e., replicate projections) and parameter uncertainty (i.e., statistical uncertainty in the relationships between individual body condition and health/survival, respectively). The latter is considered only if replicate coefficients have been sampled from the posteriors of the fitted survival and body condition GAMs using \code{\link[narwind]{augment}}.
+}
+\examples{
+\dontrun{
+library(narwind)
+m <- narw(1000)
+p <- predict(m)
+}
+------------------------------------------------------------
+------------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+NOTE: ---------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------
+------------------------------------------------------
+------------------------------------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+----------------------------
+------------------------------------------------------
+------------------------------------------------------
 }
 \author{
 Phil J. Bouchet
-
-------------------------------------------------------
-------------------------------------------------------
-------------------------------------------------------
-------------------------------------------------------
-------------------------------------------------------
-------------------------------------------------------
-------------------------------------------------------
-------------------------------------------------------
-------------------------------------------------------
-------------------------------------------------------
-----------------------------
-----------------------------
-----------------------------
-----------------------------
-----------------------------
-----------------------------
-----------------------------
-----------------------------
-----------------------------
-----------------------------
-----------------------------
-----------------------------
-----------------------------
-----------------------------
 }

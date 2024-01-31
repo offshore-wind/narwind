@@ -2,3 +2,14 @@
 ^renv\.lock$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^calanus$
+^inst$
+^densitymaps$
+^dirichlet$
+^elicitation$
+^gear$
+^parameters$
+^regions$
+^sightings$
+^vessels$
+^windfarms$

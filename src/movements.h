@@ -98,7 +98,7 @@ public:
               Eigen::VectorXd resolution_fishing,
               Eigen::VectorXd resolution_vessels,
               Eigen::VectorXd resolution_noise){
-              // phmap::flat_hash_map<std::int64_t, int> hash) {
+
     double d, d_0, a, x0, y0, xn, yn;
     bool sampling = true;
     // int n_interm = 100;
@@ -326,7 +326,6 @@ public:
               Eigen::VectorXd resolution_fishing,
               Eigen::VectorXd resolution_vessels,
               Eigen::VectorXd resolution_noise) {
-              // phmap::flat_hash_map<std::int64_t, int> hash) {
     
     // Rcpp::NumericVector out (3);
     // Rcpp::NumericVector latent_coords (3);
@@ -442,9 +441,10 @@ public:
           
           bool calc_geo = false;
             
+            // If in Canadian waters between U.S. border and entrance to GSL or
+            // in Cape Cod Bay region
             if((x0 >= 685 & x0 <= 1420 & y0 >= 1070 & y0 <= 1865) ||
                (x0 >= 520 & x0 <= 730 & y0 >= 825 & y0 <= 960)) calc_geo = true;
-            
             
             if(animal.north == 1){
               
@@ -453,8 +453,11 @@ public:
             } else {
               
               if(calc_geo){
+                
                 dist_to_latent = geoD(support, xn, yn, active_latent.x, active_latent.y, limits, resolution);
+                
               } else {
+                
                 dist_to_latent = std::pow(xn - active_latent.x, 2) + std::pow(yn - active_latent.y, 2);
               }
             }

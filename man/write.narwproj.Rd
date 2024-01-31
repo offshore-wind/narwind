@@ -2,19 +2,36 @@
 % Please edit documentation in R/write.narwproj.R
 \name{write.narwproj}
 \alias{write.narwproj}
-\title{Summary}
+\title{Export population projection data}
 \usage{
-\method{write}{narwproj}(obj, ...)
+\method{write}{narwproj}(obj, filename = "narwproj", ...)
+}
+\arguments{
+\item{obj}{An object of class \code{narwproj}, as returned by \code{\link{predict.narwsim}}.}
+
+\item{filename}{Character. Output file name. Defauls to \code{"narwproj"}.}
+
+\item{...}{Additional arguments passed to \code{\link[openxlsx]{write.xlsx}}.}
+}
+\value{
+An Excel file containing four sheets:
+\itemize{
+\item \code{Abundance}: Estimated mean right whale abundance (calculated across replicate projections), summarized by year and cohort. Lower and upper bounds of the associated confidence interval are also reported.
+\item \code{Projection}: Estimated right whale abundance, by year, cohort, and projection.
+\item \code{Births}: Numbers of calving events, summarized by year and projection.
+\item \code{Deaths}: Numbers of mortality events, summarized by year and projection.
+}
 }
 \description{
-Summary information
+Writes outputs from the stochastic population model to an .xlsx file on disk.
 }
 \examples{
 \dontrun{
 library(narwind)
-
-animals <- run_model(10)
-plot(animals)
+m <- narw(1000)
+m <- augment(m)
+prj <- predict(m)
+write(m)
 }
 }
 \author{

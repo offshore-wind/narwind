@@ -1,17 +1,17 @@
 #' Overview of model results
 #'
+#' Prints a subset of model data to the R console.
+#'
+#' @param obj An object of class \code{narwsim}, as returned by \code{\link{narw}}.
 #' @import data.table
-#' @param obj Object returned by run_model
-#' @param rows Number of rows to print
 #' @export
 #'
 #' @author Phil J. Bouchet
 #' @examples
 #' \dontrun{
 #' library(narwind)
-#'
-#' animals <- run_model(10)
-#' plot(animals)
+#' m <- narw(1000)
+#' print(m)
 #' }
 #'
 print.narwsim <- function(obj, ...){
@@ -19,25 +19,17 @@ print.narwsim <- function(obj, ...){
   # Function ellipsis –– optional arguments
   args <- list(...)
   
-  # Default optional arguments
-  rowID <- 1:5
-  cohortID <- obj$param$cohortID
-  whaleID <- 1 
-  
   # Default values
-  if(length(args) > 0){
-    if("rowID" %in% names(args)) rowID <- args[["rowID"]]
-    if("cohortID" %in% names(args)) cohortID <- args[["cohortID"]]
-    if("whaleID" %in% names(args)) whaleID <- args[["whaleID"]]
-  }
+  if("rowID" %in% names(args)) rowID <- args[["rowID"]] else rowID <- 1:5
+  if("cohort" %in% names(args)) cohort <- args[["cohort"]] else cohort <- obj$param$cohort
+  if("whale" %in% names(args)) whale <- args[["whale"]] else whale <- 1 
 
   if(!all(rowID %in% 1:365)) stop("<rows> must be between 1 and 365")
 
   cohorts <- obj$param$cohorts
-  cohort.ab <- cohorts[id %in% cohortID, abb]
-  # cohort.names <- cohorts[id %in% cohortID, name]
+  cohort.ab <- cohorts[id %in% cohort, abb]
 
-  for (k in cohortID) {
+  for (k in cohort) {
     
     if(k > 1) cat("\n\n\n")
     
@@ -46,14 +38,14 @@ print.narwsim <- function(obj, ...){
     cat("=========================================================================================\n")
     cat("\n")
 
-    sim_dt <- obj[["sim"]][[cohorts[id==k, abb]]][whale %in% whaleID, ]
+    sim_dt <- obj[["sim"]][[cohorts[id==k, abb]]][whale %in% whale, ]
     sim_dt <- sim_dt[day %in% rowID, ]
 
     cat("--------------------------\n")
     cat("Locations \n")
     cat("--------------------------\n")
     cat("\n")
-    print(sim_dt[, list(whale, day, date, easting, northing, region)])
+    print(sim_dt[, list(whale, day, date, easting, northing, region, resid_m, resid_sd, pleave)])
     cat("\n")
 
     cat("--------------------------\n")
@@ -65,7 +57,7 @@ print.narwsim <- function(obj, ...){
     }
     print(sim_dt[, list(whale, day,
       cohort, gsl, seus, alive, age, bc, length, length_a, length_b, length_c,
-      mass, leanmass, fatmass, mass_a, mass_b, mouth_r, mouth_a, mouth_w, abort, starve, died, date_died, p_died
+      mass, leanmass, fatmass, mass_a, mass_b, mouth_r, mouth_a, mouth_w, abort, starve, died, date_died, p_surv
     )])
 
     if (k == 5) {
@@ -151,7 +143,7 @@ print.narwsim <- function(obj, ...){
       cat("\n")
     }
     print(sim_dt[, list(whale, day,
-      feed, preyconc, minprey, gape, feedspeed, captEff, impedance, daylight,
+      feed, preyconc, minprey, gape, feedspeed, captEff, impedance,
       feed_effort, eta_lwrBC, eta_upprBC, targetBC, cop_mass, cop_kJ, digestEff, metabEff_juv, metabEff_ad, E_cop
     )])
 
@@ -161,7 +153,7 @@ print.narwsim <- function(obj, ...){
       cat("\n +++ Calves +++\n\n")
       print(sim_dt[, list(whale, day,
         t_lac, assim, provision, zeta, milk_drop, eta_milk, mamm_M, mammEff, 
-        milk_rate, t_suckling, targetBC_calf, nursing, milk_lip, milk_pro
+        milk_rate, targetBC_calf, nursing, milk_lip, milk_pro
       )])
     }
     cat("\n")

@@ -72,7 +72,7 @@ Imports:
     terra,
     tibble,
     tidyr
-LinkingTo: Rcpp, RcppEigen
+LinkingTo: Rcpp, RcppEigen, RcppThread
 RoxygenNote: 7.2.3
 Depends: 
     R (>= 2.10)

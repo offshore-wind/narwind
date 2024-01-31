@@ -1,42 +1,50 @@
-#' Summary
+#' Export simulation data
 #'
-#' Summary information
-#' @export
+#' Writes outputs from the individual-based model to an .xlsx file on disk.
+#' @param obj An object of class \code{narwsim}, as returned by \code{\link{narw}}.
+#' @param filename Character. Output file name. Defaults to \code{"narwsim"}.
+#' @note This function 
+#' @inheritParams write.narwproj
+#' @return One Excel file per population cohort. It is recommended to only use this function for short simulation runs (\code{nsim = 100} or less, or to use the \code{cohort} and \code{whale} arguments to extract data for specific individuals/cohorts. Each output file contains multiple sheets capturing all simulation parameters, as follows:
+#' \itemize{
+#' \item \code{Attributes}: day, date, month, unique whale ID, cohort ID, alive (yes/no), age, starve (yes/no), mortality from other sources (yes/no), probability of death from other sources, body condition, body length, coefficients of the length-at-age function, total mass, lean mass, fat mass, coefficients of the mass-at-length function, mouth radius, mouth opening angle, mouth width, migration to SEUS (yes/no), migration to GSL (yes/no)
+#' \item \code{Attributes_calf} same as \code{Attributes}, for calves
+#' \item \code{Movements}: easting,	northing, region, distance traveled, swim speed
+#' \item \code{Behavior}: proportion of time spent gliding, proportion of time spent gliding during foraging, proportion of time spent gliding while swimming in echelon position, time spent traveling, time spent feeding, time spent resting/nursing
+#' \item \code{Stressors}: Probability of entanglement, daily energetic cost of entanglement, entanglement event (yes/no), site of attachement (head/not head), entanglement serverity, entanglement duration, day of entanglement start, day of entanglement end, vessel strike	risk,	incidence of strike, incidence of behavioral response to noise, received sound level, threshold of response
+#' \item \code{Energy}: Daily energy balance, daily energy intake, daily energy expenditure, resting metabolic rate, locomotory costs, scalar applied to locomotory costs, stroke rate, stroke rate during foraging, energetic cost of somatic growth, total energetic cost of gestation, energetic costs of fetus growth and placental maintenance, heat increment of gestation, energetic cost of lactation, relative proportions of bones, viscera and muscles in lean mass
+#' \item \code{Energy_calf} same as \code{Energy}, for calves (where relevant)
+#' \item \code{Feeding}: incidence of foraging, prey concentration, minimum prey threshold that triggers foraging, size of the mouth gape, swimming speed while foraging, prey capture efficiency, reduction in the mouth gape during a head entanglement, feeding effort, feed_effort, coefficients of the feeding effort curve, target body condition, average mass of copepods, energy content of copepods, digestive efficiency, metabolizing efficiency	for juveniles and adults (heat increment of feeding)
+#' \item \code{Growth}: change in fat mass, daily change in lean mass, anabolism efficiency, catabolism efficiency
+#' \item \code{Growth_calf} same as \code{Growth}, for calves
+#' \item \code{Gestation}: incidence of abortion, fetus length, fetus mass, change in fetus mass, change in fetus length, predicted birth length, predicted birth mass, mass of muscles, viscera, bones, and blubber in fetal tissues, proportions of lipid and protein in fetal muscles, viscera, bones, bones, and blubber.
+#' \item \code{Lactation}: duration of lactation, milk assimilation ratem milk provision rate, factor defining the nonlinearity between milk supply and body condition of the mother, age at which milk consumption starts to decrease, factor defining the nonlinearity between milk assimilation and calf age, mass of mammary glands, mammary efficiency, milk production rate, time spent nursing, target body condition (calf), proportions of protein and lipids in milk
 #' 
+#' }
+#' @export
 #' @author Phil J. Bouchet
 #' @examples
 #' \dontrun{
 #' library(narwind)
-#' 
-#' animals <- run_model(10)
-#' plot(animals)
-#' }
+#' m <- narw(1000)
+#' write(m)}
 
-write.narwsim <- function(obj, ...){
-  
+write.narwsim <- function(obj, 
+                          filename = "narwsim",
+                          ...){
   
   # Function ellipsis –– optional arguments
   args <- list(...)
-  
-  # Default values for optional arguments
-  whaleID <- seq_len(obj$param$nsim)
-  cohortID <- obj$param$cohortID
-  prefix <- "narwsim"
-  overwrite <- TRUE
 
   # Default values
-  if(length(args) > 0) {
-    if("cohortID" %in% names(args)) cohortID <- args[["cohortID"]]
-    if("whaleID" %in% names(args)) whaleID <- args[["whaleID"]]
-    if("prefix" %in% names(args)) prefix <- args[["prefix"]]
-    if("overwrite" %in% names(args)) overwrite <- args[["overwrite"]]
-  }
+  if("cohort" %in% names(args)) cohort <- args[["cohort"]] else cohort <- obj$param$cohort
+  if("whale" %in% names(args)) whaleID <- args[["whale"]] else whaleID <- seq_len(obj$param$nsim)
 
   if(!inherits(obj, "narwsim")) stop("Object must be of class <narwsim>")
 
   cohorts <- obj$param$cohorts
-  cohort.ab <- cohorts[id %in% cohortID, abb]
-  cohort.names <- cohorts[id %in% cohortID, name]
+  cohort.ab <- cohorts[id %in% cohort, abb]
+  cohort.names <- cohorts[id %in% cohort, name]
   sim <- obj$sim
 
   cat("Saving ...\n")
@@ -63,17 +71,20 @@ write.narwsim <- function(obj, ...){
     # // ATTRIBUTES
     # // ------------------------------------------------------------
     
-    attrib <- cbind(const, sim[[k]][whale %in% whaleID & day > 0, list(alive, age, starve, died, p_died, bc, length, length_a, length_b, length_c, mass, leanmass, fatmass, mass_a, mass_b, mouth_r, mouth_a, mouth_w, gsl, seus)])
+    attrib <- cbind(const, sim[[k]][whale %in% whaleID & day > 0, list(alive, age, p_starve, starve, died, p_surv, bc, length, length_a, length_b, length_c, mass, leanmass, fatmass, mass_a, mass_b, mouth_r, mouth_a, mouth_w, gsl, seus)])
     
     # // ------------------------------------------------------------
     # // ATTRIBUTES (calves)
     # // ------------------------------------------------------------
     
-   
     if (cohorts[abb == k, id] == 5) {
-      attrib_calf <- cbind(const[, !c("cohort")], sim[[k]][whale %in% whaleID & day > 0, list(cohort_calf, born, alive_calf, age_calf, starve_calf, bc_calf, length_calf, La_calf, Lb_calf, Lc_calf, mass_calf, leanmass_calf, fatmass_calf, ma_calf, mb_calf, mouth_r_calf, mouth_a_calf, mouth_w_calf)])
+      
+      attrib_calf <- cbind(const[, !c("cohort")], sim[[k]][whale %in% whaleID & day > 0, list(cohort_calf, born, dob, pbirth, alive_calf, age_calf, p_starve_calf, starve_calf, bc_calf, length_calf, La_calf, Lb_calf, Lc_calf, mass_calf, leanmass_calf, fatmass_calf, ma_calf, mb_calf, mouth_r_calf, mouth_a_calf, mouth_w_calf, died_calf, date_died_calf, p_surv_calf)])
+      
     } else {
-      attrib_calf <- cbind(const[, !c("cohort")], data.table::data.table(cohort_calf = NA, born = NA, alive_calf = NA, age_calf = NA, starve_calf = NA, bc_calf = NA, length_calf = NA, La_calf = NA, Lb_calf = NA, Lc_calf = NA, mass_calf = NA, leanmass_calf = NA, fatmass_calf = NA, ma_calf = NA, mb_calf = NA, mouth_r_calf = NA, mouth_a_calf = NA, mouth_w_calf = NA))
+      
+      attrib_calf <- cbind(const[, !c("cohort")], data.table::data.table(cohort_calf = NA, born = NA, dob = NA, pbirth = NA, alive_calf = NA, age_calf = NA, p_starve_calf = NA, starve_calf = NA, bc_calf = NA, length_calf = NA, La_calf = NA, Lb_calf = NA, Lc_calf = NA, mass_calf = NA, leanmass_calf = NA, fatmass_calf = NA, ma_calf = NA, mb_calf = NA, mouth_r_calf = NA, mouth_a_calf = NA, mouth_w_calf = NA, died_calf = NA, date_died_calf = NA, p_surv_calf = NA))
+      
     }
     
     # // ------------------------------------------------------------
@@ -106,7 +117,7 @@ write.narwsim <- function(obj, ...){
     # // FORAGING
     # // ------------------------------------------------------------
     
-    feed <- cbind(const, sim[[k]][whale %in% whaleID & day > 0, list(feed, preyconc, minprey, gape, feedspeed, captEff, impedance, daylight, feed_effort, eta_lwrBC, eta_upprBC, targetBC, cop_mass, cop_kJ, digestEff, metabEff_juv, metabEff_ad, E_cop)])
+    feed <- cbind(const, sim[[k]][whale %in% whaleID & day > 0, list(feed, preyconc, minprey, gape, feedspeed, captEff, impedance,  feed_effort, eta_lwrBC, eta_upprBC, targetBC, cop_mass, cop_kJ, digestEff, metabEff_juv, metabEff_ad, E_cop)])
 
     # // ------------------------------------------------------------
     # // SOMATIC GROWTH
@@ -146,9 +157,9 @@ write.narwsim <- function(obj, ...){
       
       energy_calf <- cbind(const[, !c("cohort")], data.table::data.table(cohort_calf = NA, E_tot_calf = NA, E_in_calf = NA, E_out_calf = NA, rmr_calf = NA, LC_calf = NA, scalar_LC = NA, E_growth_calf = NA))
       
-      lact <- cbind(const[, !c(cohort)], sim[[k]][whale %in% whaleID & day > 0, list(
+      lact <- cbind(const[, !c("cohort")], sim[[k]][whale %in% whaleID & day > 0, list(
         t_lac = NA, assim = NA, provision = NA, zeta = NA, milk_drop = NA, eta_milk = NA, 
-        mamm_M = NA, mammEff = NA, milk_rate = NA, t_suckling = NA, targetBC_calf = NA, nursing = NA, milk_lip = NA, milk_pro = NA
+        mamm_M = NA, mammEff = NA, milk_rate = NA, targetBC_calf = NA, nursing = NA, milk_lip = NA, milk_pro = NA
       )])
       
       
@@ -176,13 +187,13 @@ write.narwsim <- function(obj, ...){
                        "Lactation" = lact)
     
     openxlsx::write.xlsx(x = sheet.list,
-      file = paste0(prefix, "_", tolower(file.name), ".xlsx"), 
+      file = paste0(tolower(filename), "_", file.name, ifelse(!is.null(obj$param$label), paste0("_", obj$param$label)), ".xlsx"), 
       asTable = TRUE,
-      overwrite = overwrite,
       firstRow = TRUE, 
       tableStyle = "TableStyleMedium1",
       bandedRows = TRUE,
-      withFilter = FALSE)
+      withFilter = FALSE,
+      ...)
 
   } # End for loop
 

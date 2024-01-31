@@ -3,6 +3,16 @@
 \name{entanglement_event}
 \alias{entanglement_event}
 \title{Entanglement event}
+\usage{
+entanglement_event(
+  p_entangled = 0,
+  p_head = 0.732,
+  p_severity = as.numeric(c(0.819, 0.14, 0.041))
+)
+}
+\arguments{
+\item{p_head}{Probability that the entanglement involves the anterior region of the body (mouth, head, rostrum)}
+}
 \description{
 Entanglement event
 }
