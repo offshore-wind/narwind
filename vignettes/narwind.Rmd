@@ -156,7 +156,7 @@ This scenario involves shutdowns of installation operations during the main righ
 In this scenario, we assume that all three wind farms are in simultaneous and continuous operation (Figure 3). The primary footprint for operations is taken to be vessel traffic to and from wind farm sites; we do not consider vessel movements within farm areas.
 
 ::: {style="width:650px"}
-![**Figure 3.** Location of wind farm sites included in the default narwind scenarios.](piling_schedule.jpg)
+![**Figure 3.** Schedule of piling activities under three pre-defined offshore wind scenarios.](piling_schedule.jpg)
 :::
 
 As can be seen below, `narwscenario` objects consist of several elements:
@@ -243,7 +243,7 @@ m3 <- narw(nsim = 50) # Compare to an additional baseline run with no pairing
 ```
 
 ::: {style="width:850px"}
-![**Figure 4.** Location of wind farm sites included in the default narwind scenarios.](simulation_pairing.jpg)
+![**Figure 4.** Comparison of simulated movement trajectories for paired and unpaired runs.](simulation_pairing.jpg)
 :::
 
 ### Viewing data
