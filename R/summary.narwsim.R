@@ -216,7 +216,7 @@ summary.narwsim <- function(obj,
       
     }
     
-    n.dead.region <- dead.df[, .N, list(abb, region, cause_death)] |> 
+    n.dead.region <- dead.df[cohort %in% cohortID & whale %in% whaleID, .N, list(abb, region, cause_death)] |> 
       tidyr::pivot_wider(names_from = abb, values_from = N) |> 
       {\(.) {replace(.,is.na(.),0)}}() |> 
       dplyr::arrange(cause_death, region)

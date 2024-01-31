@@ -433,7 +433,7 @@ narw.preds <- predict(m)
 ```
 
 ```{r preds, echo=FALSE}
-narw.preds <- predict(m, n = 10)
+narw.proj <- predict(m, n = 10)
 ```
 
 > **Note:** `predict()` returns an object of class `narwproj`, which contains several datasets and model outputs in list format. Any call to `predict()` must therefore be assigned to an R object, as shown below.
@@ -458,12 +458,17 @@ Population trends can be visualized using the `plot()` command. When set to `TRU
 | `ny`       | `5`           | Integer. Desired number of y-axis intervals. Non-integer values are rounded down.                                                                                 |
 +------------+---------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
-```{r poptrends_all}
+```{r poptrends_all, eval =FALSE}
+plot(narw.proj)
+```
+
+```{r poptrends, echo=FALSE}
 plot(narw.preds)
 ```
 
+
 ```{r poptrends_bycohort, eval=FALSE}
-plot(narw.preds, cohort = TRUE)
+plot(narw.proj, cohort = TRUE)
 ```
 
 ```{r poptrends_cohort, echo=FALSE, fig.width=8,fig.height=10}
