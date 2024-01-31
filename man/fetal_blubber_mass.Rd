@@ -2,7 +2,63 @@
 % Please edit documentation in R/RcppExports.R
 \name{fetal_blubber_mass}
 \alias{fetal_blubber_mass}
+\alias{fetal_blubber_mass_vec}
 \title{Fetal blubber mass}
+\usage{
+fetal_blubber_mass(
+  L,
+  BC,
+  M_muscle,
+  M_viscera,
+  M_bones,
+  D_blubber,
+  D_muscle,
+  D_viscera,
+  D_bones
+)
+
+fetal_blubber_mass_vec(
+  L,
+  BC,
+  M_muscle,
+  M_viscera,
+  M_bones,
+  D_blubber,
+  D_muscle,
+  D_viscera,
+  D_bones
+)
+}
+\arguments{
+\item{L}{Length of the fetus (m)}
+
+\item{M_muscle}{Mass of muscles in the fetus (kg)}
+
+\item{M_viscera}{Mass of viscera in the fetus (kg)}
+
+\item{M_bones}{Mass of bone tissues in the fetus (kg)}
+
+\item{D_blubber}{Average blubber density (kg/m^3)}
+
+\item{D_muscle}{Average muscle density (kg/m^3)}
+
+\item{D_viscera}{Average density of viscera (kg/m^3)}
+
+\item{D_bones}{Average bone density (kg/m^3)}
+}
 \description{
 Fetal blubber mass
+
+Fetal blubber mass (vectorised)
+}
+\note{
+The original equation from Christiansen et al. (2022) (DOI: 10.3354/meps14009) includes an additional term
+designed to account for the calf's body condition at birth. However, Christiansen et al. rely on a metric of body condition (BC)
+that differs from, and is not readily comparable to, ours. Here, we assume that BC = 0, which corresponds to an animal of average
+body condition.
+
+The original equation from Christiansen et al. (2022) (DOI: 10.3354/meps14009) includes an additional term
+designed to account for the calf's body condition at birth. However, Christiansen et al. rely on a metric of body condition (BC)
+that differs from, and is not readily comparable to, ours. Here, we assume that BC = 0, which corresponds to an animal of average
+body condition.
 }

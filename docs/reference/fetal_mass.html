@@ -56,7 +56,32 @@
     <p>Fetal mass</p>
     </div>
 
+    <div id="ref-usage">
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">fetal_mass</span><span class="op">(</span><span class="va">days_to_birth</span>, <span class="va">mother_length</span>, bbc <span class="op">=</span> <span class="fl">0L</span>, body_density <span class="op">=</span> <span class="fl">805.07</span><span class="op">)</span></span></code></pre></div>
+    </div>
 
+    <div id="arguments">
+    <h2>Arguments</h2>
+    <dl><dt>days_to_birth</dt>
+<dd><p>Number of days until birth, assuming a 365-day gestation period (d)</p></dd>
+
+
+<dt>mother_length</dt>
+<dd><p>Body length of the mother (m)</p></dd>
+
+
+<dt>bbc</dt>
+<dd><p>Body condition, as defined by Christiansen et al. (2022). Defaults to 0 for an individual of average condition.</p></dd>
+
+
+<dt>body_density</dt>
+<dd><p>Average body density (kg/m^3)</p></dd>
+
+</dl></div>
+    <div id="note">
+    <h2>Note</h2>
+    <p>In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365</p>
+    </div>
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -66,7 +91,7 @@
 
 
       <footer><div class="copyright">
-  <p></p><p>Developed by Phil Bouchet, Pirotta Enrico, Hewitt Josh, Schick Rob, Harris Catriona, Thomas Len.</p>
+  <p></p><p>Developed by P. Bouchet, E. Pirotta, J. Hewitt, R. Schick, C. Harris, L. Thomas.</p>
 </div>
 
 <div class="pkgdown">
