@@ -41,49 +41,6 @@ NULL
 #' @name RMR
 NULL
 
-#' Energetic cost of placental maintenance during pregnancy (vectorised)
-NULL
-
-#' Energetic cost of placental maintenance during pregnancy
-#' @name placental_maintenance
-NULL
-
-#' Heat increment of gestation
-#' @name heat_gestation
-NULL
-
-#' Heat increment of gestation (vectorised)
-NULL
-
-#' Fetal tissue mass
-#' @name fetal_tissue_mass
-NULL
-
-#' Fetal tissue mass (vectorised)
-NULL
-
-#' Fetal blubber mass
-#' @name fetal_blubber_mass
-NULL
-
-#' Fetal blubber mass (vectorised)
-NULL
-
-#' Fetal mass 
-#' @name fetal_mass
-NULL
-
-#' Fetal mass 
-NULL
-
-#' Fetal length 
-#' @name fetal_length
-NULL
-
-#' Energetic cost of growth
-#' @name growth_cost
-NULL
-
 transpose_c <- function(m, k) {
     .Call('_narwind_transpose_c', PACKAGE = 'narwind', m, k)
 }
@@ -309,46 +266,117 @@ locomotor_costs <- function(mass, distance, strokerate_foraging, strokerate, gli
     .Call('_narwind_locomotor_costs', PACKAGE = 'narwind', mass, distance, strokerate_foraging, strokerate, glide_foraging, glide, t_feed, t_activ, scalar)
 }
 
+#' Energetic cost of placental maintenance during pregnancy (vectorised)
+#' @name placental_maintenance
+#' @param G Energetic cost of fetal growth (kJ)
 placental_maintenance_vec <- function(G) {
     .Call('_narwind_placental_maintenance_vec', PACKAGE = 'narwind', G)
 }
 
+#' Energetic cost of placental maintenance during pregnancy
+#' @name placental_maintenance
+#' @param G Energetic cost of fetal growth (kJ)
 placental_maintenance <- function(G) {
     .Call('_narwind_placental_maintenance', PACKAGE = 'narwind', G)
 }
 
+#' Heat increment of gestation
+#' @name heat_gestation
+#' @param birth_mass Birth mass of the fetus (kg)
+#' @param delta_m Daily growth rate of the fetus (kg/day)
 heat_gestation <- function(birth_mass, delta_m) {
     .Call('_narwind_heat_gestation', PACKAGE = 'narwind', birth_mass, delta_m)
 }
 
+#' Heat increment of gestation (vectorised)
+#' @name heat_gestation
+#' @param birth_mass Birth mass of the fetus (kg)
+#' @param delta_m Daily growth rate of the fetus (kg/day)
 heat_gestation_vec <- function(birth_mass, delta_m) {
     .Call('_narwind_heat_gestation_vec', PACKAGE = 'narwind', birth_mass, delta_m)
 }
 
+#' Fetal tissue mass
+#' @name fetal_tissue_mass
+#' @param P_b Proportion of the body volume comprised of tissue b
+#' @param L Length of the fetus (m)
+#' @note This relationship only applies to muscles, bones, and viscera
 fetal_tissue_mass <- function(P_b, L) {
     .Call('_narwind_fetal_tissue_mass', PACKAGE = 'narwind', P_b, L)
 }
 
+#' Fetal tissue mass (vectorised)
+#' @name fetal_tissue_mass
+#' @param P_b Proportion of the body volume comprised of tissue b
+#' @param L Length of the fetus (m)
+#' @note This relationship only applies to muscles, bones, and viscera
 fetal_tissue_mass_vec <- function(P_b, L) {
     .Call('_narwind_fetal_tissue_mass_vec', PACKAGE = 'narwind', P_b, L)
 }
 
+#' Fetal blubber mass
+#' @name fetal_blubber_mass
+#' @param L Length of the fetus (m)
+#' @param M_muscle Mass of muscles in the fetus (kg)
+#' @param M_viscera Mass of viscera in the fetus (kg)
+#' @param M_bones Mass of bone tissues in the fetus (kg)
+#' @param D_blubber Average blubber density (kg/m^3)
+#' @param D_muscle Average muscle density (kg/m^3)
+#' @param D_viscera Average density of viscera (kg/m^3)
+#' @param D_bones Average bone density (kg/m^3)
+#' @note The original equation from Christiansen et al. (2022) (DOI: 10.3354/meps14009) includes an additional term
+#' designed to account for the calf's body condition at birth. However, Christiansen et al. rely on a metric of body condition (BC)
+#' that differs from, and is not readily comparable to, ours. Here, we assume that BC = 0, which corresponds to an animal of average
+#' body condition. 
 fetal_blubber_mass <- function(L, BC, M_muscle, M_viscera, M_bones, D_blubber, D_muscle, D_viscera, D_bones) {
     .Call('_narwind_fetal_blubber_mass', PACKAGE = 'narwind', L, BC, M_muscle, M_viscera, M_bones, D_blubber, D_muscle, D_viscera, D_bones)
 }
 
+#' Fetal blubber mass (vectorised)
+#' @name fetal_blubber_mass
+#' @param L Length of the fetus (m)
+#' @param M_muscle Mass of muscles in the fetus (kg)
+#' @param M_viscera Mass of viscera in the fetus (kg)
+#' @param M_bones Mass of bone tissues in the fetus (kg)
+#' @param D_blubber Average blubber density (kg/m^3)
+#' @param D_muscle Average muscle density (kg/m^3)
+#' @param D_viscera Average density of viscera (kg/m^3)
+#' @param D_bones Average bone density (kg/m^3)
+#' @note The original equation from Christiansen et al. (2022) (DOI: 10.3354/meps14009) includes an additional term
+#' designed to account for the calf's body condition at birth. However, Christiansen et al. rely on a metric of body condition (BC)
+#' that differs from, and is not readily comparable to, ours. Here, we assume that BC = 0, which corresponds to an animal of average
+#' body condition. 
 fetal_blubber_mass_vec <- function(L, BC, M_muscle, M_viscera, M_bones, D_blubber, D_muscle, D_viscera, D_bones) {
     .Call('_narwind_fetal_blubber_mass_vec', PACKAGE = 'narwind', L, BC, M_muscle, M_viscera, M_bones, D_blubber, D_muscle, D_viscera, D_bones)
 }
 
+#' Fetal mass 
+#' @name fetal_mass
+#' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
+#' @param mother_length Body length of the mother (m)
+#' @param bbc Body condition, as defined by Christiansen et al. (2022). Defaults to 0 for an individual of average condition.
+#' @param body_density Average body density (kg/m^3)
+#' @note In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
 fetal_mass <- function(days_to_birth, mother_length, bbc = 0L, body_density = 805.07) {
     .Call('_narwind_fetal_mass', PACKAGE = 'narwind', days_to_birth, mother_length, bbc, body_density)
 }
 
+#' Fetal mass 
+#' @name fetal_mass (vectorised)
+#' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
+#' @param mother_length Body length of the mother (m)
+#' @param bbc Body condition, as defined by Christiansen et al. (2022). Defaults to 0 for an individual of average condition.
+#' @param body_density Average body density (kg/m^3)
+#' @note In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
 fetal_mass_vec <- function(days_to_birth, mother_length, bbc = 0L, body_density = 805.07) {
     .Call('_narwind_fetal_mass_vec', PACKAGE = 'narwind', days_to_birth, mother_length, bbc, body_density)
 }
 
+#' Fetal length 
+#' @name fetal_length
+#' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
+#' @param mother_length Body length of the mother (m)
+#' @note In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
 fetal_length <- function(days_to_birth, mother_length) {
     .Call('_narwind_fetal_length', PACKAGE = 'narwind', days_to_birth, mother_length)
 }
@@ -362,6 +390,16 @@ fetal_length_vec <- function(days_to_birth, mother_length) {
     .Call('_narwind_fetal_length_vec', PACKAGE = 'narwind', days_to_birth, mother_length)
 }
 
+#' Energetic cost of growth
+#' @name growth_cost
+#' @param delta_m Body mass growth increment (kg/day)
+#' @param prop_blubber Proportion of the body that is blubber (\%)
+#' @param prop_water Proportion of lean body mass that is water (\%)
+#' @param P_lipid_blubber Proportion of blubber that is lipid (\%)
+#' @param rho_lipid Energy density of lipids (kJ/kg)
+#' @param rho_protein Energy density of protein (kJ/kg)
+#' @param D_lipid Efficiency of deposition of lipids (\%)
+#' @param D_protein Efficiency of deposition of protein (\%)
 growth_cost_old <- function(delta_m, prop_blubber, prop_water, P_lipid_blubber, rho_lipid, rho_protein, D_lipid, D_protein) {
     .Call('_narwind_growth_cost_old', PACKAGE = 'narwind', delta_m, prop_blubber, prop_water, P_lipid_blubber, rho_lipid, rho_protein, D_lipid, D_protein)
 }

@@ -5,7 +5,7 @@
 #' @param ... One or more objects of class \code{narwsim}.
 #' @param n Integer. Number of replicate projections. Defaults to \code{100}.
 #' @param yrs Integer. Time horizon, specified either as the desired number of years (from current) or the desired target end year. Defaults to \code{35}, which is commensurate with the average lifespan of a typical wind farm.
-#' @param lpmatrix Logical. If \code{TRUE}, prediction uncertainty includes parameter uncertainty.  
+#' @param param Logical. If \code{TRUE}, prediction variance includes parameter uncertainty.  
 #' @param piling Integer. Year of construction. Defaults to \code{1}, such that piling occurs on the first year of the projection, followed by O&M for the remainder.
 #' @param progress Logical. If \code{TRUE}, a progress bar is shown during execution. Defaults to \code{FALSE}
 #' @return A list of class \code{narwproj}.
@@ -20,7 +20,7 @@
 predict.narwsim <- function(...,
                             n = 100,
                             yrs = 35,
-                            lpmatrix = TRUE,
+                            param = TRUE,
                             piling = 1,
                             progress = TRUE) {
 
@@ -48,7 +48,10 @@ predict.narwsim <- function(...,
   obj <- args[which.obj]
   
   # Check whether posterior samples are available
-  if(any(purrr::map_lgl(.x = obj, .f = ~is.null(.x$post)))) warning("Posterior samples for terminal functions not available!\nRun the augment() function to estimate variance through posterior simulation.", sep = "")
+  if(any(purrr::map_lgl(.x = obj, .f = ~is.null(.x$post)))){
+    param <- FALSE
+    warning("Posterior samples for terminal functions not available!\nRun the augment() function to estimate variance through posterior simulation.", sep = "")
+  }
 
   # Check whether terminal functions are available
   if(sum(sapply(X = obj, FUN = function(o){
@@ -178,7 +181,7 @@ predict.narwsim <- function(...,
   
   cat("+ Replicates: N =", formatC(n, big.mark = ","), "\n")
   cat("+ Horizon:", yrs, "years\n")
-  cat("+ Parameter uncertainty:", ifelse(lpmatrix, "Yes", "No"), "\n")
+  cat("+ Parameter uncertainty:", ifelse(param, "Yes", "No"), "\n")
   cat("\n––– Timeline:\n\n")
   proj_timeline(schedule)
   cat("––– Execution:\n\n")
@@ -318,7 +321,7 @@ predict.narwsim <- function(...,
     
     # Reserves needed to leave resting state and initiate pregnancy
     
-    if(lpmatrix){
+    if(param){
 
       Xp <- predict(mbc.model, data.frame(mass = narw.indiv[1, "tot_mass", ]), type = "lpmatrix")
       
@@ -341,7 +344,7 @@ predict.narwsim <- function(...,
     # Calving events
     narw.indiv[1, "birth", ] <- as.numeric(cohort.vec == 4)
     
-    if(lpmatrix){
+    if(param){
     
     # Survival probability
     Xp <- predict(survbc.model[[initial.phase]]$surv, data.frame(start_bc = bc, cohort = cohort.vec), type = "lpmatrix")
@@ -429,7 +432,7 @@ predict.narwsim <- function(...,
         narw.indiv[i, "lean_mass", ] <- alive * length2mass_vec(narw.indiv[i, "length", ])
         
         # Predict new body condition from current body condition
-        if (lpmatrix) {
+        if (param) {
           Xp <- predict(survbc.model[[current.phase]]$bc,
             data.frame(
               start_bc = narw.indiv[i - 1, "bc", ],
@@ -464,7 +467,7 @@ predict.narwsim <- function(...,
         
         # Minimum body condition needed to successfully bring fetus to term without starving
         # No evidence of reproductive senescence in right whales - Hamilton et al. (1998)
-        if (lpmatrix) {
+        if (param) {
           Xp <- predict(mbc.model, data.frame(mass = narw.indiv[i, "tot_mass", ]), type = "lpmatrix")
           narw.indiv[i, "min_bc", ] <- alive * (narw.indiv[i, "cohort", ] == 6) * ilink.mbc(rowSums(Xp * mbc.curves))
         } else {
@@ -518,7 +521,7 @@ predict.narwsim <- function(...,
         # SURVIVAL
         #' ----------------------------
         
-        if(lpmatrix){
+        if(param){
         # Predict survival probability based on body condition
         Xp <- predict(survbc.model[[current.phase]]$surv,
          data.frame(

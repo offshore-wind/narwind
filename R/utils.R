@@ -6394,11 +6394,11 @@ split_byNA <- function(x){
 }
 
 tickmark <- function(){
-  return("✓")
+  return("\U2714")
 }
 
 crossmark <- function(){
-  return("✗")
+  return("\U2717")
 }
 
 console <- function(msg, suffix = NULL){

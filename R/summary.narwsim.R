@@ -4,6 +4,7 @@
 #'
 #' @param obj An object of class \code{narwsim}, as returned by \code{\link{narw}}.
 #' @param what Character, or character vector, defining which data to summarize. The default (\code{"all"}) returns a full summary of all model components. See Details for further information.
+#' @param relative Logical. If \code{TRUE}, percentages are calculated relative to class totals. Defaults to \code{FALSE}.
 #' @param plot Logical. If \code{TRUE}, additional plots are produced.
 #' @param ... Optional arguments for subsetting.
 #' @details An overview of individual model components can be obtained as follows:
@@ -156,7 +157,7 @@ summary.narwsim <- function(obj,
   cat("Cohort(s)\n")
   cat("----------\n")
   
-  for (h in cohort) cat(cohorts[id==h, abb], ": ", cohorts[id==h, name], "\n", sep = "")
+  for (h in cohortID) cat(cohorts[id==h, abb], ": ", cohorts[id==h, name], "\n", sep = "")
   cat("\n")
   cat("Simulation start:", month.name[init.month], "\n\n")
 
@@ -244,8 +245,8 @@ summary.narwsim <- function(obj,
       cat("\n+++++++++++ Pregnancies +++++++++++\n")
 
       cat("\n")
-      cat("Abortion rate: ", round(100 * as.numeric(obj$abort[whale %in% whaleID & cohort %in% cohortID, .(abort = sum(abort))]) / nrow(obj$abort), 1),
-        "% (", as.numeric(obj$abort[whale %in% whaleID & cohort %in% cohortID, .(abort = sum(abort))]), ")\n",
+      cat("Abortion rate: ", round(100 * as.numeric(obj$abort[whale %in% whaleID, .(abort = sum(abort))]) / nrow(obj$abort), 1),
+        "% (", as.numeric(obj$abort[whale %in% whaleID, .(abort = sum(abort))]), ")\n",
         sep = ""
       )
     }

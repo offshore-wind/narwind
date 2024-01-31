@@ -3,7 +3,7 @@
 #' Writes outputs from the stochastic population model to an .xlsx file on disk.
 #' 
 #' @param obj An object of class \code{narwproj}, as returned by \code{\link{predict.narwsim}}.
-#' @param filename Character. Output file name. Defauls to \code{"narwproj"}.
+#' @param prefix Character string. Output file name. Defaults to \code{"narwproj"}.
 #' @param ... Additional arguments passed to \code{\link[openxlsx]{write.xlsx}}.
 #' @return An Excel file containing four sheets:
 #' \itemize{
@@ -24,7 +24,7 @@
 #' }
 
 write.narwproj <- function(obj, 
-                           filename = "narwproj",
+                           prefix = "narwproj",
                            ...){
   
   
@@ -59,7 +59,7 @@ write.narwproj <- function(obj,
   
   # Write to disk
   openxlsx::write.xlsx(x = sheet.list,
-                       file = paste0(tolower(filename), ifelse(!is.null(obj$param$label), paste0("_", obj$param$label)), ".xlsx"), 
+                       file = paste0(tolower(prefix), ifelse(!is.null(obj$param$label), paste0("_", obj$param$label)), ".xlsx"), 
                        asTable = TRUE,
                        firstRow = TRUE, 
                        tableStyle = "TableStyleMedium1",

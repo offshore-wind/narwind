@@ -22,7 +22,7 @@ print.narwsim <- function(obj, ...){
   # Default values
   if("rowID" %in% names(args)) rowID <- args[["rowID"]] else rowID <- 1:5
   if("cohort" %in% names(args)) cohort <- args[["cohort"]] else cohort <- obj$param$cohort
-  if("whale" %in% names(args)) whale <- args[["whale"]] else whale <- 1 
+  if("whale" %in% names(args)) whaleID <- args[["whale"]] else whaleID <- 1 
 
   if(!all(rowID %in% 1:365)) stop("<rows> must be between 1 and 365")
 
@@ -38,7 +38,7 @@ print.narwsim <- function(obj, ...){
     cat("=========================================================================================\n")
     cat("\n")
 
-    sim_dt <- obj[["sim"]][[cohorts[id==k, abb]]][whale %in% whale, ]
+    sim_dt <- obj[["sim"]][[cohorts[id==k, abb]]][whale %in% whaleID, ]
     sim_dt <- sim_dt[day %in% rowID, ]
 
     cat("--------------------------\n")

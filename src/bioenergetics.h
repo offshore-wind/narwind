@@ -1014,9 +1014,9 @@ double gape_size(double L, double omega, double alpha){
 
 // //' Active feeding during foraging
 // //' @description Determines the proportion of time spent actively feeding while in foraging mode
-// //' @param F Filtration rate (\ifelse{html}{\out{m<sup>3</sup>/s}}{\eqn{m^3/s})
+// //' @param F Filtration rate (m^3/s)
 // //' @param tau_clear Time required to clear the forestomach (s)
-// //' @param stomach_size Forestomach capacity (\ifelse{html}{\out{m<sup>3</sup>}}{\eqn{m^3})
+// //' @param stomach_size Forestomach capacity (m^3)
 // //' @return Proportion of active feeding (\%)
 // // [[Rcpp::export]]
 //  
@@ -1040,12 +1040,12 @@ double gape_size(double L, double omega, double alpha){
 //' Filtration rate
 //' @name filtration_rate
  //' @description Calculates the volume of water filtered per unit time
- //' @param A Area of the mouth gape (\ifelse{html}{\out{m<sup>2</sup>}}{\eqn{m^2})
+ //' @param A Area of the mouth gape (m^2)
  //' @param lambda_gape Percent reduction in the gape during an entanglement event (\%)
  //' @param V Swimming speed while filtering (m/s)
  //' @param E_capt Capture efficiency (\%)
  //' @param lambda_capt Percent reduction in capture efficiency during an entanglement event (\%)
- //' @return Estimated filtration rate (\ifelse{html}{\out{m<sup>3</sup>/s}}{\eqn{m^3/s})
+ //' @return Estimated filtration rate (m^3/s)
  // [[Rcpp::export]]
  
  double filtration_rate(double A, double lambda_gape, double V, double E_capt, double lambda_capt){ 
@@ -1060,8 +1060,8 @@ double gape_size(double L, double omega, double alpha){
  //' @param M Scalar on milk provisioning by the mother (d.u.)
  //' @param E_gland Mammary gland efficiency (\%)
  //' @param mu_female Total mass of mammary glands (kg)
- //' @param delta_female Milk production rate by the mother (\ifelse{html}{\out{m<sup>2</sup>}}{\eqn{m^2}})
- //' @param D Density of milk (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
+ //' @param delta_female Milk production rate by the mother (m^2)
+ //' @param D Density of milk (kg/m^3)
  // [[Rcpp::export]]
  
  double milk_ingestion(double E_milk, double M, double E_gland, double mu_female, double delta_female, double D){ 
@@ -1349,10 +1349,9 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
 //  }  
 
 //' Energetic cost of placental maintenance during pregnancy (vectorised)
- //' @name placental_maintenance
- //' @param G Energetic cost of fetal growth (kJ)
- // [[Rcpp::export]]
- 
+//' @name placental_maintenance
+//' @param G Energetic cost of fetal growth (kJ)
+// [[Rcpp::export]]
  Rcpp::NumericVector placental_maintenance_vec(Rcpp::NumericVector G){ 
    int n = G.size();
    Rcpp::NumericVector out(n);
@@ -1364,8 +1363,8 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
 
 //' Energetic cost of placental maintenance during pregnancy
 //' @name placental_maintenance
- //' @param G Energetic cost of fetal growth (kJ)
- // [[Rcpp::export]]
+//' @param G Energetic cost of fetal growth (kJ)
+// [[Rcpp::export]]
  
  double placental_maintenance(double G){ 
    return (G/0.807)*(1-0.807);
@@ -1373,19 +1372,19 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
 
 //' Heat increment of gestation
 //' @name heat_gestation
- //' @param birth_mass Birth mass of the fetus (kg)
- //' @param delta_m Daily growth rate of the fetus (kg/day)
- // [[Rcpp::export]]
+//' @param birth_mass Birth mass of the fetus (kg)
+//' @param delta_m Daily growth rate of the fetus (kg/day)
+// [[Rcpp::export]]
  
  double heat_gestation(double birth_mass, double delta_m){ 
    return 18409.6 * std::pow(birth_mass, 1.2) * (delta_m/birth_mass);
  }  
 
 //' Heat increment of gestation (vectorised)
- //' @name heat_gestation
- //' @param birth_mass Birth mass of the fetus (kg)
- //' @param delta_m Daily growth rate of the fetus (kg/day)
- // [[Rcpp::export]]
+//' @name heat_gestation
+//' @param birth_mass Birth mass of the fetus (kg)
+//' @param delta_m Daily growth rate of the fetus (kg/day)
+// [[Rcpp::export]]
  
  Rcpp::NumericVector heat_gestation_vec(double birth_mass,
                                         Rcpp::NumericVector delta_m){ 
@@ -1400,21 +1399,21 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
 
 //' Fetal tissue mass
 //' @name fetal_tissue_mass
- //' @param P_b Proportion of the body volume comprised of tissue b
- //' @param L Length of the fetus (m)
- //' @note This relationship only applies to muscles, bones, and viscera
- // [[Rcpp::export]]
+//' @param P_b Proportion of the body volume comprised of tissue b
+//' @param L Length of the fetus (m)
+//' @note This relationship only applies to muscles, bones, and viscera
+// [[Rcpp::export]]
  
  double fetal_tissue_mass(double P_b, double L){ 
    return 1000 * P_b * std::exp(-4.115 + 3.016 * std::log(L));
  }  
 
 //' Fetal tissue mass (vectorised)
- //' @name fetal_tissue_mass
- //' @param P_b Proportion of the body volume comprised of tissue b
- //' @param L Length of the fetus (m)
- //' @note This relationship only applies to muscles, bones, and viscera
- // [[Rcpp::export]]
+//' @name fetal_tissue_mass
+//' @param P_b Proportion of the body volume comprised of tissue b
+//' @param L Length of the fetus (m)
+//' @note This relationship only applies to muscles, bones, and viscera
+// [[Rcpp::export]]
  
  Rcpp::NumericVector fetal_tissue_mass_vec(double P_b, 
                                            Rcpp::NumericVector L){ 
@@ -1429,19 +1428,19 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
 
 //' Fetal blubber mass
 //' @name fetal_blubber_mass
- //' @param L Length of the fetus (m)
- //' @param M_muscle Mass of muscles in the fetus (kg)
- //' @param M_viscera Mass of viscera in the fetus (kg)
- //' @param M_bones Mass of bone tissues in the fetus (kg)
- //' @param D_blubber Average blubber density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
- //' @param D_muscle Average muscle density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
- //' @param D_viscera Average density of viscera (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
- //' @param D_bones Average bone density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
- //' @note The original equation from Christiansen et al. (2022) (DOI: 10.3354/meps14009) includes an additional term
- //' designed to account for the calf's body condition at birth. However, Christiansen et al. rely on a metric of body condition (BC)
- //' that differs from, and is not readily comparable to, ours. Here, we assume that BC = 0, which corresponds to an animal of average
- //' body condition. 
- // [[Rcpp::export]]
+//' @param L Length of the fetus (m)
+//' @param M_muscle Mass of muscles in the fetus (kg)
+//' @param M_viscera Mass of viscera in the fetus (kg)
+//' @param M_bones Mass of bone tissues in the fetus (kg)
+//' @param D_blubber Average blubber density (kg/m^3)
+//' @param D_muscle Average muscle density (kg/m^3)
+//' @param D_viscera Average density of viscera (kg/m^3)
+//' @param D_bones Average bone density (kg/m^3)
+//' @note The original equation from Christiansen et al. (2022) (DOI: 10.3354/meps14009) includes an additional term
+//' designed to account for the calf's body condition at birth. However, Christiansen et al. rely on a metric of body condition (BC)
+//' that differs from, and is not readily comparable to, ours. Here, we assume that BC = 0, which corresponds to an animal of average
+//' body condition. 
+// [[Rcpp::export]]
  
  double fetal_blubber_mass(double L,
                            double BC,
@@ -1456,20 +1455,20 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
  }  
 
 //' Fetal blubber mass (vectorised)
- //' @name fetal_blubber_mass
- //' @param L Length of the fetus (m)
- //' @param M_muscle Mass of muscles in the fetus (kg)
- //' @param M_viscera Mass of viscera in the fetus (kg)
- //' @param M_bones Mass of bone tissues in the fetus (kg)
- //' @param D_blubber Average blubber density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
- //' @param D_muscle Average muscle density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
- //' @param D_viscera Average density of viscera (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
- //' @param D_bones Average bone density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
- //' @note The original equation from Christiansen et al. (2022) (DOI: 10.3354/meps14009) includes an additional term
- //' designed to account for the calf's body condition at birth. However, Christiansen et al. rely on a metric of body condition (BC)
- //' that differs from, and is not readily comparable to, ours. Here, we assume that BC = 0, which corresponds to an animal of average
- //' body condition. 
- // [[Rcpp::export]]
+//' @name fetal_blubber_mass
+//' @param L Length of the fetus (m)
+//' @param M_muscle Mass of muscles in the fetus (kg)
+//' @param M_viscera Mass of viscera in the fetus (kg)
+//' @param M_bones Mass of bone tissues in the fetus (kg)
+//' @param D_blubber Average blubber density (kg/m^3)
+//' @param D_muscle Average muscle density (kg/m^3)
+//' @param D_viscera Average density of viscera (kg/m^3)
+//' @param D_bones Average bone density (kg/m^3)
+//' @note The original equation from Christiansen et al. (2022) (DOI: 10.3354/meps14009) includes an additional term
+//' designed to account for the calf's body condition at birth. However, Christiansen et al. rely on a metric of body condition (BC)
+//' that differs from, and is not readily comparable to, ours. Here, we assume that BC = 0, which corresponds to an animal of average
+//' body condition. 
+// [[Rcpp::export]]
  
  Rcpp::NumericVector fetal_blubber_mass_vec(Rcpp::NumericVector L,
                                             double BC,
@@ -1502,25 +1501,25 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
 
 //' Fetal mass 
 //' @name fetal_mass
- //' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
- //' @param mother_length Body length of the mother (m)
- //' @param bbc Body condition, as defined by Christiansen et al. (2022). Defaults to 0 for an individual of average condition.
- //' @param body_density Average body density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
- //' @note In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
- // [[Rcpp::export]]
+//' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
+//' @param mother_length Body length of the mother (m)
+//' @param bbc Body condition, as defined by Christiansen et al. (2022). Defaults to 0 for an individual of average condition.
+//' @param body_density Average body density (kg/m^3)
+//' @note In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
+// [[Rcpp::export]]
  
  double fetal_mass(int days_to_birth, double mother_length, int bbc = 0, double body_density = 805.07){
    return (std::exp(-4.115 + 3.016 * std::log((std::exp(-1.050376 + 0.007685 * days_to_birth) + (0.021165/365)*days_to_birth)*mother_length))*(1+bbc))*body_density;
  }
 
 //' Fetal mass 
- //' @name fetal_mass (vectorised)
- //' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
- //' @param mother_length Body length of the mother (m)
- //' @param bbc Body condition, as defined by Christiansen et al. (2022). Defaults to 0 for an individual of average condition.
- //' @param body_density Average body density (\ifelse{html}{\out{kg/m<sup>3</sup>}}{\eqn{kg/m^3})
- //' @note In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
- // [[Rcpp::export]]
+//' @name fetal_mass (vectorised)
+//' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
+//' @param mother_length Body length of the mother (m)
+//' @param bbc Body condition, as defined by Christiansen et al. (2022). Defaults to 0 for an individual of average condition.
+//' @param body_density Average body density (kg/m^3)
+//' @note In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
+// [[Rcpp::export]]
  
  Rcpp::NumericVector fetal_mass_vec(Rcpp::NumericVector days_to_birth, 
                                     Rcpp::NumericVector mother_length, 
@@ -1552,10 +1551,10 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
 
 //' Fetal length 
 //' @name fetal_length
- //' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
- //' @param mother_length Body length of the mother (m)
- //' @note In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
- // [[Rcpp::export]]
+//' @param days_to_birth Number of days until birth, assuming a 365-day gestation period (d)
+//' @param mother_length Body length of the mother (m)
+//' @note In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
+// [[Rcpp::export]]
  
  double fetal_length(int days_to_birth, double mother_length){
    return (std::exp(-1.050376 + 0.007685 * days_to_birth) + (0.021165/365) * days_to_birth) * mother_length;
@@ -1635,15 +1634,15 @@ Rcpp::NumericVector fetal_length_vec(Rcpp::NumericVector days_to_birth,
 
 //' Energetic cost of growth
 //' @name growth_cost
- //' @param delta_m Body mass growth increment (kg/day)
- //' @param prop_blubber Proportion of the body that is blubber (\%)
- //' @param prop_water Proportion of lean body mass that is water (\%)
- //' @param P_lipid_blubber Proportion of blubber that is lipid (\%)
- //' @param rho_lipid Energy density of lipids (kJ/kg)
- //' @param rho_protein Energy density of protein (kJ/kg)
- //' @param D_lipid Efficiency of deposition of lipids (\%)
- //' @param D_protein Efficiency of deposition of protein (\%)
- // [[Rcpp::export]]
+//' @param delta_m Body mass growth increment (kg/day)
+//' @param prop_blubber Proportion of the body that is blubber (\%)
+//' @param prop_water Proportion of lean body mass that is water (\%)
+//' @param P_lipid_blubber Proportion of blubber that is lipid (\%)
+//' @param rho_lipid Energy density of lipids (kJ/kg)
+//' @param rho_protein Energy density of protein (kJ/kg)
+//' @param D_lipid Efficiency of deposition of lipids (\%)
+//' @param D_protein Efficiency of deposition of protein (\%)
+// [[Rcpp::export]]
  
  double growth_cost_old(double delta_m, double prop_blubber, double prop_water, double P_lipid_blubber,
                     double rho_lipid, double rho_protein, double D_lipid, double D_protein){

@@ -2,7 +2,7 @@
 #'
 #' Writes outputs from the individual-based model to an .xlsx file on disk.
 #' @param obj An object of class \code{narwsim}, as returned by \code{\link{narw}}.
-#' @param filename Character. Output file name. Defaults to \code{"narwsim"}.
+#' @param prefix Character string. Output file name. Defaults to \code{"narwsim"}.
 #' @note This function 
 #' @inheritParams write.narwproj
 #' @return One Excel file per population cohort. It is recommended to only use this function for short simulation runs (\code{nsim = 100} or less, or to use the \code{cohort} and \code{whale} arguments to extract data for specific individuals/cohorts. Each output file contains multiple sheets capturing all simulation parameters, as follows:
@@ -30,7 +30,7 @@
 #' write(m)}
 
 write.narwsim <- function(obj, 
-                          filename = "narwsim",
+                          prefix = "narwsim",
                           ...){
   
   # Function ellipsis –– optional arguments
@@ -187,7 +187,7 @@ write.narwsim <- function(obj,
                        "Lactation" = lact)
     
     openxlsx::write.xlsx(x = sheet.list,
-      file = paste0(tolower(filename), "_", file.name, ifelse(!is.null(obj$param$label), paste0("_", obj$param$label)), ".xlsx"), 
+      file = paste0(tolower(prefix), "_", file.name, ifelse(!is.null(obj$param$label), paste0("_", obj$param$label)), ".xlsx"), 
       asTable = TRUE,
       firstRow = TRUE, 
       tableStyle = "TableStyleMedium1",
