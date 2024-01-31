@@ -2,7 +2,18 @@
 % Please edit documentation in R/RcppExports.R
 \name{placental_maintenance}
 \alias{placental_maintenance}
-\title{Energetic cost of placental maintenance during pregnancy}
+\alias{placental_maintenance_vec}
+\title{Energetic cost of placental maintenance during pregnancy (vectorised)}
+\usage{
+placental_maintenance_vec(G)
+
+placental_maintenance(G)
+}
+\arguments{
+\item{G}{Energetic cost of fetal growth (kJ)}
+}
 \description{
+Energetic cost of placental maintenance during pregnancy (vectorised)
+
 Energetic cost of placental maintenance during pregnancy
 }

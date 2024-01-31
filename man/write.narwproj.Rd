@@ -4,12 +4,12 @@
 \alias{write.narwproj}
 \title{Export population projection data}
 \usage{
-\method{write}{narwproj}(obj, filename = "narwproj", ...)
+\method{write}{narwproj}(obj, prefix = "narwproj", ...)
 }
 \arguments{
 \item{obj}{An object of class \code{narwproj}, as returned by \code{\link{predict.narwsim}}.}
 
-\item{filename}{Character. Output file name. Defauls to \code{"narwproj"}.}
+\item{prefix}{Character string. Output file name. Defaults to \code{"narwproj"}.}
 
 \item{...}{Additional arguments passed to \code{\link[openxlsx]{write.xlsx}}.}
 }

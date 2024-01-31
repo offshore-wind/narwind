@@ -2,7 +2,25 @@
 % Please edit documentation in R/RcppExports.R
 \name{fetal_tissue_mass}
 \alias{fetal_tissue_mass}
+\alias{fetal_tissue_mass_vec}
 \title{Fetal tissue mass}
+\usage{
+fetal_tissue_mass(P_b, L)
+
+fetal_tissue_mass_vec(P_b, L)
+}
+\arguments{
+\item{P_b}{Proportion of the body volume comprised of tissue b}
+
+\item{L}{Length of the fetus (m)}
+}
 \description{
 Fetal tissue mass
+
+Fetal tissue mass (vectorised)
+}
+\note{
+This relationship only applies to muscles, bones, and viscera
+
+This relationship only applies to muscles, bones, and viscera
 }

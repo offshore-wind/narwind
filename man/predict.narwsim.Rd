@@ -4,7 +4,7 @@
 \alias{predict.narwsim}
 \title{Predictions of right whale abundance}
 \usage{
-\method{predict}{narwsim}(..., n = 100, yrs = 35, lpmatrix = TRUE, piling = 1, progress = TRUE)
+\method{predict}{narwsim}(..., n = 100, yrs = 35, param = TRUE, piling = 1, progress = TRUE)
 }
 \arguments{
 \item{...}{One or more objects of class \code{narwsim}.}
@@ -13,7 +13,7 @@
 
 \item{yrs}{Integer. Time horizon, specified either as the desired number of years (from current) or the desired target end year. Defaults to \code{35}, which is commensurate with the average lifespan of a typical wind farm.}
 
-\item{lpmatrix}{Logical. If \code{TRUE}, prediction uncertainty includes parameter uncertainty.}
+\item{param}{Logical. If \code{TRUE}, prediction variance includes parameter uncertainty.}
 
 \item{piling}{Integer. Year of construction. Defaults to \code{1}, such that piling occurs on the first year of the projection, followed by O&M for the remainder.}
 

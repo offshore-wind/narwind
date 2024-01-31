@@ -4,12 +4,12 @@
 \alias{write.narwsim}
 \title{Export simulation data}
 \usage{
-\method{write}{narwsim}(obj, filename = "narwsim", ...)
+\method{write}{narwsim}(obj, prefix = "narwsim", ...)
 }
 \arguments{
 \item{obj}{An object of class \code{narwsim}, as returned by \code{\link{narw}}.}
 
-\item{filename}{Character. Output file name. Defaults to \code{"narwsim"}.}
+\item{prefix}{Character string. Output file name. Defaults to \code{"narwsim"}.}
 
 \item{...}{Additional arguments passed to \code{\link[openxlsx]{write.xlsx}}.}
 }

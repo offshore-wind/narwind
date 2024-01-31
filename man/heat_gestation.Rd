@@ -2,7 +2,20 @@
 % Please edit documentation in R/RcppExports.R
 \name{heat_gestation}
 \alias{heat_gestation}
+\alias{heat_gestation_vec}
 \title{Heat increment of gestation}
+\usage{
+heat_gestation(birth_mass, delta_m)
+
+heat_gestation_vec(birth_mass, delta_m)
+}
+\arguments{
+\item{birth_mass}{Birth mass of the fetus (kg)}
+
+\item{delta_m}{Daily growth rate of the fetus (kg/day)}
+}
 \description{
 Heat increment of gestation
+
+Heat increment of gestation (vectorised)
 }

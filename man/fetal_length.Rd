@@ -5,6 +5,8 @@
 \alias{fetal_length_vec}
 \title{Fetal length}
 \usage{
+fetal_length(days_to_birth, mother_length)
+
 fetal_length_vec(days_to_birth, mother_length)
 }
 \arguments{
@@ -18,5 +20,7 @@ Fetal length
 Fetal length (vectorised)
 }
 \note{
+In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
+
 In this parameterization, birth corresponds to t=0 and conception corresponds to t=-365
 }

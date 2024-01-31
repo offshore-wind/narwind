@@ -11,6 +11,8 @@
 
 \item{what}{Character, or character vector, defining which data to summarize. The default (\code{"all"}) returns a full summary of all model components. See Details for further information.}
 
+\item{relative}{Logical. If \code{TRUE}, percentages are calculated relative to class totals. Defaults to \code{FALSE}.}
+
 \item{plot}{Logical. If \code{TRUE}, additional plots are produced.}
 
 \item{...}{Optional arguments for subsetting.}
