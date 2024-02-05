@@ -456,25 +456,42 @@ Rcpp::NumericVector survivorship_vec(Rcpp::NumericVector age,
 //' Initialize body condition
 //' @name start_bcondition
 //' @description Performs a random draw from a beta distribution to initialize 
-//' the body condition of simulated animals, taken as the ration of fat mass to total mass.
+//' the body condition of simulated animals, taken as the ratio of fat mass to total mass.
 //' @param age Age in years
 //' @param shape1 First shape parameter of the beta distribution
 //' @param shape2 Second shape parameter of the beta distribution
 // [[Rcpp::export]]
 long double start_bcondition(double cohort){
-   
-   long double bc;
-   
-   if(cohort == 0){ // Calves
-     bc = rtnorm(0.3341088, 0.05095528, 0.05, 0.6);
-     // bc = rtnorm(0.08, 0.01, 0.06, 1);
-   } else if(cohort == 5){ // Lactating females, which start simulation as late pregnant
-     bc = rtnorm(0.6, 0.05, 0.05, 0.6);
-   } else { // All other individuals
-    bc = rtnorm(0.35, 0.075, 0.05, 0.6); 
-   }
-   return bc;
- }
+  
+  // Mean and SD values obtained from the <init_bc> function based on Christiansen et al.
+  // Lower bound = starvation threshold
+  // Upper bound = maximum allowable BC (see <find_maxBC> function)
+  
+  long double bc;
+  
+   // Calves
+  if(cohort == 0){ 
+
+    bc = rtnorm(0.362901169, 0.08700064, 0.05, 0.665289);
+    
+    // Juveniles (males and females)
+  } else if(cohort == 1 | cohort == 2){
+    
+    bc = rtnorm(0.28574784, 0.02027885, 0.05, 0.665289);
+    
+    // Adult males, resting females, pregnant females
+  } else if(cohort == 3 | cohort == 4 | cohort == 6) {
+    
+    bc = rtnorm(0.25940715, 0.01519702, 0.05, 0.665289);
+    
+    // Lactating females, which start simulation as late pregnant
+  } else { 
+    
+    bc = rtnorm(0.41616393, 0.02267595, 0.05, 0.665289);
+    
+  }
+  return bc;
+}
 
 //' Initialize body condition 
 //' @name start_bcondition_vec
@@ -492,21 +509,27 @@ Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month =
   for(int i = 0; i < n; i++) {
 
     // Calves
-    if(cohort[i] == 0){
+    if(cohort[i] == 0){ 
       
-      bc[i] = rtnorm(0.3539697, 0.08844279, 0.05, 0.6);;
-
-      // Lactating females, starting as late pregnant
-    } else if(cohort[i] == 5){
-
-        bc[i] = rtnorm(0.6, 0.05, 0.05, 0.6);
-
-      // All other individuals
-    } else {
+      bc[i] = rtnorm(0.362901169, 0.08700064, 0.05, 0.665289);
       
-        bc[i] = rtnorm(0.35, 0.075, 0.05, 0.5188374);
+      // Juveniles (males and females)
+    } else if(cohort[i] == 1 | cohort[i] == 2){
+      
+      bc[i] = rtnorm(0.28574784, 0.02027885, 0.05, 0.665289);
+      
+      // Adult males, resting females, pregnant females
+    } else if(cohort[i] == 3 | cohort[i] == 4 | cohort[i] == 6) {
+      
+      bc[i] = rtnorm(0.25940715, 0.01519702, 0.05, 0.665289);
+      
+      // Lactating females, which start simulation as late pregnant
+    } else if(cohort[i] == 5){ 
+      
+      bc[i] = rtnorm(0.41616393, 0.02267595, 0.05, 0.665289);
       
     }
+    
   }
 
   return bc;
@@ -1965,40 +1988,44 @@ double entanglement_effect(double prob_survival,
   double p_surv3mo = 0.0L;
   double p_surv3mo_cloglog;
   double surv_drop = entgl_hit(severity);
-
+  
   // If the entanglement effect estimated under PCoMS is zero, then
   // return 0; otherwise, calculate the modified survival probability
   if(surv_drop != 0){
-  
-  // If the daily probability of a mortality event (starving) is p,
-  // then the daily probability of survival is (1-p). 
-  // The probability of survival over 3 months (taken to be 90 days) is then given 
-  // by (1-p)^90. Incidentally, the probability of starving during the 3-month period is
-  // is p_3mo = 1-((1-p)^90). 
-  // It follows that p = 1-((1-p_3mo)^(1/90))
-  
-  p_surv3mo = std::pow(prob_survival, ndays);
-
-  // Convert complementary log-log scale
-  p_surv3mo_cloglog = std::log(-std::log(1.0L - p_surv3mo));
-  
-  if(std::isinf(p_surv3mo_cloglog)) throw std::invalid_argument("Argument out of bounds; reduce --p or change --ndays");
-
-  // Add effect of entanglement estimated from PCoMS (Pirotta et al. 2023)
-  p_surv3mo_cloglog += entgl_hit(severity);
-  // if(severity == 0) p_surv3mo_cloglog += minor;
-  // if(severity == 1) p_surv3mo_cloglog += moderate;
-  // if(severity == 2) p_surv3mo_cloglog += severe;
-
-  // Apply inverse cloglog
-  p_surv3mo = 1.0L - std::exp(-std::exp(p_surv3mo_cloglog));
-  
-  // Convert back to daily probability
-  // double out = std::pow(p_surv3mo, 1.0L/ndays);
-  
+    
+    // If the daily probability of a mortality event (starving) is p,
+    // then the daily probability of survival is (1-p). 
+    // The probability of survival over 3 months (taken to be 90 days) is then given 
+    // by (1-p)^90. Incidentally, the probability of starving during the 3-month period is
+    // is p_3mo = 1-((1-p)^90). 
+    // It follows that p = 1-((1-p_3mo)^(1/90))
+    
+    p_surv3mo = std::pow(prob_survival, ndays);
+    
+    // Convert complementary log-log scale
+    p_surv3mo_cloglog = std::log(-std::log(1.0L - p_surv3mo));
+    
+    if(std::isinf(p_surv3mo_cloglog)) throw std::invalid_argument("Argument out of bounds; reduce --p or change --ndays");
+    
+    // Add effect of entanglement estimated from PCoMS (Pirotta et al. 2023)
+    p_surv3mo_cloglog += entgl_hit(severity);
+    // if(severity == 0) p_surv3mo_cloglog += minor;
+    // if(severity == 1) p_surv3mo_cloglog += moderate;
+    // if(severity == 2) p_surv3mo_cloglog += severe;
+    
+    // Apply inverse cloglog
+    p_surv3mo = 1.0L - std::exp(-std::exp(p_surv3mo_cloglog));
+    
+    // Convert back to daily probability
+    // double out = std::pow(p_surv3mo, 1.0L/ndays);
+    
+    return p_surv3mo;
+    
+  } else {
+    
+    return prob_survival;
+    
   }
-
-  return p_surv3mo;
 }
 
 
