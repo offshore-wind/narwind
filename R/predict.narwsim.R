@@ -373,14 +373,16 @@ predict.narwsim <- function(...,
         # Current phase of development
         current.phase <- phase.names[schedule[i]+1]
         
-        # New samples from the posteriors of model coefficients
-        post.sample <- sample(
-          x = seq_len(mcmc[[current.phase]]$n),
-          size = nrow(Xp),
-          replace = TRUE)
-        
-        bc.curves <- mcmc[[current.phase]]$bc[post.sample,]
-        mbc.curves <- mcmc[[current.phase]]$mbc[post.sample,]
+        if(param){
+          # New samples from the posteriors of model coefficients
+          post.sample <- sample(
+            x = seq_len(mcmc[[current.phase]]$n),
+            size = nrow(Xp),
+            replace = TRUE)
+          
+          bc.curves <- mcmc[[current.phase]]$bc[post.sample,]
+          mbc.curves <- mcmc[[current.phase]]$mbc[post.sample,]
+        }
         
         #' ----------------------------
         # ALIVE
