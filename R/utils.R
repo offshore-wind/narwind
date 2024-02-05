@@ -2298,6 +2298,61 @@ get_pva <- function(){
   
 }
 
+get_bc <- function(){
+  fred <- readr::read_csv("data/condition/christiansen2022.csv") |> 
+    dplyr::filter(tissue == "blubber")
+  out.spline <- splinefun(x = fred$index, y = fred$bc)
+  return(out.spline)
+}
+
+init_bc <- function(calves = c(-0.61, 14.64272),
+                    juveniles = c(-13.1, 2.9),
+                    adults = c(-16.7, 2),
+                    lactating = c(9.4, 4.8)){
+  
+  # From Christiansen et al. (2022) J Physiol
+  # The birth condition value is -0.0061 (or -0.61%) with a SE of 0.0049 (or -0.49%)
+  # The sample size is: n = 992
+  # This gives an SD = 0.1543306
+  # 
+  # From Christiansen et al. (2020) MEPS
+  # lactating NARW females (mean = −9.4%, SE = 4.8)
+  # adults (mean = −16.7%, SE = 2.0)
+  # immature NARWs (mean = −13.1%, SE = 2.9)
+  
+  out <- list()
+  
+  # Calculate relative blubber mass from body condition indices (mean +/- 2SE)
+  # using a spline function <bc_index> fitted to data from Christiansen et al. (2022) -- Figure 7D
+  tmp <- c(bc_index(calves[1]/100),
+    bc_index(calves[1]/100-2*(calves[2]/100)),
+    bc_index(calves[1]/100+2*(calves[2]/100)))
+  
+  # Estimate associated SD in relative blubber mass
+  out[["calves"]] <- c(tmp[1], mean(c((tmp[3] - tmp[1])/2, (tmp[1] - tmp[2])/2)))
+  
+  tmp <- c(bc_index(juveniles[1]/100),
+                bc_index(juveniles[1]/100-2*(juveniles[2]/100)),
+                bc_index(juveniles[1]/100+2*(juveniles[2]/100)))
+  
+  out[["juveniles"]] <- c(tmp[1], mean(c((tmp[3] - tmp[1])/2, (tmp[1] - tmp[2])/2)))
+  
+  tmp <- c(bc_index(adults[1]/100),
+                bc_index(adults[1]/100-2*(adults[2]/100)),
+                bc_index(adults[1]/100+2*(adults[2]/100)))
+  
+  out[["adults"]] <- c(tmp[1], mean(c((tmp[3] - tmp[1])/2, (tmp[1] - tmp[2])/2)))
+  
+  tmp <- c(bc_index(lactating[1]/100),
+                bc_index(lactating[1]/100-2*(lactating[2]/100)),
+                bc_index(lactating[1]/100+2*(lactating[2]/100)))
+  
+  out[["lactating"]] <- c(tmp[1], mean(c((tmp[3] - tmp[1])/2, (tmp[1] - tmp[2])/2)))
+  
+  return(out)
+  
+}
+
 # NOISE ------------------------------------------------------
 
 add_SPL <- function(spl, raster = FALSE){
@@ -5997,22 +6052,28 @@ figures <- function(obj = NULL, cex = 1, lwd = 2, scale.width = 1, scale.height 
   
   jpeg(filename = file.path("out/initial_bodycondition.jpeg"), res = 300, width = Lwidth, height = height)
   
-  # Lactating females
-  plot(seq(0, 1, length.out = 1000), truncnorm::dtruncnorm(seq(0, 1, length.out = 1000), 0.05, 0.6, 0.6, 0.05), 
-       xlab = "Body condition (% fat mass)", 
-       xlim = c(0,1),
-       ylab = "Density", 
-       type = 'l',
-       cex.lab = cex, 
-       cex.axis = cex, 
-       cex.main = cex, 
-       lwd = lwd, 
-       col = "deepskyblue4", 
-       from = 0, 
-       to = 1)
+  pbc <- init_bc()
+  pcol <- c("grey20", "firebrick", "goldenrod2", "deepskyblue4")
   
-  # Adults
-  quiet(draw("tnorm", 0.35, 0.075, 0.05, 0.6, main = "", 
+  # Adults (males, resting females, pregnant females)
+  plot(density(rtnorm_vec(10000, pbc[["adults"]][1], pbc[["adults"]][2], 0.05, find_maxBC()),            
+                adjust = 2,
+                from = 0, to = 1),
+       main = "",
+        xlab = "Body condition (% fat mass)", 
+        xlim = c(0,1),
+        ylab = "Density", 
+        cex.lab = cex, 
+        cex.axis = cex,
+        cex.main = cex, 
+        lwd = lwd, 
+        col = pcol[3])
+  
+  # Calves at birth
+  lines(density(rtnorm_vec(10000, pbc[["calves"]][1], pbc[["calves"]][2], 0.05, find_maxBC()), 
+               adjust = 2,
+               from = 0, to = 1),
+       main = "",
        xlab = "Body condition (% fat mass)", 
        xlim = c(0,1),
        ylab = "Density", 
@@ -6020,31 +6081,103 @@ figures <- function(obj = NULL, cex = 1, lwd = 2, scale.width = 1, scale.height 
        cex.axis = cex,
        cex.main = cex, 
        lwd = lwd, 
-       add = TRUE,
-       col = "goldenrod1",
-       from = 0, 
-       to = 1))
+       col = pcol[1])
   
-  # Calves
-  quiet(draw("tnorm", 0.3341088, 0.05095528, 0.05, 0.6,
-       main = "", 
-       xlab = "Body condition (% fat mass)", 
-       xlim = c(0,1), 
-       ylab = "Density", 
-       cex.lab = cex, 
-       cex.axis = cex, 
-       cex.main = cex, 
-       lwd = lwd, 
-       col = "grey30", 
-       add = TRUE, 
-       from = 0, 
-       to = 1))
+
   
-  legend("topleft", 
+  # Adults (males, resting females, pregnant females)
+  lines(density(rtnorm_vec(10000, pbc[["juveniles"]][1], pbc[["juveniles"]][2], 0.05, find_maxBC()), 
+                adjust = 2,
+                from = 0, to = 1),
+        xlab = "Body condition (% fat mass)", 
+        xlim = c(0,1),
+        ylab = "Density", 
+        cex.lab = cex, 
+        cex.axis = cex,
+        cex.main = cex, 
+        lwd = lwd, 
+        col = pcol[2])
+  
+  # Adults (males, resting females, pregnant females)
+  lines(density(rtnorm_vec(10000, pbc[["lactating"]][1], pbc[["lactating"]][2], 0.05, find_maxBC()), 
+                adjust = 2,
+                from = 0, to = 1),
+        xlab = "Body condition (% fat mass)", 
+        xlim = c(0,1),
+        ylab = "Density", 
+        cex.lab = cex, 
+        cex.axis = cex,
+        cex.main = cex, 
+        lwd = lwd, 
+        col = pcol[4])
+  
+  
+  # # Adults (males, resting females, pregnant females)
+  # quiet(draw("tnorm", pbc[["adults"]][1], pbc[["adults"]][2], 0.05, find_maxBC(), main = "", 
+  #            xlab = "Body condition (% fat mass)", 
+  #            xlim = c(0,1),
+  #            ylab = "Density", 
+  #            cex.lab = cex, 
+  #            cex.axis = cex,
+  #            cex.main = cex, 
+  #            lwd = lwd, 
+  #            # add = TRUE,
+  #            col = pcol[3],
+  #            from = 0, 
+  #            to = 1))
+  # 
+  # # Lactating females
+  # lines(seq(0, 1, length.out = 1000),
+  #   truncnorm::dtruncnorm(
+  #     seq(0, 1, length.out = 1000), 0.05, find_maxBC(),
+  #     pbc[["lactating"]][1], pbc[["lactating"]][2]
+  #   ),
+  #   xlab = "Body condition (% fat mass)",
+  #   xlim = c(0, 1),
+  #   ylab = "Density",
+  #   type = "l",
+  #   cex.lab = cex,
+  #   cex.axis = cex,
+  #   cex.main = cex,
+  #   lwd = lwd,
+  #   col = pcol[4]
+  # )
+  # 
+  # # Calves
+  # quiet(draw("tnorm", pbc[["calves"]][1], pbc[["calves"]][2], 0.05, find_maxBC(),
+  #            main = "", 
+  #            xlab = "Body condition (% fat mass)", 
+  #            xlim = c(0,1), 
+  #            ylab = "Density", 
+  #            cex.lab = cex, 
+  #            cex.axis = cex, 
+  #            cex.main = cex, 
+  #            lwd = lwd, 
+  #            col = pcol[1], 
+  #            add = TRUE, 
+  #            from = 0, 
+  #            to = 1))
+  # 
+  # # Juveniles
+  # quiet(draw("tnorm", pbc[["juveniles"]][1], pbc[["juveniles"]][2], 0.05, find_maxBC(),
+  #            main = "", 
+  #            xlab = "Body condition (% fat mass)", 
+  #            xlim = c(0,1), 
+  #            ylab = "Density", 
+  #            cex.lab = cex, 
+  #            cex.axis = cex, 
+  #            cex.main = cex, 
+  #            lwd = lwd, 
+  #            col = pcol[2],
+  #            add = TRUE, 
+  #            from = 0, 
+  #            to = 1))
+  
+  legend("topright", 
          bty = "n",
          lty = 1, 
-         col = c(rep("deepskyblue4", 1), rep("goldenrod1", 1), "grey30"), 
-         legend = c("Lactating females", "Juv/adults", "Calves"))
+         col = pcol,
+         legend = c("Calves", "Juveniles", "Adults", "Late pregnant females"))
   
   dev.off()
   
