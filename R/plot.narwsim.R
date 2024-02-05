@@ -38,15 +38,15 @@ plot.narwsim <- function(obj,
   if("lwd" %in% names(args)) lwd <- args[["lwd"]] else lwd <- 0.2
   if("bymonth" %in% names(args)) bymonth <- args[["bymonth"]] else bymonth <- FALSE
   if("bywhale" %in% names(args)) bywhale <- args[["bywhale"]] else bywhale <- FALSE
-  if("cohort" %in% names(args)) cohort <- args[["cohort"]] else  cohort <- obj$param$cohort
+  if("cohort" %in% names(args)) cohortID <- args[["cohort"]] else cohortID <- obj$param$cohort
   if("whale" %in% names(args)) whaleID <- args[["whale"]] else whaleID <- 1:obj$param$nsim
   if("vid" %in% names(args)) vid <- args[["vid"]] else vid <- "gif"
   
   if(bymonth & bywhale) stop("<bymonth> and <bywhale> cannot both be set to TRUE")
   
   cohorts <- obj$param$cohorts
-  cohort.ab <- cohorts[id %in% cohort, abb]
-  cohort.names <- cohorts[id %in% cohort, name]
+  cohort.ab <- cohorts[id %in% cohortID, abb]
+  cohort.names <- cohorts[id %in% cohortID, name]
   n.ind <- length(whaleID)
 
   #' -------------------------------------------------------
@@ -247,9 +247,11 @@ plot.narwsim <- function(obj,
   locs.birth <- obj$birth
   
   locations <- purrr::set_names(x = cohort.ab) |>
-    purrr::map(.f = ~sim[[.x]][day > 0, list(date, month, whale, easting, northing, region, cohort_name, feed, north)])
+    purrr::map(.f = ~sim[[.x]][day > 0, list(date, month, whale, easting, northing, region, cohort, cohort_name, feed, north)])
   
   tracks <- data.table::rbindlist(locations)
+  
+  # Only retain animals of interest
   tracks <- tracks[whale %in% whaleID]
 
   # ....................................
@@ -271,144 +273,310 @@ plot.narwsim <- function(obj,
   # Generate plots
   # ....................................
   
-  COLORS <- c('starve' = 'firebrick', 'strike' = 'deepskyblue4', 'birth' = "#15A471", 'other' = 'darkorange')
-  SHAPES <- c('Calves' = 1, 'Juveniles' = 16, 'Adults' = 16)
+  # Define legend colors and shapes
+  COLORS <- c('Mortality (starve)' = 'firebrick',
+              'Mortality (strike)' = 'deepskyblue4',
+              'Birth' = "#15A471", 
+              'Mortality (age)' = 'darkorange')
+  SHAPES <- c('Calves' = 1, 'Adults/Juveniles' = 16)
   
-  plot.list <- purrr::set_names(cohort) |>
-  purrr::map(.f = ~ {
-
-    # Extract movement tracks
-    tracks.cohort <- tracks[whale %in% whaleID & cohort_name == cohorts[id == .x, name]]
+  locs.dead$cause_death <- sapply(locs.dead$cause_death, switch,
+                                  "none" = "None",
+                                  "strike" = "Mortality (strike)",
+                                  "starve" = "Mortality (starve)",
+                                  "other" = "Mortality (age)")
+  
+  locs.dead$class <- sapply(locs.dead$class, switch,
+                            "Adults" = "Adults/Juveniles",
+                            "Juveniles" = "Adults/Juveniles",
+                            "Calves" = "Calves")
+  
+  
+  locs.birth$event <- "Birth"
+  
+  # Extract movement tracks
+  tracks.cohort <- tracks[cohort %in% cohortID]
+  
+  # Rename lactating cohort so that calves are plotted together with lactating females
+  if(5 %in% cohortID){
+    new.name <- paste0(unique(tracks.cohort[cohort == 5,]$cohort_name), " + calves")
+    tracks.cohort[cohort == 5,]$cohort_name <- new.name
+    locs.dead[cohort %in% c(0,5), cohort_name:= new.name]
+    locs.birth[cohort %in% c(0,5), cohort_name:= new.name]
+  }
+  
+  # List format for leaflet plotting
+  if(web) tracks.cohort <- split(tracks.cohort, f = tracks.cohort$cohort_name)
+  
+  # Basemap (land)
+  base_p <- gg.opts + 
+    ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", linewidth = 0.25) +
+    theme_narw(vertical = TRUE)
+  
+  create_map <- function(input.tracks){
     
-    if(.x == 5){
-      new.name <- paste0(unique(tracks.cohort$cohort_name), " + calves")
-      # tracks[cohort_name == .y, cohort_name:= new.name]
-      tracks.cohort$cohort_name <- new.name
-      locs.dead[cohort %in% c(0,5), cohort_name:= new.name]
-      # if("data.table" %in% class(locs.birth)) 
-      locs.birth[cohort %in% c(0,5), cohort_name:= new.name]
-    }
-
-    # Plot base map (land)
-    base_p <- gg.opts + 
-      ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", linewidth = 0.25) +
-      theme_narw(vertical = TRUE)
-
-    # Produce required plot(s)
+    # Color by month 
     if(bymonth) {
       
-      track_p <- 
-        base_p +
-        ggplot2::geom_path(data = tracks.cohort, 
+      out_p <- base_p +
+        ggplot2::geom_path(data = input.tracks, 
                            mapping = ggplot2::aes(x = easting, y = northing, group = whale, colour = factor(month)), 
-                                               alpha = 0.7, linewidth = lwd) +
+                           alpha = 0.7, linewidth = lwd) +
         ggplot2::scale_color_manual(values = pals::viridis(12), labels = month.abb) +
         labs(color = NULL) +
         ggplot2::coord_sf(expand = FALSE) +
-        ggplot2::facet_wrap(~cohort_name) +
         ggplot2::theme(
           legend.title = element_blank(),
           legend.position = c(1000, -500),
           legend.background = element_rect(fill = "white", colour = NA),
           legend.text = element_text(size = 10),
-          legend.key = element_rect(fill = "transparent")) 
+          legend.key = element_rect(fill = "transparent"))
       
     } else {
       
-      track_p <- 
+      # Color by individual
+      if(bywhale){
         
-        base_p +
-        
-        # ............................................................
-        # Color by individual
-        # ............................................................
-        
-        {if(bywhale) ggplot2::geom_path(data = tracks.cohort,
-                mapping = ggplot2::aes(x = easting, y = northing, group = whale, 
-                                       col = factor(whale)), alpha = 0.7, linewidth = lwd) } +
-        
-        {if(bywhale & length(whaleID) <= 10) ggplot2::scale_color_manual(values = whale)} +
-        
-        {if(bywhale & length(whaleID) <= 10) ggnewscale::new_scale_colour() }
-      
-      if(what == "feed"){
-        
-        track_p <- track_p +
-          ggplot2::geom_point(data = tracks.cohort,
-                              mapping = ggplot2::aes(x = easting, y = northing, group = whale, colour = factor(feed))) 
-        
-      } else if(what == "migrate"){
-        
-        track_p <- track_p +
-          ggplot2::geom_path(data = tracks.cohort,
-            mapping = ggplot2::aes(x = easting, y = northing, group = whale, colour = factor(north))) +
-          
-          {if(.x == 5 & "data.table" %in% class(locs.birth))
-            ggplot2::geom_point(data = locs.dead[cohort == 0 & whale %in% whaleID & abb %in% cohorts[id == 0, abb]],
-                                aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class)))}
+        out_p <- base_p +
+            ggplot2::geom_path(
+              data = input.tracks,
+              mapping = ggplot2::aes(
+                x = easting, y = northing, group = whale,
+                col = factor(whale)), alpha = 0.7, linewidth = lwd) +
+          {if (length(whaleID) <= 10) ggplot2::scale_color_manual(values = whale)} +
+          {if (length(whaleID) <= 10) ggnewscale::new_scale_colour()}
         
       } else {
         
-        track_p <- track_p +
+        if(what == "feed"){
           
-          # ............................................................
-        # Same color
-        # ............................................................
-        
-        {if(!bywhale) ggplot2::geom_path(data = tracks.cohort,
-             mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = lwd)} +
-        
-        # ............................................................
-        # Mortality - adults
-        # ............................................................
-        
-        # Adults / juveniles
-        ggplot2::geom_point(data = locs.dead[cohort > 0 & whale %in% whaleID & abb %in% cohorts[id == .x, abb]],
-                            aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class))) +
-        
-        # ............................................................
-        # Calving events
-        # ............................................................
-        
-        {if(.x == 5 & "data.table" %in% class(locs.birth))
-            ggplot2::geom_point(data = locs.dead[cohort == 0 & whale %in% whaleID & abb %in% cohorts[id == 0, abb]],
-                                aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class)))} +
-        
-        {if(.x == 5 & "data.table" %in% class(locs.birth))
-            ggplot2::geom_point(data = locs.birth[whale %in% whaleID], aes(x = easting, y = northing, colour = factor(event)))
-        } +
-        
-        # ............................................................
-        # Color and theme options
-        # ............................................................
-        
-        ggplot2::scale_color_manual(values = COLORS) +
-        ggplot2::scale_shape_manual(values = SHAPES)
-
+          out_p <- base_p +
+            ggplot2::geom_point(data = input.tracks,
+                                mapping = ggplot2::aes(x = easting, 
+                                                       y = northing, 
+                                                       group = whale, 
+                                                       colour = factor(feed))) 
+          
+        } else if(what == "migrate"){
+          
+          out_p <- base_p +
+            ggplot2::geom_path(data = input.tracks,
+                               mapping = ggplot2::aes(x = easting, 
+                                                      y = northing, 
+                                                      group = whale, 
+                                                      colour = factor(north))) 
+          
+        } else {
+          
+          out_p <- base_p +
+            ggplot2::geom_path(
+              data = input.tracks,
+              mapping = ggplot2::aes(x = easting, 
+                                     y = northing, 
+                                     group = whale), 
+              alpha = 0.7, 
+              linewidth = lwd) +
+            
+            # Mortality - adults
+            ggplot2::geom_point(
+              data = locs.dead[cohort > 0 & whale %in% whaleID & cohort %in% unique(input.tracks$cohort)],
+              aes(x = easting, 
+                  y = northing, 
+                  colour = factor(cause_death), 
+                  shape = factor(class))) +
+            
+            # Calf mortality
+            {if (5 %in% unique(input.tracks$cohort) & "data.table" %in% class(locs.birth)) {
+                ggplot2::geom_point(
+                  data = locs.dead[cohort == 0 & whale %in% whaleID],
+                  aes(x = easting, 
+                      y = northing, 
+                      colour = factor(cause_death), 
+                      shape = factor(class)))}} +
+            
+            # Calving events
+            {if (5 %in% unique(input.tracks$cohort) & "data.table" %in% class(locs.birth)) {
+                ggplot2::geom_point(data = locs.birth[whale %in% whaleID], 
+                                    aes(x = easting, 
+                                        y = northing, 
+                                        colour = factor(event)))}} +
+            
+            ggplot2::scale_color_manual(values = COLORS) +
+            ggplot2::scale_shape_manual(values = SHAPES) +
+            ggplot2::labs(shape = "Age class", colour = "Event")
+        }
+      }
     }
-     
-    track_p <- track_p +
+    
+   out_p +
       ggplot2::theme(
-          legend.title = element_blank(),
-          legend.position = c(1000, -500),
-          legend.background = element_rect(fill = "white", colour = NA),
-          legend.text = element_text(size = 10),
-          legend.key = element_rect(fill = "transparent"))  +
-        labs(color = NULL) +
-        ggplot2::facet_wrap(~cohort_name) +
-        ggplot2::coord_sf(expand = FALSE) +
-        ggplot2::theme(plot.margin = unit(c(-0.30,0,0,0), "null"))
-    }
-
-    print(track_p)
-  })
+        legend.background = ggplot2::element_rect(fill = "white", colour = NA),
+        legend.text = ggplot2::element_text(size = 10),
+        legend.key = ggplot2::element_rect(fill = "transparent"))  +
+      ggplot2::theme(legend.title = element_text(face = "bold")) +
+      ggplot2::facet_wrap(~cohort_name) +
+      ggplot2::coord_sf(expand = FALSE) +
+     {if(!5 %in% unique(input.tracks$cohort)) ggplot2::guides(shape = "none")}
+    
+  } # End create_map
   
   if(web){
-    web_p <- purrr::map(.x = plot.list, .f = ~plotly::ggplotly(.x))
+    
+    tracks_p <- purrr::map(.x = tracks.cohort, .f = ~create_map(.x))
+    web_p <- purrr::map(.x = tracks_p, .f = ~plotly::ggplotly(.x))
     purrr::walk(web_p, print)
+    
   } else {
-    print(patchwork::wrap_plots(plot.list) + patchwork::plot_layout(guides = "collect"))
+    
+    tracks_p <- create_map(tracks.cohort)
+    print(tracks_p)
+    
   }
+    
+  # # /////////////////////////////////////////////
+  # plot.list <- purrr::set_names(cohort) |>
+  # purrr::map(.f = ~ {
+  # 
+  #   # Extract movement tracks
+  #   tracks.cohort <- tracks[whale %in% whaleID & cohort_name == cohorts[id == .x, name]]
+  #   
+  #   if(.x == 5){
+  #     new.name <- paste0(unique(tracks.cohort$cohort_name), " + calves")
+  #     # tracks[cohort_name == .y, cohort_name:= new.name]
+  #     tracks.cohort$cohort_name <- new.name
+  #     locs.dead[cohort %in% c(0,5), cohort_name:= new.name]
+  #     # if("data.table" %in% class(locs.birth)) 
+  #     locs.birth[cohort %in% c(0,5), cohort_name:= new.name]
+  #   }
+  # 
+  #   # Plot base map (land)
+  #   base_p <- gg.opts + 
+  #     ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", linewidth = 0.25) +
+  #     theme_narw(vertical = TRUE)
+  # 
+  #   # Produce required plot(s)
+  #   if(bymonth) {
+  #     
+  #     track_p <- 
+  #       base_p +
+  #       ggplot2::geom_path(data = tracks.cohort, 
+  #                          mapping = ggplot2::aes(x = easting, y = northing, group = whale, colour = factor(month)), 
+  #                                              alpha = 0.7, linewidth = lwd) +
+  #       ggplot2::scale_color_manual(values = pals::viridis(12), labels = month.abb) +
+  #       labs(color = NULL) +
+  #       ggplot2::coord_sf(expand = FALSE) +
+  #       ggplot2::facet_wrap(~cohort_name) +
+  #       ggplot2::theme(
+  #         legend.title = element_blank(),
+  #         legend.position = c(1000, -500),
+  #         legend.background = element_rect(fill = "white", colour = NA),
+  #         legend.text = element_text(size = 10),
+  #         legend.key = element_rect(fill = "transparent")) 
+  #     
+  #   } else {
+  #     
+  #     track_p <- 
+  #       
+  #       base_p +
+  #       
+  #       # ............................................................
+  #       # Color by individual
+  #       # ............................................................
+  #       
+  #       {if(bywhale) ggplot2::geom_path(data = tracks.cohort,
+  #               mapping = ggplot2::aes(x = easting, y = northing, group = whale, 
+  #                                      col = factor(whale)), alpha = 0.7, linewidth = lwd) } +
+  #       
+  #       {if(bywhale & length(whaleID) <= 10) ggplot2::scale_color_manual(values = whale)} +
+  #       
+  #       {if(bywhale & length(whaleID) <= 10) ggnewscale::new_scale_colour() }
+  #     
+  #     if(what == "feed"){
+  #       
+  #       track_p <- track_p +
+  #         ggplot2::geom_point(data = tracks.cohort,
+  #                             mapping = ggplot2::aes(x = easting, y = northing, group = whale, colour = factor(feed))) 
+  #       
+  #     } else if(what == "migrate"){
+  #       
+  #       track_p <- track_p +
+  #         ggplot2::geom_path(data = tracks.cohort,
+  #           mapping = ggplot2::aes(x = easting, y = northing, group = whale, colour = factor(north))) +
+  #         
+  #         {if(.x == 5 & "data.table" %in% class(locs.birth))
+  #           ggplot2::geom_point(data = locs.dead[cohort == 0 & whale %in% whaleID & abb %in% cohorts[id == 0, abb]],
+  #                               aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class)))}
+  #       
+  #     } else {
+  #       
+  #       track_p <- track_p +
+  #         
+  #       # ............................................................
+  #       # Same color
+  #       # ............................................................
+  #       
+  #       {if(!bywhale) ggplot2::geom_path(data = tracks.cohort,
+  #            mapping = ggplot2::aes(x = easting, y = northing, group = whale), alpha = 0.7, linewidth = lwd)} +
+  #       
+  #         # ggplot2::facet_wrap(vars(cohort_name)) +
+  #          # Adults / juveniles
+  #       ggplot2::geom_point(data = locs.dead[cohort > 0 & whale %in% whaleID & abb %in% cohorts[id == .x, abb]],
+  #                           aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class))) +
+  #         
+  #         
+  #       # ............................................................
+  #       # Mortality - adults
+  #       # ............................................................
+  #       
+  #       # Adults / juveniles
+  #       ggplot2::geom_point(data = locs.dead[cohort > 0 & whale %in% whaleID & abb %in% cohorts[id == .x, abb]],
+  #                           aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class))) +
+  #       
+  #       # ............................................................
+  #       # Calving events
+  #       # ............................................................
+  #       
+  #       {if(.x == 5 & "data.table" %in% class(locs.birth))
+  #           ggplot2::geom_point(data = locs.dead[cohort == 0 & whale %in% whaleID & abb %in% cohorts[id == 0, abb]],
+  #                               aes(x = easting, y = northing, colour = factor(cause_death), shape = factor(class)))} +
+  #       
+  #       {if(.x == 5 & "data.table" %in% class(locs.birth))
+  #           ggplot2::geom_point(data = locs.birth[whale %in% whaleID], aes(x = easting, y = northing, colour = factor(event)))
+  #       } +
+  #       
+  #       # ............................................................
+  #       # Color and theme options
+  #       # ............................................................
+  #       
+  #       ggplot2::scale_color_manual(values = COLORS) +
+  #       ggplot2::scale_shape_manual(values = SHAPES)
+  # 
+  #   }
+  #    
+  #   track_p <- track_p +
+  #     ggplot2::theme(
+  #         legend.title = element_blank(),
+  #         # legend.position = "none",
+  #         # legend.position = c(1000, -500),
+  #         legend.background = element_rect(fill = "white", colour = NA),
+  #         legend.text = element_text(size = 10),
+  #         legend.key = element_rect(fill = "transparent"))  +
+  #       labs(color = NULL) +
+  #       ggplot2::facet_wrap(~cohort_name) +
+  #       ggplot2::coord_sf(expand = FALSE) +
+  #       ggplot2::theme(plot.margin = unit(c(-0.30,0,0,0), "null"))
+  #   }
+  # 
+  #   print(track_p)
+  # })
+  # 
+  # 
+  # if(web){
+  #   web_p <- purrr::map(.x = plot.list, .f = ~plotly::ggplotly(.x))
+  #   purrr::walk(web_p, print)
+  # } else {
+  #   print(patchwork::wrap_plots(plot.list) + patchwork::plot_layout(guides = "collect"))
+  # }
   
   if(animate){
 
