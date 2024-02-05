@@ -7,7 +7,6 @@
 
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(cpp11)]]
-// [[Rcpp::depends(RcppThread)]]
 
 #include "progressbar.hpp"
 #include <Eigen/Eigen>
@@ -20,7 +19,6 @@
 #include "geodesic.h"
 #include "bioenergetics.h"
 #include <random>
-#include <RcppThread.h>
 using namespace std;
 
 
@@ -1271,8 +1269,8 @@ Rcpp::List movesim(
               }
               
               // Run Bernoulli trials
-              if(animal->alive) animal->mort = R::rbinom(1, 1-p_surv);
-              calves[current_animal].mort = R::rbinom(1, 1-p_surv_calf);
+              if(animal->mort == 0) animal->mort = R::rbinom(1, 1-p_surv);
+              if(calves[current_animal].mort==0) calves[current_animal].mort = R::rbinom(1, 1-p_surv_calf);
               
               if(animal->alive && animal->mort){
                 
@@ -1969,6 +1967,8 @@ Rcpp::List movesim(
           } // End if stressors
         } // End if alive
       } // End if current_day > 0
+      
+      // std::cout << "Day: " << current_day << " | Animal:" << current_animal << std::endl;
       
       // ------------------------------------------------------------
       // STORE VALUES in output matrices
