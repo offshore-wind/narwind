@@ -141,13 +141,11 @@ summary.narwsim <- function(obj,
   gamdat <- obj$gam$dat[whale %in% whaleID,]
   dead.df <- obj$dead[whale %in% whaleID,]
   
-  if(5 %in% cohortID){
-    gamdat <- gamdat[cohort %in% c(0,cohort),]
-    dead.df <- dead.df[cohort %in% c(0,cohort),]
-  } else {
-    gamdat <- gamdat[cohort %in% cohortID,]
-    dead.df <- dead.df[cohort %in% cohortID,]
-  }
+  if(5 %in% cohortID) cohortID <- c(0, cohortID)
+  
+  gamdat <- gamdat[cohort %in% cohortID,]
+  dead.df <- dead.df[cohort %in% cohortID,]
+  
   
   cat("=============================================================\n")
   cat("SIMULATIONS\n")
@@ -186,20 +184,21 @@ summary.narwsim <- function(obj,
       dplyr::rename(cohort = name) |> 
       format_dt(direction = "row", N = n.ind)
     
-    if(5 %in% cohortID){
-    n.dead.calves <- gamdat[whale %in% whaleID & cohort == 0,
-                     list(alive = sum(alive == 1)), name] |>
-      dplyr::mutate(dead = nrow(gamdat[whale %in% whaleID & cohort ==0 & event == "birth"]) - alive) |> 
-      format_dt(direction = "row", N = nbirths) |> 
-      dplyr::rename(cohort = name)
-    
-    print(knitr::kable(data.table::rbindlist(list(n.dead.bycohort, n.dead.calves)), format = "simple"))
-    
-    } else {
+    # if(5 %in% cohortID){
+    #   
+    # n.dead.calves <- gamdat[whale %in% whaleID & cohort == 0,
+    #                  list(alive = sum(alive == 1)), name] |>
+    #   dplyr::mutate(dead = nrow(gamdat[whale %in% whaleID & cohort ==0 & event == "birth"]) - alive) |> 
+    #   format_dt(direction = "row", N = nbirths) |> 
+    #   dplyr::rename(cohort = name)
+    # 
+    # print(knitr::kable(data.table::rbindlist(list(n.dead.bycohort, n.dead.calves)), format = "simple"))
+    # 
+    # } else {
       
       print(knitr::kable(n.dead.bycohort, format = "simple"))
     
-    }
+    # }
     
     cat("\n+++++++++++ Mortality (by source) +++++++++++")
     
@@ -226,7 +225,7 @@ summary.narwsim <- function(obj,
       n.dead.region <- format_dt(n.dead.region, relative = relative, N = n.ind)
       n.dead.region <- split(n.dead.region, f = factor(n.dead.region$cause_death))
       
-      n.dead.cause <- dead.df[, list(n = .N), list(abb, cause_death)]
+      n.dead.cause <- dead.df[cohort %in% cohortID & whale %in% whaleID, list(n = .N), list(abb, cause_death)]
       n.dead.cause <- format_dt(n.dead.cause, relative = FALSE, N = n.ind) |> 
         dplyr::rename(N = n, cohort = abb)
       
@@ -269,12 +268,12 @@ summary.narwsim <- function(obj,
         
         cat("DOB: ", lubridate::day(dob$mean_DOB), 
             " ", as.character(lubridate::month(dob$mean_DOB, label = TRUE, abbr = TRUE)),
-            " [",
-            lubridate::day(dob$min_DOB), " ",
-            as.character(lubridate::month(dob$min_DOB, label = TRUE, abbr = TRUE)), " – ",
-            lubridate::day(dob$max_DOB), " ",
-            as.character(lubridate::month(dob$max_DOB, label = TRUE, abbr = TRUE)),
-            "]\n", sep = "")
+            # " [",
+            # lubridate::day(dob$min_DOB), " ",
+            # as.character(lubridate::month(dob$min_DOB, label = TRUE, abbr = TRUE)), " – ",
+            # lubridate::day(dob$max_DOB), " ",
+            # as.character(lubridate::month(dob$max_DOB, label = TRUE, abbr = TRUE)),
+            "\n", sep = "")
         
         cat("\n")
       } else {
@@ -311,7 +310,7 @@ summary.narwsim <- function(obj,
         dplyr::mutate(animal = gsub("bc_calf", "Calves", animal)) |> 
         dplyr::mutate(animal = gsub("bc", "Adults", animal)) |> 
         data.table::as.data.table()
-      
+
       dates.tbl <- data.table::data.table(day = unique(bodycondition.df$day), date = get_dates(strip = FALSE))
       bodycondition.df[dates.tbl, on = 'day', date := i.date]
       bodycondition.df <- bodycondition.df |> dplyr::filter(day > 92) |> 
@@ -319,18 +318,16 @@ summary.narwsim <- function(obj,
       # bodycondition.df[, date:=lubridate::ymd(gsub(pattern = "00", replacement = "01", x = date))]
       
       bodycondition.plot <- 
-        purrr::map(.x = cohort, .f = ~{
+        purrr::map(.x = cohortID[cohortID>0], .f = ~{
           ggplot2::ggplot(data = bodycondition.df |> dplyr::filter(cohort == .x & day > 0),
                           aes(x = date, y = bc, group = whale)) +
             ggplot2::geom_path(col = "black", alpha = 0.15) +
             {if(!.x == 5) ggplot2::facet_wrap(vars(cohort_name), scales = 'free') } +
             {if(.x == 5) ggplot2::facet_grid(vars(animal), vars(cohort_name), scales = 'free') } +
             theme_narw() +
-            ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90),
-                           axis.title.x = ggplot2::element_blank()) +
+            ggplot2::theme(axis.title.x = ggplot2::element_blank()) +
             ylab("Body condition") + 
             ggplot2::scale_x_date(breaks = xd, date_labels = "%b") +
-            # ggplot2::scale_x_date(date_breaks = "4 weeks", date_labels = "%b") +
             ggplot2::scale_y_continuous(
               limits = ~ c(0, ceiling(max(.x))),
               breaks = ~ pretty(.x, 5),
@@ -338,12 +335,12 @@ summary.narwsim <- function(obj,
             ggplot2::geom_hline(yintercept = 0.05, col = "#cb4154")
         })
       
-      if(length(cohort) == 1){
+      if(length(cohortID[cohortID>0]) == 1){
         plot(bodycondition.plot[[1]])
       } else {
         bcp <- patchwork::wrap_plots(bodycondition.plot, 
-                              nrow = ifelse(length(cohort) == 2, 1, 2), 
-                              ncol = ifelse(length(cohort) == 2, 1, 3))
+                              nrow = ifelse(length(cohortID) == 2, 1, 2), 
+                              ncol = ifelse(length(cohortID) == 2, 1, 3))
         print(bcp)
       }
 
@@ -754,13 +751,13 @@ summary.narwsim <- function(obj,
       dplyr::select(entangled, rate) |> 
       dplyr::mutate(entangled = ifelse(entangled == 0, "no", "yes"))
     
-    if(5 %in% cohortID){
-    entgl.overall.calf <- suppressWarnings(entgl.rate.calf |> 
-      janitor::tabyl(var1 = entangled)) |> 
-      dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
-      dplyr::select(entangled, rate) |> 
-      dplyr::mutate(entangled = ifelse(entangled == 0, "no", "yes"))
-    }
+    # if(5 %in% cohortID){
+    # entgl.overall.calf <- suppressWarnings(entgl.rate.calf |>
+    #   janitor::tabyl(var1 = entangled)) |>
+    #   dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |>
+    #   dplyr::select(entangled, rate) |>
+    #   dplyr::mutate(entangled = ifelse(entangled == 0, "no", "yes"))
+    # }
     
     #'---------------------------------------
     # Entanglement rates by cohort
@@ -804,14 +801,14 @@ summary.narwsim <- function(obj,
       dplyr::select(position, rate) |> 
       dplyr::mutate(position = ifelse(position == 0, "body", "head"))
     
-    if(5 %in% cohortID){
-    head.overall.calf <- suppressWarnings(entgl.head.calf |>
-      janitor::tabyl(var1 = anterior)) |> 
-      dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
-      dplyr::rename(position = anterior) |> 
-      dplyr::select(position, rate) |> 
-      dplyr::mutate(position = ifelse(position == 0, "body", "head"))
-    }
+    # if(5 %in% cohortID){
+    # head.overall.calf <- suppressWarnings(entgl.head.calf |>
+    #   janitor::tabyl(var1 = anterior)) |> 
+    #   dplyr::mutate(rate = paste0(round(100 * percent, 1), "% (", n, ")")) |> 
+    #   dplyr::rename(position = anterior) |> 
+    #   dplyr::select(position, rate) |> 
+    #   dplyr::mutate(position = ifelse(position == 0, "body", "head"))
+    # }
 
     head.bycohort <- suppressMessages(entgl.head |>
                                         janitor::tabyl(var1 = cohort, var2 = anterior)) |>
@@ -824,7 +821,7 @@ summary.narwsim <- function(obj,
     #'---------------------------------------
     
     entgl.events <- entgl.rate[n_events > 0, list(
-      `No. entanglements` =
+      `No. events per animal` =
         paste0(
           round(mean(n_events), 2),
           " (±",
@@ -855,6 +852,24 @@ summary.narwsim <- function(obj,
       tidyr::unnest(cols = c(value)) |>
       dplyr::rename(cohort = name) |> data.table::as.data.table()
     
+    if(5 %in% cohortID){
+      
+      entgl.sev.calf <- suppressWarnings(sim[[cohorts[id==5,abb]]][
+        day > 0 & is_entgl_calf == 1,
+        list(entgl = sum(is_entgl_calf),
+             minor = sum(entgl_sev_calf == 0),
+             moderate = sum(entgl_sev_calf == 1),
+             severe = sum(entgl_sev_calf == 2),
+             born = max(born)), whale] |>
+          dplyr::mutate(cohort = "c(m,f)") |> 
+          dplyr::relocate(cohort, .before = "whale") |> 
+          dplyr::filter(born == 1) |> 
+          dplyr::select(-born))
+      
+      entgl.sev <- data.table::rbindlist(list(entgl.sev, entgl.sev.calf))
+    }
+    
+    
     entgl.eventbycat <- entgl.sev |>
       dplyr::select(-entgl) |> 
       tidyr::pivot_longer(!c(cohort,whale), names_to = "severity", values_to = "count") |> 
@@ -865,23 +880,7 @@ summary.narwsim <- function(obj,
       tidyr::pivot_wider(names_from = severity, values_from = n) |> 
       format_dt(direction = "row", relative = relative, N = n.ind)
     
-    if(5 %in% cohortID){
-      
-      entgl.sev.calf <- suppressWarnings(sim[[cohorts[id==5,abb]]][
-        day > 0 & is_entgl_calf == 1,
-        list(entgl = sum(is_entgl_calf),
-             minor = sum(entgl_sev_calf == 0),
-             moderate = sum(entgl_sev_calf == 1),
-             severe = sum(entgl_sev_calf == 2),
-             born = max(born)), whale] |>
-        dplyr::mutate(cohort = "c(m,f)") |> 
-        dplyr::relocate(cohort, .before = "whale") |> 
-        dplyr::filter(born == 1) |> 
-        dplyr::select(-born))
-      
-      entgl.sev <- data.table::rbindlist(list(entgl.sev, entgl.sev.calf))
-    }
-   
+    
     #'---------------------------------------
     # Entanglement duration
     #'---------------------------------------
