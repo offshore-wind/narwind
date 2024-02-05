@@ -119,7 +119,7 @@ start_mouth <- function(cohort, age) {
 #' Initialize body condition
 #' @name start_bcondition
 #' @description Performs a random draw from a beta distribution to initialize 
-#' the body condition of simulated animals, taken as the ration of fat mass to total mass.
+#' the body condition of simulated animals, taken as the ratio of fat mass to total mass.
 #' @param age Age in years
 #' @param shape1 First shape parameter of the beta distribution
 #' @param shape2 Second shape parameter of the beta distribution
