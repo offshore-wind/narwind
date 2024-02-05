@@ -15,5 +15,5 @@ start_bcondition(cohort)
 }
 \description{
 Performs a random draw from a beta distribution to initialize 
-the body condition of simulated animals, taken as the ration of fat mass to total mass.
+the body condition of simulated animals, taken as the ratio of fat mass to total mass.
 }

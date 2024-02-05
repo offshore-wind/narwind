@@ -108,7 +108,7 @@ narw <- function(nsim = 1e3,
   starvation <- 0.05
   
   # Body condition at which starvation-induced mortality increases
-  starvation_begin <- 0.15
+  starvation_begin <- 0.10
   
   # Default values
   # Starvation threshold expressed as relative blubber mass
@@ -123,7 +123,7 @@ narw <- function(nsim = 1e3,
   risk.scalar <- 1e-07
   
   # Scalar for prey surfaces
-  prey.scalar <- 40
+  prey.scalar <- 100
   
   # Step size for movement model
   step.size <- 120
@@ -791,7 +791,9 @@ narw <- function(nsim = 1e3,
   
   # Update values
   gam.dt[cohort == 0, cohort_name:= "Calves (male, female)"]
-  gam.dt[event == "death", cause_death:= ifelse(strike == 1, "strike", ifelse(starve == 1, "starve", ifelse(died == 1, "other", "none")))]
+  gam.dt[event == "death", cause_death:= ifelse(strike == 1, "strike",
+                                                ifelse(starve == 1, "starve",
+                                                ifelse(died == 1, "other", "none")))]
   
   if(5 %in% cohort){
 
