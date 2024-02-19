@@ -5,6 +5,7 @@
 #' @param obj An object of class \code{narwsim}, as returned by \code{\link{narw}}.
 #' @param what Character, or character vector, defining which data to summarize. The default (\code{"all"}) returns a full summary of all model components. See Details for further information.
 #' @param relative Logical. If \code{TRUE}, percentages are calculated relative to class totals. Defaults to \code{FALSE}.
+#' @param quintile Logical. If \code{TRUE}, body condition plots (under the "health" section) are based on quintiles of the data.
 #' @param plot Logical. If \code{TRUE}, additional plots are produced.
 #' @param ... Optional arguments for subsetting.
 #' @details An overview of individual model components can be obtained as follows:
@@ -86,6 +87,7 @@
 summary.narwsim <- function(obj, 
                             what = "all", 
                             relative = FALSE,
+                            quintile = FALSE,
                             plot = TRUE,
                             ...){
   
@@ -285,10 +287,6 @@ summary.narwsim <- function(obj,
     
     ## Body condition ---------------------------------------------------------------
     
-    # .....................................................
-    # BODY CONDITION
-    # .....................................................
-    
     if(plot){
       
       # Define dates for x-axis
@@ -310,20 +308,44 @@ summary.narwsim <- function(obj,
         dplyr::mutate(animal = gsub("bc_calf", "Calves", animal)) |> 
         dplyr::mutate(animal = gsub("bc", "Adults", animal)) |> 
         data.table::as.data.table()
-
+      
       dates.tbl <- data.table::data.table(day = unique(bodycondition.df$day), date = get_dates(strip = FALSE))
       bodycondition.df[dates.tbl, on = 'day', date := i.date]
       bodycondition.df <- bodycondition.df |> dplyr::filter(day > 92) |> 
         dplyr::mutate(date = lubridate::ymd(date))
-      # bodycondition.df[, date:=lubridate::ymd(gsub(pattern = "00", replacement = "01", x = date))]
+      
+      if(quintile){
+        
+      # Assign whales to quintiles
+      quintile.df <- bodycondition.df[day == 93,]
+      quintile.df[, q := cut(bc,
+       breaks = quantile(bc, c(0, 0.2, 0.4, 0.6, 0.8, 1)),
+       labels = as.character(1:5),
+       right = FALSE,
+       include.lowest = TRUE
+     )]
+      
+      bodycondition.df <- dplyr::left_join(bodycondition.df, quintile.df[, list(whale, q)], by = "whale")
+      
+      }
       
       bodycondition.plot <- 
         purrr::map(.x = cohortID[cohortID>0], .f = ~{
-          ggplot2::ggplot(data = bodycondition.df |> dplyr::filter(cohort == .x & day > 0),
-                          aes(x = date, y = bc, group = whale)) +
-            ggplot2::geom_path(col = "black", alpha = 0.15) +
+          
+          bcdat <- bodycondition.df[cohort == .x & day > 0]
+          
+          if(quintile) bcdat <- bcdat[, list(bc_mean = mean(bc), 
+                                             animal = unique(animal),
+                                             cohort_name = unique(cohort_name)), list(date, q)]
+          
+          ggplot2::ggplot(data = bcdat,
+                          if (quintile) {
+                            aes(x = date, y = bc_mean, group = q, colour = q)
+                          } else {
+                          aes(x = date, y = bc, group = whale)}) +
+            ggplot2::geom_path(alpha = ifelse(quintile, 1, 0.15), linewidth = ifelse(quintile, 0.5, 0.25)) +
             {if(!.x == 5) ggplot2::facet_wrap(vars(cohort_name), scales = 'free') } +
-            {if(.x == 5) ggplot2::facet_grid(vars(animal), vars(cohort_name), scales = 'free') } +
+            {if(.x == 5) ggplot2::facet_grid(vars(animal), vars(cohort_name), scales = 'free')} +
             theme_narw() +
             ggplot2::theme(axis.title.x = ggplot2::element_blank()) +
             ylab("Body condition") + 
@@ -331,8 +353,10 @@ summary.narwsim <- function(obj,
             ggplot2::scale_y_continuous(
               limits = ~ c(0, ceiling(max(.x))),
               breaks = ~ pretty(.x, 5),
-              expand = c(0, 0))
-            # ggplot2::geom_hline(yintercept = 0.05, col = "#cb4154")
+              expand = c(0, 0)) +
+            {if(quintile) scale_colour_manual(values = pals::viridis(5))} +
+            {if(quintile) ggplot2::theme(legend.position = "none")} 
+          
         })
       
       if(length(cohortID[cohortID>0]) == 1){

@@ -12,6 +12,13 @@ load_functions <- function(){
   cat("Done!\n")
 }
 
+# ++ [FUNCTION] Source C++ code and required functions
+source_pkg <- function(){
+  Rcpp::compileAttributes()
+  Rcpp::sourceCpp("src/simtools.cpp")
+  suppressWarnings(source("R/narw.R"))
+}
+
 # MODEL ------------------------------------------------------
 
 # ++ [FUNCTION] Generate scenario objects for use in the simulator

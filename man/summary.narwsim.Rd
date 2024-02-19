@@ -4,7 +4,14 @@
 \alias{summary.narwsim}
 \title{Model summary and diagnostics}
 \usage{
-\method{summary}{narwsim}(obj, what = "all", relative = FALSE, plot = TRUE, ...)
+\method{summary}{narwsim}(
+  obj,
+  what = "all",
+  relative = FALSE,
+  quintile = FALSE,
+  plot = TRUE,
+  ...
+)
 }
 \arguments{
 \item{obj}{An object of class \code{narwsim}, as returned by \code{\link{narw}}.}
@@ -12,6 +19,8 @@
 \item{what}{Character, or character vector, defining which data to summarize. The default (\code{"all"}) returns a full summary of all model components. See Details for further information.}
 
 \item{relative}{Logical. If \code{TRUE}, percentages are calculated relative to class totals. Defaults to \code{FALSE}.}
+
+\item{quintile}{Logical. If \code{TRUE}, body condition plots (under the "health" section) are based on quintiles of the data.}
 
 \item{plot}{Logical. If \code{TRUE}, additional plots are produced.}
 
