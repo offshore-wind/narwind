@@ -1007,6 +1007,7 @@ colour_breaks <- function(dat){
 
 # UTILITIES ------------------------------------------------------
 
+# ++ [FUNCTION] Print current date and time
 date_time <- function(){
   cat("Date:", as.character(Sys.Date()), "\n")
   now.time <- Sys.time() |> 
@@ -1017,6 +1018,9 @@ date_time <- function(){
   cat("Time: ", now.time, " (", timezone, ")\n\n", sep = "")
 }
 
+# ++ [FUNCTION] Run basic checks on simulator outputs
+# ++ [PARAM] obj –– An object of class <narwsim>, as returned by <narw>
+# ++ [RETURN] Prints warnings if errors are detected
 check <- function(obj){
   
   max_bc <- purrr::map(.x = obj[["sim"]], .f = ~max(.x$bc)) |> do.call(what = c)
@@ -1046,6 +1050,9 @@ check <- function(obj){
   
 }
 
+# ++ [FUNCTION] Add a label to a simulation
+# ++ [PARAM] obj –– An object of class <narwsim>, as returned by <narw>
+# ++ [PARAM] lb –– Character. Label to assign to the object
 label <- function(obj, lb){
   if(!inherits(obj, "narwsim") & !inherits(obj, "narwproj")) 
     stop("Input object must be of class <narwsim> or <narwproj>")
@@ -1053,6 +1060,8 @@ label <- function(obj, lb){
   return(obj)
 }
 
+# ++ [FUNCTION] Text-based timeline of wind farm development activities
+# ++ [PARAM] schedule –– Vector of integers indicating which phase of development takes place in which year
 proj_timeline <- function(schedule){
   
   operator <- " -----> "
@@ -1082,133 +1091,35 @@ proj_timeline <- function(schedule){
   cat("\n\n")
 }
 
-update_pkg <- function(){
-  
-  fromPath <- getwd()
-  toPath <- "../narwind"
-  
-  # R files
-  R.files <- list.files(path = "R/", recursive = FALSE)
-  R.files <- R.files[!R.files %in% c("narwinddev-package.R", "zzz.R", "RcppExports.R", "data_targets.R")]
-  R.files <- file.path("R", R.files)
-  
-  # C++ files
-  C.files <- list.files(path = "src/", recursive = FALSE)
-  C.files <- C.files[!C.files %in% c("backup", "narwinddev.so", "RcppExports.cpp", "RcppExports.o", "simtools.o")]
-  C.files <- file.path("src", C.files)
-  
-  # Package help files (including datasets)
-  man.files <- list.files(path = "man/", recursive = FALSE)
-  man.files <- man.files[!man.files %in% c("narwinddev-package.Rd", "narwinddev.Rd")]
-  man.files <- file.path("man", man.files)
-  
-  # Data files
-  dat.files <- list.files(path = "data/", recursive = FALSE)
-  dat.files <- dat.files[!dat.files %in% c("calanus", "densitymaps", "dirichlet", "elicitation", "gear", "parameters", "regions", "regions", "sightings", "vessels", "windfarms", "basemap", "popviability", "vignettes", "condition")]
-  dat.files <- file.path("data", dat.files)
-  
-  # Web files
-  pkgdown.files <- list.files(path = "pkgdown/", recursive = FALSE)
-  pkgdown.files <- file.path("pkgdown", pkgdown.files)
-  
-  # Package files
-  root.files <- c("README.md", "README.Rmd", "_targets.yaml", "_targets.R", "DESCRIPTION")
-  
-  # Vignette files
-  vig.files <- list.files(path = "vignettes/", recursive = FALSE)
-  vig.files <- file.path("vignettes", vig.files)
-  
-  # All files
-  allfiles <- c(R.files, C.files, man.files, dat.files, pkgdown.files, root.files, vig.files)
-  
-  pb <- progress::progress_bar$new(total = length(allfiles), 
-                                   width = 80, 
-                                   format = "Processing changes [:bar] :percent",
-                                   clear = TRUE)
-  
-  file.changes <- vector(mode = "list", length = length(allfiles))
-  
-  for(f in seq_along(allfiles)){
-    pb$tick()
-    # If file does not exist in target directory
-    if(!file.exists(file.path(toPath, allfiles[f]))){
-      file.changes[[f]] <- allfiles[f]
-    } else {
-      isSame <- unname(tools::md5sum(file.path(fromPath, allfiles[f])) == tools::md5sum(file.path(toPath, allfiles[f])))
-      if(!isSame){
-        file.changes[[f]] <- allfiles[f]
-      }
-    }
-  }
-  
-  file.changes <- purrr::compact(file.changes)
-  
-  
-  pb <- progress::progress_bar$new(total = length(file.changes), 
-                                   width = 80, 
-                                   format = "Copying files [:bar] :percent",
-                                   clear = TRUE)
-  
-  for (g in 1:length(file.changes)) {
-    pb$tick()
-    invisible(file.copy(from = file.path(fromPath, file.changes[[g]]), 
-                        to = file.path(toPath, file.changes[[g]]), 
-                        overwrite = TRUE))
-  }
-  
-  if(length(file.changes) == 0){
-    
-    cat("All files are up to date!")
-    
-  } else {
-    
-    cat("Updated files:\n")
-    cat("--------------------\n")
-    purrr::walk(.x = file.changes, .f = ~cat(.x, "\n"))
-    
-  }
-  
-  # Update narw.R
-  narw.txt <- readLines("R/narw.R")
-  stringr::str_replace(string = narw.txt,
-                       pattern = ".packages = c\\(\"Rcpp\"\\)",
-                       replacement = ".packages = c\\(\"Rcpp\", \"narwind\"\\)") |>
-  stringr::str_replace(pattern = "Rcpp::sourceCpp\\(\"src/simtools.cpp\"\\)",
-                         replacement = "") |>
-    writeLines(file.path(toPath, "R", "narw.R"))
-
-  # Update DESCRIPTION
-  desc.txt <- readLines("DESCRIPTION")
-  stringr::str_replace(string = desc.txt,
-                       pattern = "narwinddev",
-                       replacement = "narwind") |>
-    writeLines(file.path(toPath, "DESCRIPTION"))
-  
-
-}
-
+# ++ [FUNCTION] Split vector at NA values and zeroes
+# ++ [PARAM] x –– Input vector
 split_NAzero <- function(x){
   idx <- 1 + cumsum( is.na(x) | x == 0)
   not.na <- !is.na(x) & !x == 0
   split(x[not.na], idx[not.na])
 }
 
+# ++ [FUNCTION] Split vector at NA values
+# ++ [PARAM] x –– Input vector
 split_NA <- function(x){
   idx <- 1 + cumsum(is.na(x))
   not.na <- !is.na(x)
   split(x[not.na], idx[not.na])
 }
 
+# ++ [FUNCTION] Simple tick mark
 tickmark <- function(){
   return("[ok]")
   # return("\U2714")
 }
 
+# ++ [FUNCTION] Simple cross mark
 crossmark <- function(){
   return("[x]")
   # return("\U2717")
 }
 
+# ++ [FUNCTION] Print current status in console 
 console <- function(msg, suffix = NULL){
   if(is.null(suffix)){
     cat("\r", paste0(msg, " ..."), sep = "")
@@ -1223,29 +1134,12 @@ console <- function(msg, suffix = NULL){
   }
 }
 
-save_params <- function(){
-  rio::convert(in_file = "/Users/philbouchet/OneDrive - University of St Andrews/BOEM/project/WP1_synthesis/BOEM_140M0121C0008_ModelParameters_3.0.xlsx",
-               out_file = "/Volumes/GoogleDrive/My Drive/Documents/git/narwind/data/parameters/BOEM_140M0121C0008_ModelParameters.csv")
-  targets::tar_delete(params)
-  targets::tar_make(params)
-  save_object("params", TRUE, TRUE)
-}
-
-do.align <- function(var = "preyconc", lyr = dummy_prey){
-  
-  alive <- which(m$sim[[1]][, alive][-1] == 1)
-  fromSim <- unname(unlist(m$sim[[1]][, var, with = FALSE])[-1])[alive]
-  fromRast <- numeric(length(fromSim))
-  for(j in alive){
-    xy <- m$sim[[1]][day==j, list(easting, northing)]
-    mo <- m$sim[[1]][day==j, month]
-    r <- lyr[[month.abb[mo]]]
-    if(!inherits(r, "RasterLayer")) r <- raster::raster(r)
-    fromRast[j] <- raster::extract(x = r, y = xy)
-  }
-  identical(fromSim, fromRast)
-}
-
+# ++ [FUNCTION] Generate date sequence for the simulation
+# ++ [PARAM] start.month –– Integer indicating the month in which the simulation begins.
+# ++ [PARAM] ndays –– Integer. Duration of the simulation in days.
+# ++ [PARAM] strip –– Logical. If TRUE, remove year from output date.
+# ++ [PARAM] gantt –– Logical. If TRUE, update year for use in Shiny Gantt chart.
+# ++ [RETURN] A character vector of dates
 get_dates <- function(start.month = 10, ndays = 457, strip = TRUE, gantt = FALSE){
   
   thisyear <- lubridate::year(lubridate::now())
@@ -1270,12 +1164,7 @@ get_dates <- function(start.month = 10, ndays = 457, strip = TRUE, gantt = FALSE
   return(date_seq)
 }
 
-quiet <- function(x) { 
-  sink(tempfile()) 
-  on.exit(sink()) 
-  invisible(force(x)) 
-} 
-
+# ++ [FUNCTION] Fix paths to vignette assets (images)
 fix_paths_vignettes <- function(vignette.name = "narwind"){
   vignette.path <- file.path("./docs/articles", paste0(vignette.name, ".html"))
   tx  <- readLines(vignette.path)
@@ -1283,6 +1172,11 @@ fix_paths_vignettes <- function(vignette.name = "narwind"){
   writeLines(tx_mod, con = vignette.path)
 }
 
+# ++ [FUNCTION] Simple plots of simulator outputs
+# ++ [PARAM] obj –– An object of class <narwsim>, as returned by <narw>.
+# ++ [PARAM] cohort –– Cohort label
+# ++ [PARAM] whaleID –– Individual ID number.
+# ++ [PARAM] calf –– Logical. If TRUE, includes calf parameters.
 inspect <- function(obj, cohort = "ad(f,l)", whaleID = 1, calf = FALSE){
   pdf(file = "allplots.pdf")
   par(mfrow = c(3,3))
@@ -1299,6 +1193,11 @@ inspect <- function(obj, cohort = "ad(f,l)", whaleID = 1, calf = FALSE){
   dev.off()
 }
 
+# ++ [FUNCTION] Format data.tables for use in <summary> by adding %
+# ++ [PARAM] dt –– Input data.table
+# ++ [PARAM] relative –– Logical. If TRUE, percentages are calculated relative to class totals.
+# ++ [PARAM] N –– Total to use.
+# ++ [PARAM] direction –– One of "row" or "col". Indicates how totals are calculated.
 format_dt <- function(dt, relative = FALSE, N, direction = "col") {
   if (nrow(dt) > 0) {
     if (relative) {
@@ -1320,59 +1219,4 @@ format_dt <- function(dt, relative = FALSE, N, direction = "col") {
   } else {
     dt
   }
-}
-
-array2dt <- function(a){
-  y <- aperm(a, c(1, 3, 2))
-  dim(y) <- c(prod(dim(a)[-2]), dim(a)[2])
-  y <- data.table::data.table(y)
-  names(y) <- colnames(a)
-  return(y)
-}
-
-rescale <- function(x, x.min = NULL, x.max = NULL, new.min = 0, new.max = 1) {
-  
-  if(is.null(x.min)){
-    if(inherits(x, "RasterLayer")){
-      x.min <- raster::cellStats(x, "min")
-    } else if(is.numeric(x)){
-      x.min <- min(x, na.rm = TRUE)
-    }
-  }
-  
-  if(is.null(x.max)){
-    if(inherits(x, "RasterLayer")){
-      x.max <- raster::cellStats(x, "max")
-    } else if(is.numeric(x)){
-      x.max <- max(x, na.rm = TRUE)
-    }
-  }
-  
-  out <- new.min + (x - x.min) * ((new.max - new.min) / (x.max - x.min))
-  
-  return(out)
-}
-
-save_object <- function(obj, tg = TRUE, internal = FALSE) {
-  if (internal) {
-    tmp_env <- new.env(hash = FALSE)
-    load("R/sysdata.rda", envir = tmp_env)
-    if(tg) dat <- suppressWarnings(targets::tar_read_raw(obj)) else dat <- get(obj, envir = .GlobalEnv)
-    tmp_env[[obj]] <- dat
-    save(list = names(tmp_env), file = "R/sysdata.rda", envir = tmp_env)
-    # usethis::use_data(daylight, density_support, doseresponse, entgl_d, params, regions, regions_m, support_poly, wL, world, internal = TRUE, overwrite = TRUE)
-  } else {
-    if(tg) suppressWarnings(targets::tar_load(obj))
-    for (i in obj) {
-      file.name <- paste0("data/", i, ".rda")
-      if (file.exists(file.name)) file.remove(file.name)
-      do.call(save, c(lapply(i, as.name), file = paste0("data/", i, ".rda")))
-    }
-  }
-}
-
-format_table <- function(df, top = TRUE, bottom = TRUE, sign = "-"){
-  # dashes <- purrr::map_dbl(.x = names(df), .f = ~nchar(.x))
-  # dashes <- purrr::map(.x = dashes, .f = ~paste0(rep(sign, .x), collapse = ""))
-  rbind(df[1:nrow(df) - 1,], c("---", rep("",ncol(df)-1)), df[nrow(df),])
 }
