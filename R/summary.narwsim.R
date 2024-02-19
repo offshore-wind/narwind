@@ -86,7 +86,7 @@
 summary.narwsim <- function(obj, 
                             what = "all", 
                             relative = FALSE,
-                            plot = FALSE,
+                            plot = TRUE,
                             ...){
   
   options(pillar.sigfig = 7)
@@ -331,8 +331,8 @@ summary.narwsim <- function(obj,
             ggplot2::scale_y_continuous(
               limits = ~ c(0, ceiling(max(.x))),
               breaks = ~ pretty(.x, 5),
-              expand = c(0, 0)) +
-            ggplot2::geom_hline(yintercept = 0.05, col = "#cb4154")
+              expand = c(0, 0))
+            # ggplot2::geom_hline(yintercept = 0.05, col = "#cb4154")
         })
       
       if(length(cohortID[cohortID>0]) == 1){
@@ -343,45 +343,6 @@ summary.narwsim <- function(obj,
                               ncol = ifelse(length(cohortID) == 2, 1, 3))
         print(bcp)
       }
-
-      # Growth ---------------------------------------------------------------
-      
-      # # .....................................................
-      # # GROWTH
-      # # .....................................................
-      # 
-      # body_growth_l <-
-      #  purrr::map(
-      #    .x = cohort,
-      #    .f = ~ growth_curve(param = "length", 
-      #                        obj = obj, 
-      #                        cohortID = .x, 
-      #                        whaleID = whale,
-      #                        ylabel = "Body length (m)")
-      #  )
-      # 
-      # if (4 %in% cohortID) {
-      #   body_growth_l <-
-      #     append(body_growth_l, 
-      #            list(growth_curve(param = "fetus_l", 
-      #                              obj = obj, 
-      #                              cohortID = 4, 
-      #                              whaleID = whale,
-      #                              ylabel = "Body length (m)")))
-      # }
-      # 
-      # if (5 %in% cohortID) {
-      #   body_growth_l <-
-      #     append(body_growth_l, 
-      #            list(growth_curve(param = "length_calf", 
-      #                              obj = obj, 
-      #                              cohortID = 5, 
-      #                              whaleID = whale,
-      #                              ylabel = "Body length (m)")))
-      # }
-      # 
-      # growth.plot <- patchwork::wrap_plots(purrr::discard(.x = body_growth_l, .p = ~is.list(.x) & length(.x) == 1))
-      # print(growth.plot)
       
       } # End plot = TRUE
   } # End what == health
@@ -542,7 +503,7 @@ summary.narwsim <- function(obj,
     dplyr::left_join(x = tibble::tibble(region = sort(regions$region)), by = "region") |> 
     dplyr::mutate(n = dplyr::coalesce(n, 0), cohort = .x)
     }) |> do.call(what = rbind) |> 
-    dplyr::mutate(n = glue::glue("{format(round(100*n/n.ind, 1), nsmall = 1)}% ({n})")) |> 
+    dplyr::mutate(n = paste0(round(100*n/n.ind, 1), "% (", n, ")")) |> 
     tidyr::pivot_wider(names_from = cohort, values_from = n)
 
   days.df <- purrr::map(.x = cohort.ab, .f = ~{

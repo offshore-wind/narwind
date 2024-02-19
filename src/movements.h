@@ -10,7 +10,7 @@
 // [[Rcpp::plugins(cpp11)]]
 
 // Standard deviations of the Normal half-step function
-double sigma_move(int r){
+double sigma_move(int region){
   
   // Standard deviation of Normal half-step density given by 
   // sigma = mean step length / sqrt(pi)
@@ -23,11 +23,11 @@ double sigma_move(int r){
   double sigma_nurse = 18.5/std::sqrt(M_PI);
   
   // Travel
-  if(r == 7 | r == 8){ // MIDA and SCOS
+  if(region == 7 | region == 8){ // MIDA and SCOS
     return sigma_travel;
-  } else if(r == 9){ // SEUS
+  } else if(region == 9){ // SEUS
     return sigma_nurse;
-  } else { // BOF, CABOT, CCB, GOM, GSL, SNE
+  } else { // Elsewhere
     return sigma_feed;
   }
 }
@@ -80,39 +80,33 @@ public:
   }
   
   void update(AnimalType & animal, 
-              EnvironmentType & environment, 
-              bool norm, 
+              EnvironmentType & environment,
               int region,
               Eigen::MatrixXd support,
               Eigen::VectorXd limits, 
-              Eigen::VectorXd limits_daylight,
               Eigen::VectorXd limits_regions,
               Eigen::VectorXd limits_prey,
               Eigen::VectorXd limits_fishing,
               Eigen::VectorXd limits_vessels,
               Eigen::VectorXd limits_noise,
               Eigen::VectorXd resolution,
-              Eigen::VectorXd resolution_daylight,
               Eigen::VectorXd resolution_regions,
               Eigen::VectorXd resolution_prey,
               Eigen::VectorXd resolution_fishing,
               Eigen::VectorXd resolution_vessels,
               Eigen::VectorXd resolution_noise){
 
-    double d, d_0, a, x0, y0, xn, yn;
+    // double d, d_0, a;
+    double x0, y0, xn, yn;
     bool sampling = true;
-    // int n_interm = 100;
     
     while(sampling) {
       
-      if(norm){
-
         x0 = animal.x + R::rnorm(0, sigma_move(region));
         y0 = animal.y + R::rnorm(0, sigma_move(region));
         
-      } else {  
-        
         // Availability radius model of Michelot et al. (2019)
+        // ------------------------------------
         // runif run here in scalar mode - generates a single value
         // The square root is needed to sample points uniformly within a circle using inverse transform sampling
         // This is because the desired probability density function for point generation grows linearly with the
@@ -121,39 +115,18 @@ public:
         // The inverse CDF is therefore sqrt()
         // https://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly
         
-        d_0 = std::sqrt(R::runif(0,stepsize_sq)); 
-        a = R::runif(-M_PI,M_PI);
+        // d_0 = std::sqrt(R::runif(0,stepsize_sq)); 
+        // a = R::runif(-M_PI,M_PI);
+        // 
+        // // Disc center
+        // x0 = animal.x + d_0 * std::cos(a);
+        // y0 = animal.y + d_0 * std::sin(a);
         
-        // Disc center
-        x0 = animal.x + d_0 * std::cos(a);
-        y0 = animal.y + d_0 * std::sin(a);
-        
-      }
-      
-      // bool crossland = false;
-      // 
-      // Rcpp::NumericVector x_interm = seq_cpp(animal.x, x0, n_interm);
-      // Rcpp::NumericVector y_interm = seq_cpp(animal.y, y0, n_interm);
-      // Rcpp::NumericVector d_interm(n_interm);
-      // 
-      // for(int i=0; i<n_interm; i++){
-      //   d_interm(i) = environment(x_interm(i),y_interm(i),'D') == 0;
-      // }
-      // 
-      // if(sum(d_interm) > 0 || environment(x0,y0,'D')==0) {
-      //   crossland = true;
-      // } else {
-      //   crossland = false;
-      // }
       
       while(environment(x0,y0,'D')==0){
 
-        if(norm){
-
           x0 = animal.x + R::rnorm(0, sigma_move(region));
           y0 = animal.y + R::rnorm(0, sigma_move(region));
-
-        } else {
 
           // Availability radius model of Michelot et al. (2019)
           // runif run here in scalar mode - generates a single value
@@ -164,28 +137,13 @@ public:
           // The inverse CDF is therefore sqrt()
           // https://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly
 
-          d_0 = std::sqrt(R::runif(0,stepsize_sq));
-          a = R::runif(-M_PI,M_PI);
+          // d_0 = std::sqrt(R::runif(0,stepsize_sq));
+          // a = R::runif(-M_PI,M_PI);
+          // 
+          // // Disc center
+          // x0 = animal.x + d_0 * std::cos(a);
+          // y0 = animal.y + d_0 * std::sin(a);
 
-          // Disc center
-          x0 = animal.x + d_0 * std::cos(a);
-          y0 = animal.y + d_0 * std::sin(a);
-
-        }
-        
-        // Rcpp::NumericVector x_interm = seq_cpp(animal.x, x0, n_interm);
-        // Rcpp::NumericVector y_interm = seq_cpp(animal.y, y0, n_interm);
-        // Rcpp::NumericVector d_interm(n_interm);
-        // 
-        // for(int i=0; i<n_interm; i++){
-        //   d_interm(i) = environment(x_interm(i),y_interm(i),'D') == 0;
-        // }
-        // 
-        // if(sum(d_interm) > 0 || environment(x0,y0,'D')==0) {
-        //   crossland = true;
-        // } else {
-        //   crossland = false;
-        // }
         
       }
       
@@ -193,29 +151,22 @@ public:
       // Use asterisks to create pointers
       double *prop = proposals.data();
       double *w = weights.data();
-      // double *dd = distances.data();
-
       Rcpp::NumericVector distances(m);
       
       for(std::size_t i=0; i<m; ++i) {
         
         // Randomly sample a distance and angle
 
-        if(norm){
-          
           xn = x0 + R::rnorm(0, sigma_move(region));
           yn = y0 + R::rnorm(0, sigma_move(region));
-          
-        } else {
-          
-          d = std::sqrt(R::runif(0,stepsize_sq));
-          a = R::runif(-M_PI,M_PI);
-          
-          // Calculate new x,y
-          xn = x0 + d * std::cos(a);
-          yn = y0 + d * std::sin(a);
-          
-        }
+
+          // d = std::sqrt(R::runif(0,stepsize_sq));
+          // a = R::runif(-M_PI,M_PI);
+          // 
+          // // Calculate new x,y
+          // xn = x0 + d * std::cos(a);
+          // yn = y0 + d * std::sin(a);
+
         
         // Store x,y proposal
         *(prop++) = xn;
@@ -230,20 +181,14 @@ public:
         } else {
           lyr = 'D';
         }
-        
-        // double xd = 1;
-        // if(environment(animal.x, animal.y, 'R') == 4 && environment(xn, yn, 'R') == 10) xd = 0.001;
-        // if(environment(animal.x, animal.y, 'R') == 10 && environment(xn, yn, 'R') == 4) xd = 0.001;
-        
+
         *(w++) = environment(xn, yn, lyr);
-        
         distances(i) = std::pow(xn - animal.x0, 2) + std::pow(yn - animal.y0, 2);
        
       }
       
       double dmin = Rcpp::which_min(distances);
        
-      
       // Select one point
       double totalWeight = weights.sum();
       Rcpp::checkUserInterrupt();
@@ -259,13 +204,14 @@ public:
         } else {
           k = sampleInd();
         }
-        
+
         animal.x = proposals(0,k);
         animal.y = proposals(1,k);
-        
         sampling = false;
-        
-      } // End if(totalWeight)
+
+      } else {
+      }// End if(totalWeight)
+      
     } // End while(sampling)
 
   } // End update
@@ -310,25 +256,20 @@ public:
   ) : stepsize_sq(r*r), m(n_proposals), latent_mvmt(base_mvmt),
   latent_envs(base_environments) { }
   
-  void update(AnimalType & animal, EnvironmentType & environment, bool norm, int region, 
+  void update(AnimalType & animal, EnvironmentType & environment, int region, 
               Eigen::MatrixXd support,
               Eigen::VectorXd limits, 
-              Eigen::VectorXd limits_daylight,
               Eigen::VectorXd limits_regions,
               Eigen::VectorXd limits_prey,
               Eigen::VectorXd limits_fishing,
               Eigen::VectorXd limits_vessels,
               Eigen::VectorXd limits_noise,
               Eigen::VectorXd resolution,
-              Eigen::VectorXd resolution_daylight,
               Eigen::VectorXd resolution_regions,
               Eigen::VectorXd resolution_prey,
               Eigen::VectorXd resolution_fishing,
               Eigen::VectorXd resolution_vessels,
               Eigen::VectorXd resolution_noise) {
-    
-    // Rcpp::NumericVector out (3);
-    // Rcpp::NumericVector latent_coords (3);
     
     // Update latent animals
     auto latent_env = latent_envs.begin();
@@ -336,14 +277,11 @@ public:
     auto latent_end = animal.latent.end();
     
     while(latent_animal != latent_end) {
-      latent_mvmt.update(*(latent_animal++), *(latent_env++), TRUE, region, support, limits, 
-                         limits_daylight, limits_regions, limits_prey,
+      latent_mvmt.update(*(latent_animal++), *(latent_env++), region, support, limits,
+                         limits_regions, limits_prey,
                          limits_fishing, limits_vessels, limits_noise,
-                         resolution, resolution_daylight, resolution_regions, resolution_prey,
+                         resolution, resolution_regions, resolution_prey,
                          resolution_fishing, resolution_vessels, resolution_noise);
-      // latent_coords = latent_mvmt.update(*(latent_animal++), *(latent_env++), TRUE, region);
-      // animal.latent[latent_animal - animal.latent.begin()].x = latent_coords[0];
-      // animal.latent[latent_animal - animal.latent.begin()].y = latent_coords[1];
     }
     
     // Environment defines latent animal toward which movement is attracted
@@ -360,72 +298,64 @@ public:
       
       dist_to_latent = std::pow(animal.x - active_latent.x, 2) + std::pow(animal.y - active_latent.y, 2);
       
-      if(dist_to_latent < stepsize_sq) {
-        animal.x = active_latent.x;
-        animal.y = active_latent.y;
-      }
     }
     
-
+    if(dist_to_latent < 25) {
+      animal.x = active_latent.x;
+      animal.y = active_latent.y;
+    }
+    
     // Otherwise, select point within step size closest to latent animal
-    double d_0, d, a, x0, y0, xn, yn, xnew, ynew;
+    // double d_0, d, a;
+    double x0, y0, xn, yn, xnew, ynew;
     double dmin = std::numeric_limits<double>::infinity();
     bool sampling = true;
     
     while(sampling) {
-      
-      if(norm){
-        
+
         x0 = animal.x + R::rnorm(0, sigma_move(region));
         y0 = animal.y + R::rnorm(0, sigma_move(region)); 
         
-      } else {
-        
-        d_0 = std::sqrt(R::runif(0,stepsize_sq));
-        a = R::runif(-M_PI,M_PI);
-        
-        // Disc center
-        x0 = animal.x + d_0 * std::cos(a);
-        y0 = animal.y + d_0 * std::sin(a);
-        
-      }
-
+        // Alternative: Availability radius model
+        // ------------------------------------
+        //   d_0 = std::sqrt(R::runif(0,stepsize_sq));
+        //   a = R::runif(-M_PI,M_PI);
+        //   
+        //   // Disc center
+        //   x0 = animal.x + d_0 * std::cos(a);
+        //   y0 = animal.y + d_0 * std::sin(a);
       
-      while(latent_envs[environment.id](x0, y0, 'D')==0){
-        
-        if(norm){
-          
+      while(latent_envs[environment.id](x0, y0, 'D') == 0){
+
           x0 = animal.x + R::rnorm(0, sigma_move(region));
           y0 = animal.y + R::rnorm(0, sigma_move(region)); 
           
-        } else {
+          // Alternative: Availability radius model
+          // ------------------------------------
+         //   d_0 = std::sqrt(R::runif(0,stepsize_sq));
+         //   a = R::runif(-M_PI,M_PI);
+         //   
+         //   // Disc center
+         //   x0 = animal.x + d_0 * std::cos(a);
+         //   y0 = animal.y + d_0 * std::sin(a);
           
-          d_0 = std::sqrt(R::runif(0,stepsize_sq));
-          a = R::runif(-M_PI,M_PI);
-          
-          // Disc center
-          x0 = animal.x + d_0 * std::cos(a);
-          y0 = animal.y + d_0 * std::sin(a);
-          
-        }
+  
       }
       
       // Sample m points in the circle, keep closest valid point
       for(std::size_t i=0; i<m; ++i) {
-        
-        if(norm){
           
           xn = x0 + R::rnorm(0, sigma_move(region));
           yn = y0 + R::rnorm(0, sigma_move(region));
           
-        } else {
-          
-          d = std::sqrt(R::runif(0,stepsize_sq));
-          a = R::runif(-M_PI,M_PI);
-          
-          xn = x0 + d * std::cos(a);
-          yn = y0 + d * std::sin(a);
-        }
+          // Alternative: Availability radius model
+          // --------------------------------------
+          // d = std::sqrt(R::runif(0,stepsize_sq));
+          // a = R::runif(-M_PI,M_PI);
+          // 
+          // xn = x0 + d * std::cos(a);
+          // yn = y0 + d * std::sin(a);
+        
 
         char lyr;
         if(animal.seus == 1 & animal.gsl == 0){
@@ -461,7 +391,7 @@ public:
                 dist_to_latent = std::pow(xn - active_latent.x, 2) + std::pow(yn - active_latent.y, 2);
               }
             }
-            
+
             // Keep track of the point that gets closest to latent
             if(dist_to_latent < dmin) {
               xnew = xn;

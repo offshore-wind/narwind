@@ -105,7 +105,7 @@ private:
   const MatrixType &m_noise;
   
   // Daylight hours raster (in projected coordinates)
-  const MatrixType &m_daylight;
+  // const MatrixType &m_daylight;
   
   // Region IDs (in projected coordinates)
   const MatrixType &m_regions;
@@ -114,14 +114,13 @@ public:
 
   // Spatial extents and resolution of density raster
   const Eigen::VectorXd &m_limits;
-  const Eigen::VectorXd &m_limits_daylight;
+  // const Eigen::VectorXd &m_limits_daylight;
   const Eigen::VectorXd &m_limits_regions;
   const Eigen::VectorXd &m_limits_prey;
   const Eigen::VectorXd &m_limits_fishing;
   const Eigen::VectorXd &m_limits_vessels;
   const Eigen::VectorXd &m_limits_noise;
   const Eigen::VectorXd &m_resolution;
-  const Eigen::VectorXd &m_resolution_daylight;
   const Eigen::VectorXd &m_resolution_regions;
   const Eigen::VectorXd &m_resolution_prey;
   const Eigen::VectorXd &m_resolution_fishing;
@@ -144,17 +143,14 @@ public:
     const MatrixType & fishing,
     const MatrixType & vessels,
     const MatrixType & noise,
-    const MatrixType & daylight,
     const MatrixType & regions,
     const Eigen::VectorXd & limits,
-    const Eigen::VectorXd & limits_daylight,
     const Eigen::VectorXd & limits_regions,
     const Eigen::VectorXd & limits_prey,
     const Eigen::VectorXd & limits_fishing,
     const Eigen::VectorXd & limits_vessels,
     const Eigen::VectorXd & limits_noise,
     const Eigen::VectorXd & resolution,
-    const Eigen::VectorXd & resolution_daylight,
     const Eigen::VectorXd & resolution_regions,
     const Eigen::VectorXd & resolution_prey,
     const Eigen::VectorXd & resolution_fishing,
@@ -169,17 +165,14 @@ public:
     m_fishing(fishing),
     m_vessel(vessels),
     m_noise(noise),
-    m_daylight(daylight),
     m_regions(regions),
     m_limits(limits),
-    m_limits_daylight(limits_daylight),
     m_limits_regions(limits_regions),
     m_limits_prey(limits_prey),
     m_limits_fishing(limits_fishing),
     m_limits_vessels(limits_vessels),
     m_limits_noise(limits_noise),
     m_resolution(resolution),
-    m_resolution_daylight(resolution_daylight),
     m_resolution_regions(resolution_regions),
     m_resolution_prey(resolution_prey),
     m_resolution_fishing(resolution_fishing),
@@ -209,10 +202,10 @@ public:
       i = std::round((x-m_limits[0])/m_resolution[0]);
       j = std::round((m_limits[3]-y)/m_resolution[1]);
       
-    } else if(layer == 'L') {
-      
-      i = std::round((x-m_limits_daylight[0])/m_resolution_daylight[0]);
-      j = std::round((m_limits_daylight[3]-y)/m_resolution_daylight[1]);
+    // } else if(layer == 'L') {
+    //   
+    //   i = std::round((x-m_limits_daylight[0])/m_resolution_daylight[0]);
+    //   j = std::round((m_limits_daylight[3]-y)/m_resolution_daylight[1]);
       
     } else if(layer == 'R') {
       
@@ -273,9 +266,9 @@ public:
       d = m_noise(i,j);
       break;
     
-    case 'L':
-      d = m_daylight(i,j);
-      break;
+    // case 'L':
+    //   d = m_daylight(i,j);
+    //   break;
       
     case 'R':
       d = m_regions(i,j);

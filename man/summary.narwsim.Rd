@@ -4,7 +4,7 @@
 \alias{summary.narwsim}
 \title{Model summary and diagnostics}
 \usage{
-\method{summary}{narwsim}(obj, what = "all", relative = FALSE, plot = FALSE, ...)
+\method{summary}{narwsim}(obj, what = "all", relative = FALSE, plot = TRUE, ...)
 }
 \arguments{
 \item{obj}{An object of class \code{narwsim}, as returned by \code{\link{narw}}.}

@@ -13,14 +13,6 @@ NULL
 #' @name age2length
 NULL
 
-#' Filtration rate
-#' @name filtration_rate
-NULL
-
-#' Milk ingestion rate
-#' @name milk_ingestion
-NULL
-
 #' Milk assimilation efficiency
 #' @name milk_assimilation
 NULL
@@ -40,6 +32,10 @@ NULL
 #' Resting metabolic rate
 #' @name RMR
 NULL
+
+rtnorm <- function(mean, sd, low, high) {
+    .Call('_narwind_rtnorm', PACKAGE = 'narwind', mean, sd, low, high)
+}
 
 transpose_c <- function(m, k) {
     .Call('_narwind_transpose_c', PACKAGE = 'narwind', m, k)
@@ -65,24 +61,12 @@ response_threshold <- function(dose, day, simduration, seed) {
     .Call('_narwind_response_threshold', PACKAGE = 'narwind', dose, day, simduration, seed)
 }
 
-#' Random deviate from a truncated Normal distribution
-#' @name rtnorm
-#' @param location Location parameter
-#' @param scale Scale parameter
-#' @param L Lower bound
-#' @param U Upper bound
-rtnorm <- function(location, scale, L, U) {
-    .Call('_narwind_rtnorm', PACKAGE = 'narwind', location, scale, L, U)
+starvation_mortality <- function(bc, mortality, starvation_death, starvation_onset) {
+    .Call('_narwind_starvation_mortality', PACKAGE = 'narwind', bc, mortality, starvation_death, starvation_onset)
 }
 
-#' Random deviate from a truncated Normal distribution
-#' @name rtnorm_vec
-#' @param location Location parameter
-#' @param scale Scale parameter
-#' @param L Lower bound
-#' @param U Upper bound
-rtnorm_vec <- function(n, location, scale, L, U) {
-    .Call('_narwind_rtnorm_vec', PACKAGE = 'narwind', n, location, scale, L, U)
+starvation_mortality_vec <- function(bc, mortality, starvation_death, starvation_onset) {
+    .Call('_narwind_starvation_mortality_vec', PACKAGE = 'narwind', bc, mortality, starvation_death, starvation_onset)
 }
 
 is_female <- function(cohort) {
@@ -95,14 +79,6 @@ start_age <- function(cohort) {
 
 start_age_vec <- function(cohort) {
     .Call('_narwind_start_age_vec', PACKAGE = 'narwind', cohort)
-}
-
-survivorship <- function(age, a1 = 0.1, a2 = 0, a3 = 0.01, b1 = 60, b3 = 8, longevity = 69) {
-    .Call('_narwind_survivorship', PACKAGE = 'narwind', age, a1, a2, a3, b1, b3, longevity)
-}
-
-survivorship_vec <- function(age, a1 = 0.1, a2 = 0, a3 = 0.01, b1 = 60, b3 = 8, longevity = 69) {
-    .Call('_narwind_survivorship_vec', PACKAGE = 'narwind', age, a1, a2, a3, b1, b3, longevity)
 }
 
 #' Entanglement event
@@ -152,10 +128,6 @@ age2length <- function(age, gompertz) {
 
 age2length_vec <- function(age) {
     .Call('_narwind_age2length_vec', PACKAGE = 'narwind', age)
-}
-
-create_mat <- function() {
-    .Call('_narwind_create_mat', PACKAGE = 'narwind')
 }
 
 mL <- function(n = 1L, sd = FALSE) {
@@ -223,14 +195,6 @@ deg2radians <- function(angle) {
 #' @return Estimated gape area
 gape_size <- function(L, omega, alpha) {
     .Call('_narwind_gape_size', PACKAGE = 'narwind', L, omega, alpha)
-}
-
-filtration_rate <- function(A, lambda_gape, V, E_capt, lambda_capt) {
-    .Call('_narwind_filtration_rate', PACKAGE = 'narwind', A, lambda_gape, V, E_capt, lambda_capt)
-}
-
-milk_ingestion <- function(E_milk, M, E_gland, mu_female, delta_female, D) {
-    .Call('_narwind_milk_ingestion', PACKAGE = 'narwind', E_milk, M, E_gland, mu_female, delta_female, D)
 }
 
 milk_assimilation <- function(t, T_lac, a, zeta) {
@@ -390,66 +354,24 @@ fetal_length_vec <- function(days_to_birth, mother_length) {
     .Call('_narwind_fetal_length_vec', PACKAGE = 'narwind', days_to_birth, mother_length)
 }
 
-#' Energetic cost of growth
-#' @name growth_cost
-#' @param delta_m Body mass growth increment (kg/day)
-#' @param prop_blubber Proportion of the body that is blubber (\%)
-#' @param prop_water Proportion of lean body mass that is water (\%)
-#' @param P_lipid_blubber Proportion of blubber that is lipid (\%)
-#' @param rho_lipid Energy density of lipids (kJ/kg)
-#' @param rho_protein Energy density of protein (kJ/kg)
-#' @param D_lipid Efficiency of deposition of lipids (\%)
-#' @param D_protein Efficiency of deposition of protein (\%)
-growth_cost_old <- function(delta_m, prop_blubber, prop_water, P_lipid_blubber, rho_lipid, rho_protein, D_lipid, D_protein) {
-    .Call('_narwind_growth_cost_old', PACKAGE = 'narwind', delta_m, prop_blubber, prop_water, P_lipid_blubber, rho_lipid, rho_protein, D_lipid, D_protein)
-}
-
 growth_cost <- function(leanmass_increment, EDens_lipids, EDens_protein, lipid_in_muscle, lipid_in_viscera, lipid_in_bones, protein_in_muscle, protein_in_viscera, protein_in_bones, prop_muscle, prop_viscera, prop_bones) {
     .Call('_narwind_growth_cost', PACKAGE = 'narwind', leanmass_increment, EDens_lipids, EDens_protein, lipid_in_muscle, lipid_in_viscera, lipid_in_bones, protein_in_muscle, protein_in_viscera, protein_in_bones, prop_muscle, prop_viscera, prop_bones)
-}
-
-fatdeposition_cost <- function(fatmass_increment, energy_density_lipids, energy_density_protein, lipid_in_blubber, protein_in_blubber) {
-    .Call('_narwind_fatdeposition_cost', PACKAGE = 'narwind', fatmass_increment, energy_density_lipids, energy_density_protein, lipid_in_blubber, protein_in_blubber)
 }
 
 add_calf <- function(n, attr, sex, nonreprod) {
     .Call('_narwind_add_calf', PACKAGE = 'narwind', n, attr, sex, nonreprod)
 }
 
-findminval <- function(num1, num2) {
-    .Call('_narwind_findminval', PACKAGE = 'narwind', num1, num2)
-}
-
-pbirth <- function(now, enter, timespan = 60) {
-    .Call('_narwind_pbirth', PACKAGE = 'narwind', now, enter, timespan)
-}
-
 pleave <- function(now, enter, cohortID, factor, resid) {
     .Call('_narwind_pleave', PACKAGE = 'narwind', now, enter, cohortID, factor, resid)
-}
-
-pbirth_vec <- function(now, enter, timespan = 60) {
-    .Call('_narwind_pbirth_vec', PACKAGE = 'narwind', now, enter, timespan)
-}
-
-seq_cpp <- function(start, end, npts) {
-    .Call('_narwind_seq_cpp', PACKAGE = 'narwind', start, end, npts)
-}
-
-starvation_mortality <- function(bc, starve_start, starve_threshold, starve_scalar) {
-    .Call('_narwind_starvation_mortality', PACKAGE = 'narwind', bc, starve_start, starve_threshold, starve_scalar)
-}
-
-starvation_mortality_vec <- function(bc, starve_start, starve_threshold, starve_scalar) {
-    .Call('_narwind_starvation_mortality_vec', PACKAGE = 'narwind', bc, starve_start, starve_threshold, starve_scalar)
 }
 
 entanglement_effect <- function(prob_survival, severity, ndays, entgl_hit) {
     .Call('_narwind_entanglement_effect', PACKAGE = 'narwind', prob_survival, severity, ndays, entgl_hit)
 }
 
-survival <- function(age, female) {
-    .Call('_narwind_survival', PACKAGE = 'narwind', age, female)
+survival <- function(age, regime, female) {
+    .Call('_narwind_survival', PACKAGE = 'narwind', age, regime, female)
 }
 
 clamp <- function(v, threshold) {
@@ -484,11 +406,11 @@ geoDist <- function(mat, x0, y0, x1, y1, limits, resolution, r) {
 #' @param xinit matrix of initial x coordinates for latent animals (nlatent x n)
 #' @param yinit matrix of initial y coordinates for latent animals (nlatent x n)
 #' @return List of coordinates
-NARW_simulator <- function(cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densitySeq, latentDensitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, daylight, regions, limits, limits_daylight, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_daylight, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, stepsize, xinit, yinit, stressors, growth, prey_scale, starvation, starvation_onset, nursing_cessation, piling_hrs, progress) {
-    .Call('_narwind_NARW_simulator', PACKAGE = 'narwind', cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densitySeq, latentDensitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, daylight, regions, limits, limits_daylight, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_daylight, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, stepsize, xinit, yinit, stressors, growth, prey_scale, starvation, starvation_onset, nursing_cessation, piling_hrs, progress)
+NARW_simulator <- function(cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densitySeq, latentDensitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, stepsize, xinit, yinit, stressors, growth, prey_scale, starvation_df, starvation_death, starvation_onset, nursing_cessation, piling_hrs, progress) {
+    .Call('_narwind_NARW_simulator', PACKAGE = 'narwind', cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densitySeq, latentDensitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, stepsize, xinit, yinit, stressors, growth, prey_scale, starvation_df, starvation_death, starvation_onset, nursing_cessation, piling_hrs, progress)
 }
 
-evalEnvironment <- function(density, density_seus, density_gsl, prey, fishing, vessels, noise, daylight, regions, limits, limits_daylight, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_daylight, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer) {
-    .Call('_narwind_evalEnvironment', PACKAGE = 'narwind', density, density_seus, density_gsl, prey, fishing, vessels, noise, daylight, regions, limits, limits_daylight, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_daylight, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer)
+evalEnvironment <- function(density, density_seus, density_gsl, prey, fishing, vessels, noise, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer) {
+    .Call('_narwind_evalEnvironment', PACKAGE = 'narwind', density, density_seus, density_gsl, prey, fishing, vessels, noise, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer)
 }
 

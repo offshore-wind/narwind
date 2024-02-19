@@ -29,6 +29,9 @@ narw <- function(nsim = 1e3,
                  label = "",
                  piling.hrs = 4,
                  n.cores = NULL,
+                 starvation.death = 0.005,
+                 starvation.onset = 0.05,
+                 prey.scalar = 100,
                  progress = TRUE,
                  ...){
   
@@ -103,12 +106,7 @@ narw <- function(nsim = 1e3,
 
   # Ambient noise levels
   if(!is.null(scenario)) ambient.dB <- scenario$ambient else ambient.dB <- 80
-  
-  # Body condition at which an animal starves
-  starvation <- 0.05
-  
-  # Body condition at which starvation-induced mortality increases
-  starvation_begin <- 0.10
+
   
   # Default values
   # Starvation threshold expressed as relative blubber mass
@@ -123,10 +121,17 @@ narw <- function(nsim = 1e3,
   risk.scalar <- 1e-07
   
   # Scalar for prey surfaces
-  prey.scalar <- 100
+  # prey.scalar <- 100
   
-  # Step size for movement model
-  step.size <- 120
+  # Step size for availability radius movement model (--unused)
+  # Need to divide by 2 as there are two half steps (Michelot, 2020)
+  # step.size <- 120/2
+  
+  # Radius of neighborhood around latent animal
+  # If a simulated whale enters this zone, it will merge with the latent animal
+  # This value is lower than the shortest landward distance between adjacent regions
+  # to prevent movements across land
+  merge.distance <- 25
   
   # Number of proposals when sampling new location
   # In line with sample sizes used in case studies from Michelot (2020)
@@ -162,11 +167,8 @@ narw <- function(nsim = 1e3,
   cat("--------------------------------------------------------------------------------\n")
   cat("--------------------------------------------------------------------------------\n\n")
   
-  cat("Date:", as.character(Sys.Date()), "\n")
-  now.time <- Sys.time() |> 
-    stringr::str_split(" ") |> 
-    purrr::map_chr(2)
-  cat("Time:", now.time, "\n\n")
+  
+  date_time()
   
   cat("––– Parameters:\n\n")
 
@@ -252,6 +254,13 @@ narw <- function(nsim = 1e3,
   map_seq <- as.numeric(stringr::str_sub(date_seq,-2,-1))
   
   # ............................................................
+  # Mortality curve
+  # ............................................................
+  
+  mortality_df <- mortality_curve(starvation.death, starvation.onset)
+  mortality_df <- as.matrix(mortality_df[, c("bc", "p_daily")])
+  
+  # ............................................................
   # Dose-response
   # ............................................................
   
@@ -304,9 +313,9 @@ narw <- function(nsim = 1e3,
 
   # Daylight hours
   
-  daylightmaps <- lapply(daylight, raster::as.matrix) # Monthly
-  map_limits_daylight <- get_limits(daylight[[1]])
-  map_resolution_daylight <- daylight[[1]]@grid@cellsize
+  # daylightmaps <- lapply(daylight, raster::as.matrix) # Monthly
+  # map_limits_daylight <- get_limits(daylight[[1]])
+  # map_resolution_daylight <- daylight[[1]]@grid@cellsize
   
   # Regions
   
@@ -553,22 +562,19 @@ narw <- function(nsim = 1e3,
                                 noise = noisemaps,
                                 doseresp_seed = db.seed,
                                 doseresp = median_doseresponse,
-                                daylight = daylightmaps,
                                 regions = regionsmap,
-                                M = n.prop, # No.proposals in the importance sampler (Michelot, 2020)
-                                stepsize = step.size / 2, # Movement model involves two half-steps (Michelot, 2020)
+                                M = n.prop, 
+                                step = merge.distance,
                                 xinit = matrix(data = coords[init.inds[[i]], 'x'], nrow = nrow(init.inds[[i]])),
                                 yinit = matrix(data = coords[init.inds[[i]], 'y'], nrow = nrow(init.inds[[i]])),
                                 support = geomap,
                                 limits = map_limits,
-                                limits_daylight = map_limits_daylight,
                                 limits_regions = map_limits_regions,
                                 limits_prey = map_limits_prey,
                                 limits_fishing = map_limits_fishing,
                                 limits_vessels = map_limits_vessels,
                                 limits_noise = map_limits_noise,
                                 resolution = map_resolution,
-                                resolution_daylight = map_resolution_daylight,
                                 resolution_regions = map_resolution_regions,
                                 resolution_prey = map_resolution_prey,
                                 resolution_fishing = map_resolution_fishing,
@@ -577,8 +583,9 @@ narw <- function(nsim = 1e3,
                                 stressors = stressors,
                                 growth = growth,
                                 prey_scale = prey.scalar,
-                                starvation = starvation,
-                                starvation_onset = starvation_begin,
+                                starvation_df = mortality_df,
+                                starvation_death = starvation.death,
+                                starvation_onset = starvation.onset,
                                 nursing_cessation = cease.nursing,
                                 piling_hrs = piling.hrs,
                                 progress = FALSE
@@ -608,29 +615,25 @@ narw <- function(nsim = 1e3,
       densities_gsl = maps.weighted.gsl,
       densitySeq = map_seq,
       latentDensitySeq = mapIDs,
-      # latentDensitySeq = seq_along(density_narw),
       prey = preymaps,
       fishing = fishingmaps,
       vessels = vesselmaps,
       noise = noisemaps,
       doseresp_seed = db.seed,
       doseresp = median_doseresponse,
-      daylight = daylightmaps,
       regions = regionsmap,
-      M = n.prop, # Number of proposals used in the importance sampler for movement (Michelot, 2019)
-      stepsize = step.size / 2, # Movement framework involves two half-steps (Michelot 2019, 2020)
+      M = n.prop,
+      step = merge.distance, 
       xinit = matrix(data = coords[init.inds[[1]], "x"], nrow = nrow(init.inds[[1]])),
       yinit = matrix(data = coords[init.inds[[1]], "y"], nrow = nrow(init.inds[[1]])),
       support = geomap,
       limits = map_limits,
-      limits_daylight = map_limits_daylight,
       limits_regions = map_limits_regions,
       limits_prey = map_limits_prey,
       limits_fishing = map_limits_fishing,
       limits_vessels = map_limits_vessels,
       limits_noise = map_limits_noise,
       resolution = map_resolution,
-      resolution_daylight = map_resolution_daylight,
       resolution_regions = map_resolution_regions,
       resolution_prey = map_resolution_prey,
       resolution_fishing = map_resolution_fishing,
@@ -639,8 +642,9 @@ narw <- function(nsim = 1e3,
       stressors = stressors,
       growth = growth,
       prey_scale = prey.scalar,
-      starvation = starvation,
-      starvation_onset = starvation_begin,
+      starvation_df = mortality_df,
+      starvation_death = starvation.death,
+      starvation_onset = starvation.onset,
       nursing_cessation = cease.nursing,
       piling_hrs = piling.hrs,
       progress = ifelse(progress, TRUE, FALSE)
@@ -793,7 +797,7 @@ narw <- function(nsim = 1e3,
   gam.dt[cohort == 0, cohort_name:= "Calves (male, female)"]
   gam.dt[event == "death", cause_death:= ifelse(strike == 1, "strike",
                                                 ifelse(starve == 1, "starve",
-                                                ifelse(died == 1, "other", "none")))]
+                                                ifelse(died == 1, "natural", "none")))]
   
   if(5 %in% cohort){
 
@@ -854,13 +858,6 @@ narw <- function(nsim = 1e3,
 
   console(msg = "Fitting terminal functions")
   
-  # if(length(cohort) == 1 & is.null(scenario)){ 
-  #   cat("\n")
-  #   
-  # } else {
-  #   console(msg = "Fitting terminal functions")
-  # }
-  
   surv.fit <- suppressWarnings(
       tryCatch(
         {
@@ -870,10 +867,6 @@ narw <- function(nsim = 1e3,
                     gamma = 1.4,
                     family = binomial(link = "logit")
           )
-          # scam::scam(alive ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "mpi"),
-          #           data = gam.dt[born == 1,],
-          #           family = binomial(link = "logit")
-          # )
         },
         error = function(cond) {
           return(NA)
@@ -882,20 +875,20 @@ narw <- function(nsim = 1e3,
     )
   
   # Failsafes in the event that all animals in a cohort are dead
-  n.dead <- gam.dt[, .(alive = sum(alive)), cohort]
-  gam.alive <- gam.dt[gam.dt$alive == 1, ]
-
-  gam.dead <- gam.dt[cohort %in% n.dead[alive == 0, cohort]]
-  gam.dead[,start_bc:=0]
-  gam.dead[,end_bc:=0]
-  
-  gam.bc <- rbindlist(list(gam.alive, gam.dead))
+  # n.dead <- gam.dt[, .(alive = sum(alive)), cohort]
+  # gam.alive <- gam.dt[gam.dt$alive == 1, ]
+  # gam.dead <- gam.dt[cohort %in% n.dead[alive == 0, cohort]]
+  # gam.dead[,start_bc:=0]
+  # gam.dead[,end_bc:=0]
+  # gam.bc <- rbindlist(list(gam.alive, gam.dead))
     
   bc.fit <- suppressWarnings(
       tryCatch(
         {
-          mgcv::gam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "tp"),
-                     data = gam.bc,
+          mgcv::gam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort), k = 4, bs = "tp"),
+                     data = gam.dt[alive == 1,],
+                     method = "REML",
+                     gamma = 1.4,
                      family = betar(link = "logit"))
         },
         error = function(cond) {
@@ -941,37 +934,29 @@ narw <- function(nsim = 1e3,
   # Add parameters to list output
   # ............................................................
   
-  # Record maximum body condition and check that it doesn't exceed maximum allowable
-  max_bc <- purrr::map_dbl(.x = outsim$sim, .f = ~max(.x$bc))
-  if(any(max_bc > find_maxBC())) warning("The body condition of some individuals exceeded the maximum allowable")
-  
-  
-  
-  
   outsim$gam <- list(fit = list(surv = surv.fit, bc = bc.fit), 
                      dat = gam.dt)
   
   outsim[["dead"]] <- locs.dead
   outsim[["birth"]] <- locs.birth
   outsim[["abort"]] <- abort.rate
-  outsim[["max_bc"]] <- max_bc
+  # outsim[["max_bc"]] <- max_bc
   
   outsim$param <- list(nsim = nsim,
                        label = label,
                        cohort = cohort,
                        cohorts = cohorts,
                        date_seq = date_seq,
-                       starvation = starvation,
-                       stepsize = step.size,
-                       nprop = n.prop,
+                       starvation = list(death = starvation.death,
+                                         onset = starvation.onset,
+                                         dat = mortality_df,
+                                         spline = splinefun(mortality_df[,1], mortality_df[,2])),
                        nurse_cease = cease.nursing,
                        pair = match.test,
                        risk.scalar = risk.scalar,
                        prey.scalar = prey.scalar,
-                       step.size = step.size,
+                       step = merge.distance,
                        n.prop = n.prop,
-                       starvation = starvation,
-                       starvation.begin = starvation_begin,
                        ambient.dB = ambient.dB)
   
   outsim$init <- list(month = init.month, 

@@ -238,14 +238,12 @@ Rcpp::List movesim(
     MovementRule & m,
     Eigen::MatrixXd support,
     Eigen::VectorXd limits, 
-    Eigen::VectorXd limits_daylight,
     Eigen::VectorXd limits_regions,
     Eigen::VectorXd limits_prey,
     Eigen::VectorXd limits_fishing,
     Eigen::VectorXd limits_vessels,
     Eigen::VectorXd limits_noise,
     Eigen::VectorXd resolution,
-    Eigen::VectorXd resolution_daylight,
     Eigen::VectorXd resolution_regions,
     Eigen::VectorXd resolution_prey,
     Eigen::VectorXd resolution_fishing,
@@ -255,7 +253,8 @@ Rcpp::List movesim(
     bool stressors,
     bool growth,
     double prey_scale,
-    double starvation,
+    Eigen::MatrixXd starvation_df,
+    double starvation_death,
     double starvation_onset,
     Rcpp::NumericVector nursing_cessation,
     double piling_hrs,
@@ -712,15 +711,6 @@ Rcpp::List movesim(
   entgl_pcoms(2) = entgl_severe;
   
   // -------------------------------
-  // STARVATION MORTALITY SCALAR
-  // -------------------------------
-  // Definition: Starvation mortality increases with declining body condition according 
-  // to a hyperbolic function. This scalar defines the steepness of that increase.
-  // Value: 0.02
-  // Source(s): Hin et al. (2019)
-  const double starvation_scalar = 0.02;
-  
-  // -------------------------------
   // ENERGETIC COST OF ENTANGLEMENT
   // -------------------------------
   // Definition: Additional energy expenditure associated with carrying fishing gear
@@ -1089,7 +1079,7 @@ Rcpp::List movesim(
         depart_SEUS = current_day;
       }
       
-      // Reset northward movement after 20 days
+      // Reset northward pull after 20 days
       if(animal->north == 1 && current_day == (depart_SEUS + 20)) animal->north = 0;
       
       // ------------------------------------------------------------
@@ -1253,8 +1243,8 @@ Rcpp::List movesim(
               // ===================================
               
               // Annual survival probability based on Linden (2023) – converted to daily probability
-              p_surv = std::pow(survival(animal->age, animal->sex), 1.0L/365);
-              p_surv_calf = std::pow(survival(calves[current_animal].age, calves[current_animal].sex), 1.0L/365);
+              p_surv = std::pow(survival(animal->age, 0, animal->sex), 1.0L/365);
+              p_surv_calf = std::pow(survival(calves[current_animal].age, 0, calves[current_animal].sex), 1.0L/365);
               
               // If the animal is entangled, add the initial effect ("hit") of entanglement on survival
               // on the first day of entanglement.
@@ -1308,62 +1298,64 @@ Rcpp::List movesim(
           // MOVEMENT
           // ------------------------------------------------------------
           
-          bool crossland = false;
+          // bool crossland = false;
+          
+          // std::cout << current_x << "|" << current_y << std::endl;
           
           // Update the animal's state
-          m.update(*animal, *env, TRUE, animal->region, support, 
-                   limits, limits_daylight, limits_regions, limits_prey,
+          m.update(*animal, *env, animal->region, support, 
+                   limits, limits_regions, limits_prey,
                    limits_fishing, limits_vessels, limits_noise,
-                   resolution, resolution_daylight, resolution_regions, resolution_prey,
+                   resolution, resolution_regions, resolution_prey, 
                    resolution_fishing, resolution_vessels, resolution_noise);
           
-          // Prevent movements through the Strait of Canso
-          int canso_x0 = 1100;
-          int canso_x1 = 1400;
-          int canso_y0 = 1100;
-          int canso_y1 = 1400;
+          // // Prevent movements through the Strait of Canso
+          // int canso_x0 = 1100;
+          // int canso_x1 = 1400;
+          // int canso_y0 = 1100;
+          // int canso_y1 = 1400;
+          // 
+          // // Prevent movements between SNE and CCB as well as through the Strait of Canso
+          // if((animal->region == 4 & layers[current_day](animal->x, animal->y, 'R') == 10) ||
+          //    (animal->region == 10 & layers[current_day](animal->x, animal->y, 'R') == 4) ||
+          //    ((current_x >= canso_x0 & current_x <= canso_x1 & current_y >= canso_y0 & current_y <= canso_y1) && 
+          //    layers[current_day](animal->x, animal->y, 'R') == 6) ||
+          //    (animal->region == 6 && (animal->x >= canso_x0 & animal->x <= canso_x1 & animal->y >= canso_y0 & animal->y <= canso_y1))) crossland = true;
+          //    
+          // while(crossland){
+          //   
+          //   // Reset location
+          //   animal->x = current_x;
+          //   animal->y = current_y;
+          //   
+          //   // Propose new location
+          //   m.update(*animal, *env, animal->region, support, 
+          //            limits, limits_daylight, limits_regions, limits_prey,
+          //            limits_fishing, limits_vessels, limits_noise,
+          //            resolution, resolution_daylight, resolution_regions, 
+          //            resolution_prey, resolution_fishing,
+          //            resolution_vessels, resolution_noise);
+          //   
+          //   // Check if the new candidate location passes criteria
+          //   if((animal->region == 4 & layers[current_day](animal->x, animal->y, 'R') == 10) ||
+          //      (animal->region == 10 & layers[current_day](animal->x, animal->y, 'R') == 4) ||
+          //      ((current_x >= canso_x0 & current_x <= canso_x1 & current_y >= canso_y0 & current_y <= canso_y1) && 
+          //      layers[current_day](animal->x, animal->y, 'R') == 6) ||
+          //      (animal->region == 6 && (animal->x >= canso_x0 & animal->x <= canso_x1 & animal->y >= canso_y0 & animal->y <= canso_y1))){
+          //     
+          //     crossland = true;
+          //     
+          //   } else {
+          //     
+          //     crossland = false;
+          //     
+          //   }
+          //   
+          // }
           
-          // Prevent movements between SNE and CCB as well as through the Strait of Canso
-          if((animal->region == 4 & layers[current_day](animal->x, animal->y, 'R') == 10) ||
-             (animal->region == 10 & layers[current_day](animal->x, animal->y, 'R') == 4) ||
-             ((current_x >= canso_x0 & current_x <= canso_x1 & current_y >= canso_y0 & current_y <= canso_y1) && 
-             layers[current_day](animal->x, animal->y, 'R') == 6) ||
-             (animal->region == 6 && (animal->x >= canso_x0 & animal->x <= canso_x1 & animal->y >= canso_y0 & animal->y <= canso_y1))) crossland = true;
-             
-          while(crossland){
-            
-            // Reset location
-            animal->x = current_x;
-            animal->y = current_y;
-            
-            // Propose new location
-            m.update(*animal, *env, TRUE, animal->region, support, 
-                     limits, limits_daylight, limits_regions, limits_prey,
-                     limits_fishing, limits_vessels, limits_noise,
-                     resolution, resolution_daylight, resolution_regions, 
-                     resolution_prey, resolution_fishing,
-                     resolution_vessels, resolution_noise);
-            
-            // Check if the new candidate location passes criteria
-            if((animal->region == 4 & layers[current_day](animal->x, animal->y, 'R') == 10) ||
-               (animal->region == 10 & layers[current_day](animal->x, animal->y, 'R') == 4) ||
-               ((current_x >= canso_x0 & current_x <= canso_x1 & current_y >= canso_y0 & current_y <= canso_y1) && 
-               layers[current_day](animal->x, animal->y, 'R') == 6) ||
-               (animal->region == 6 && (animal->x >= canso_x0 & animal->x <= canso_x1 & animal->y >= canso_y0 & animal->y <= canso_y1))){
-              
-              crossland = true;
-              
-            } else {
-              
-              crossland = false;
-              
-            }
-            
-          }
-          
-          // If pregnant or resting females move past Cape Hatteras, 
-          // make them turn around and head north again
-          if(cohortID == 6 | cohortID == 4){
+          // If pregnant females, resting females, or lactating females in their
+          // last trimester move past Cape Hatteras, make them turn around and head north again
+          if(cohortID == 6 | cohortID == 4 | (cohortID == 5 && current_day > 365)){
             if(animal->y <= 220) animal->north = 1;
           }
          
@@ -1440,10 +1432,12 @@ Rcpp::List movesim(
           
           if(is_feeding == 0){
             
+            // MIDA and SCOS
             if((animal->region == 7 | animal->region == 8)){
               
-              swim_speed = rtnorm(0.7670522, 0.1765645, (travel_dist*1000)/(24*3600), 4.6);
+              swim_speed = rtnorm(0.9771623, 0.1847643, (travel_dist*1000)/(24*3600), 4.6);
               
+            // Elsewhere
             } else {
               
               swim_speed = rtnorm(0.4536798, 0.2290059, (travel_dist*1000)/(24*3600), 4.6);
@@ -1452,7 +1446,7 @@ Rcpp::List movesim(
             
           } else if (is_feeding){
             
-            swim_speed = rtnorm(0.9375113, 0.2001683, (travel_dist*1000)/(24*3600), 4.6);
+            swim_speed = rtnorm(0.9066851, 0.1777602, (travel_dist*1000)/(24*3600), 4.6);
             
           }
           
@@ -1562,7 +1556,7 @@ Rcpp::List movesim(
             
             // Milk provisioning -- (d.u.)
             // Varies with mother's body condition
-            milk_provisioning = milk_supply(starvation, target_bc[0], animal->tot_mass, animal->fat_mass, zeta);
+            milk_provisioning = milk_supply(starvation_onset, target_bc[0], animal->tot_mass, animal->fat_mass, zeta);
             
             // Total mass of mammary glands -- (kg)
             mammary_M = mammary_mass(animal->tot_mass);
@@ -1870,7 +1864,8 @@ Rcpp::List movesim(
             // delta_blubber = (E_in - E_out) * anabolism_efficiency[E_balance] / (ED_lipids * catabolism_efficiency[E_balance]);
             
             if(growth){
-              animal->fat_mass = animal->fat_mass + delta_blubber;
+              // Use std::max to ensure that fat_mass never becomes negative
+              animal->fat_mass = std::max(0.0L, animal->fat_mass + delta_blubber);
               animal->tot_mass = animal->fat_mass + animal->lean_mass;
               animal->bc = animal->fat_mass / animal->tot_mass;
             }
@@ -1906,7 +1901,7 @@ Rcpp::List movesim(
           if((cohortID == 4 && animal->abort == 0) |
              (cohortID == 5 && animal->abort == 0 && current_day <= 93)){
             
-            bc_gest = abortion_scalar * (((E_out / (ED_lipids * catabolism_efficiency[1])) + starvation*animal->tot_mass) / animal->tot_mass);
+            bc_gest = abortion_scalar * (((E_out / (ED_lipids * catabolism_efficiency[1])) + starvation_onset*animal->tot_mass) / animal->tot_mass);
             
             // Abort pregnancy if the animal's reserves are insufficient to sustain its daily energetic costs
             if(bc_gest > animal->bc){
@@ -1935,10 +1930,12 @@ Rcpp::List movesim(
               
               // Body condition-dependent mortality, similar to Hin et al. (2019)
               // Probability of the animal starving given its health
-              p_starve = starvation_mortality(animal->bc, starvation_onset, starvation, starvation_scalar);
+              // p_starve = starvation_mortality(animal->bc, starvation_onset, starvation, starvation_scalar);
+              p_starve = starvation_mortality(animal->bc, starvation_df, starvation_death, starvation_onset);
               has_starved = R::rbinom(1, p_starve);
               
-              p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_onset, starvation, starvation_scalar);
+              // p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_onset, starvation, starvation_scalar);
+              p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_df, starvation_death, starvation_onset);
               has_starved_calf = R::rbinom(1, p_starve_calf);
               
             }
@@ -2658,17 +2655,14 @@ Rcpp::List NARW_simulator(
      std::vector<Eigen::MatrixXd> noise,
      Rcpp::NumericMatrix doseresp_seed,
      Rcpp::NumericVector doseresp,
-     std::vector<Eigen::MatrixXd> daylight,
      Eigen::MatrixXd regions,
      Eigen::VectorXd limits, 
-     Eigen::VectorXd limits_daylight,
      Eigen::VectorXd limits_regions,
      Eigen::VectorXd limits_prey,
      Eigen::VectorXd limits_fishing,
      Eigen::VectorXd limits_vessels,
      Eigen::VectorXd limits_noise,
      Eigen::VectorXd resolution,
-     Eigen::VectorXd resolution_daylight,
      Eigen::VectorXd resolution_regions,
      Eigen::VectorXd resolution_prey,
      Eigen::VectorXd resolution_fishing,
@@ -2681,7 +2675,8 @@ Rcpp::List NARW_simulator(
      bool stressors,
      bool growth,
      double prey_scale,
-     double starvation,
+     Eigen::MatrixXd starvation_df,
+     double starvation_death,
      double starvation_onset,
      Rcpp::NumericVector nursing_cessation,
      double piling_hrs,
@@ -2736,17 +2731,14 @@ Rcpp::List NARW_simulator(
                                       fishing[*d],
                                       vessels[*d],
                                       noise[day_of_year],
-                                      daylight[*d],
                                       regions,
                                       limits,
-                                      limits_daylight,
                                       limits_regions,
                                       limits_prey,
                                       limits_fishing,
                                       limits_vessels,
                                       limits_noise,
                                       resolution,
-                                      resolution_daylight,
                                       resolution_regions,
                                       resolution_prey,
                                       resolution_fishing,
@@ -2809,14 +2801,14 @@ Rcpp::List NARW_simulator(
    
    return movesim(cohortID, animals, calves, environments, 
                   latent_environments, doseresp_seed, doseresp, densitySeq, crm, support, 
-                  limits, limits_daylight, limits_regions, 
+                  limits, limits_regions, 
                   limits_prey, limits_fishing,
                   limits_vessels, limits_noise,
-                  resolution, resolution_daylight, resolution_regions, 
+                  resolution, resolution_regions,
                   resolution_prey, resolution_fishing,
                   resolution_vessels, resolution_noise, 
                   stepsize, stressors, growth, prey_scale, 
-                  starvation, starvation_onset,
+                  starvation_df, starvation_death, starvation_onset,
                   nursing_cessation, piling_hrs, progress);
    
  }
@@ -2843,26 +2835,23 @@ double evalEnvironment(Eigen::MatrixXd density,
                        Eigen::MatrixXd fishing, 
                        Eigen::MatrixXd vessels, 
                        Eigen::MatrixXd noise, 
-                       Eigen::MatrixXd daylight, 
                        Eigen::MatrixXd regions, 
                        Eigen::VectorXd limits, 
-                       Eigen::VectorXd limits_daylight,
                        Eigen::VectorXd limits_regions,
                        Eigen::VectorXd limits_prey,
                        Eigen::VectorXd limits_fishing,
                        Eigen::VectorXd limits_vessels,
                        Eigen::VectorXd limits_noise,
                        Eigen::VectorXd resolution,
-                       Eigen::VectorXd resolution_daylight,
                        Eigen::VectorXd resolution_regions,
                        Eigen::VectorXd resolution_prey,
                        Eigen::VectorXd resolution_fishing,
                        Eigen::VectorXd resolution_vessels,
                        Eigen::VectorXd resolution_noise,
                        double x, double y, char layer) {
-  Environment e(density, density_seus, density_gsl, prey, fishing, vessels, noise, daylight, regions, 
-                limits, limits_daylight, limits_regions, limits_prey, limits_fishing,
-                limits_vessels, limits_noise, resolution, resolution_daylight, resolution_regions, 
+  Environment e(density, density_seus, density_gsl, prey, fishing, vessels, noise, regions, 
+                limits, limits_regions, limits_prey, limits_fishing, 
+                limits_vessels, limits_noise, resolution, resolution_regions, 
                 resolution_prey, resolution_fishing,
                 resolution_vessels, resolution_noise, 0);
   return e(x, y, layer);

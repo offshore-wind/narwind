@@ -31,8 +31,15 @@ This document describes the approach taken to model spatial patterns in North At
 Before we start, let's load all the required libraries, set some global options, and define some custom functions required for the analysis.
 
 ```{r load, include=FALSE}
-pkg <- "/Volumes/GoogleDrive/My Drive/Documents/git/narwind"
-load(file.path(pkg,"vignettes/narwdens.RData"))
+# pkg <- "/Volumes/GoogleDrive/My Drive/Documents/git/narwind"
+# load(file.path(pkg,"data/vignettes/narwdens.RData"))
+```
+
+```{r setup, include = FALSE}
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>")
 ```
 
 ```{r start, echo=TRUE, results='hide', message=FALSE, eval=TRUE}

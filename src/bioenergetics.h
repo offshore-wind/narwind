@@ -6,15 +6,286 @@
 #include <cmath>
 #include <cstdio>
 #include <vector>
+#include "spline.h"
 #include <algorithm>    // std::all_of
 #include <array>        // std::array
 
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(cpp11)]]
 
+/// Truncated Normal RNG ----------------------------
+// Functions taken from the RcppTN package
+// https://github.com/olmjo/RcppTN/tree/master
+
+inline bool CheckSimple(const double low, ///< lower bound of distribution
+                        const double high ///< upper bound of distribution
+) {
+  // Init Values Used in Inequality of Interest
+  double val1 = (2 * sqrt(exp(1.0))) / (low + sqrt(pow(low, 2.0) + 4));
+  double val2 = exp((pow(low, 2.0) - low * sqrt(pow(low, 2.0) + 4)) / (4)) ;
+  //
+  
+  // Test if Simple is Preferred
+  if (high > low + val1 * val2) {
+    return true ;
+  } else {
+    return false ;
+  }
+}
+
+
+/// Draw using algorithm 1.
+
+/// 
+/// Naive Accept-Reject algorithm.
+/// 
+inline double UseAlg1(const double low, ///< lower bound of distribution
+                      const double high ///< upper bound of distribution
+) {
+  // Init Valid Flag
+  int valid = 0 ;
+  //
+  
+  // Init Draw Storage
+  double z = 0.0 ;
+  //
+  
+  // Loop Until Valid Draw
+  while (valid == 0) {
+    z = Rf_rnorm(0.0, 1.0) ;
+    
+    if (z <= high && z >= low) {
+      valid = 1 ;
+    }
+  }
+  //
+  
+  // Returns
+  return z ;
+  //
+}
+
+/// Draw using algorithm 2.
+
+/// 
+///  Accept-Reject Algorithm
+///
+
+inline double UseAlg2(const double low ///< lower bound of distribution
+) {
+  // Init Values
+  const double alphastar = (low +
+                            sqrt(pow(low, 2.0) + 4.0)
+  ) / (2.0) ;
+  const double alpha = alphastar ;
+  double e = 0 ;
+  double z = 0 ;
+  double rho = 0 ;
+  double u = 0 ;
+  //
+  
+  // Init Valid Flag
+  int valid = 0 ;
+  //
+  
+  // Loop Until Valid Draw
+  while (valid == 0) {
+    e = Rf_rexp(1.0) ;
+    z = low + e / alpha ;
+    
+    rho = exp(-pow(alpha - z, 2.0) / 2) ;
+    u = Rf_runif(0, 1) ;
+    if (u <= rho) {
+      // Keep Successes
+      valid = 1 ;
+    }
+  }
+  //
+  
+  // Returns
+  return z ;
+  //
+}
+
+/// Draw using algorithm 3.
+
+/// 
+/// Accept-Reject Algorithm
+/// 
+
+inline double UseAlg3(const double low, ///< lower bound of distribution
+                      const double high ///< upper bound of distribution
+) {
+  // Init Valid Flag
+  int valid = 0 ;
+  //
+  
+  // Declare Qtys
+  double rho = 0 ;
+  double z = 0 ;
+  double u = 0 ;
+  //
+  
+  // Loop Until Valid Draw
+  while (valid == 0) {
+    z = Rf_runif(low, high) ;
+    if (0 < low) {
+      rho = exp((pow(low, 2.0) - pow(z, 2.0)) / 2) ;
+    } else if (high < 0) {
+      rho = exp((pow(high, 2.0) - pow(z, 2.0)) / 2) ;
+    } else if (0 < high && low < 0) {
+      rho = exp(- pow(z, 2.0) / 2) ;
+    }
+    
+    u = Rf_runif(0, 1) ;
+    if (u <= rho) {
+      valid = 1 ;
+    }
+  }
+  //
+  
+  // Returns
+  return z ;
+  //
+}
+
+
+/// Draw from an arbitrary truncated normal distribution.
+
+///
+/// See Robert (1995): <br />
+/// Reference Type: Journal Article <br />
+/// Author: Robert, Christian P. <br />
+/// Primary Title: Simulation of truncated normal variables <br />
+/// Journal Name: Statistics and Computing <br />
+/// Cover Date: 1995-06-01 <br />
+/// Publisher: Springer Netherlands <br />
+/// Issn: 0960-3174 <br />
+/// Subject: Mathematics and Statistics <br />
+// Start Page: 121 <br />
+// End Page: 125 <br />
+/// Volume: 5 <br />
+/// Issue: 2 <br />
+/// Url: http://dx.doi.org/10.1007/BF00143942 <br />
+/// Doi: 10.1007/BF00143942 <br />
+///
+// [[Rcpp::export]]
+double rtnorm(const double mean,
+              const double sd,
+              const double low,
+              const double high
+) {
+  // Namespace
+  using namespace Rcpp ;
+  //
+
+  // Init Useful Values
+  double draw = 0;
+  int type = 0 ;
+  int valid = 0 ; // used only when switching to a simplified version
+  // of Alg 2 within Type 4 instead of the less
+  // efficient Alg 3
+  //
+
+  // Set Current Distributional Parameters
+  const double c_mean = mean ;
+  double c_sd = sd ;
+  const double c_low = low ;
+  const double c_high = high ;
+  double c_stdlow = (c_low - c_mean) / c_sd ;
+  double c_stdhigh = (c_high - c_mean) / c_sd ; // bounds are standardized
+  //
+
+  // Map Conceptual Cases to Algorithm Cases
+  // Case 1 (Simple Deterministic AR)
+  // mu \in [low, high]
+  if (0 <= c_stdhigh &&
+      0 >= c_stdlow
+  ) {
+    type = 1 ;
+  }
+
+  // Case 2 (Robert 2009 AR)
+  // mu < low, high = Inf
+  if (0 < c_stdlow &&
+      c_stdhigh == INFINITY
+  ) {
+    type = 2 ;
+  }
+
+  // Case 3 (Robert 2009 AR)
+  // high < mu, low = -Inf
+  if (0 > c_stdhigh &&
+      c_stdlow == -INFINITY
+  ) {
+    type = 3 ;
+  }
+
+  // Case 4 (Robert 2009 AR)
+  // mu -\in [low, high] & (abs(low) =\= Inf =\= high)
+  if ((0 > c_stdhigh || 0 < c_stdlow) &&
+      !(c_stdhigh == INFINITY || c_stdlow == -INFINITY)
+  ) {
+    type = 4 ;
+  }
+
+  ////////////
+  // Type 1 //
+  ////////////
+  if (type == 1) {
+    draw = UseAlg1(c_stdlow, c_stdhigh) ;
+  }
+
+  ////////////
+  // Type 3 //
+  ////////////
+  if (type == 3) {
+    c_stdlow = -1 * c_stdhigh ;
+    c_stdhigh = INFINITY ;
+    c_sd = -1 * c_sd ; // hack to get two negative signs to cancel out
+
+    // Use Algorithm #2 Post-Adjustments
+    type = 2 ;
+  }
+
+  ////////////
+  // Type 2 //
+  ////////////
+  if (type == 2) {
+    draw = UseAlg2(c_stdlow) ;
+  }
+
+  ////////////
+  // Type 4 //
+  ////////////
+  if (type == 4) {
+    if (CheckSimple(c_stdlow, c_stdhigh)) {
+      while (valid == 0) {
+        draw = UseAlg2(c_stdlow) ;
+        // use the simple
+        // algorithm if it is more
+        // efficient
+        if (draw <= c_stdhigh) {
+          valid = 1 ;
+        }
+      }
+    } else {
+      draw = UseAlg3(c_stdlow, c_stdhigh) ; // use the complex
+      // algorithm if the simple
+      // is less efficient
+    }
+  }
+
+
+
+  // Returns
+  return  c_mean + c_sd * draw ;
+  //
+}
+
 // [[Rcpp::export]]
 Rcpp::NumericMatrix transpose_c(Rcpp::NumericMatrix m, int k){
-  
+
   // int nc = k - (j + 1);
   Rcpp::NumericMatrix out(1, k);
   for(int i = 0; i < k ; i++){
@@ -45,24 +316,22 @@ Rcpp::NumericVector random_int(int n, int lwr = 0, int uppr = 3){
   return(out);
 }
 
-
 // [[Rcpp::export]]
 Rcpp::NumericVector random_multivariate_normal(const Eigen::MatrixXd mu, const Eigen::MatrixXd Sigma){
-  
+
   Rcpp::NumericVector out(2);
   int P = mu.rows(), i = 0;
   Eigen::MatrixXd y(Eigen::MatrixXd(P, 1).setZero()); // Create a column matrix of zeroes
   Eigen::MatrixXd z(Eigen::MatrixXd(P, 1).setZero());
-  
+
   for(i = 0 ; i < P ; i++) z(i, 0) = Rf_rnorm(0, 1); // To get original R api, use Rf_*
-  
+
   y = mu + Sigma.llt().matrixL() * z;
-  
+
   out[0] = y(0,0);
   out[1] = y(1,0);
   return out;
 }
-
 
 // // [[Rcpp::export]]
 // Rcpp::NumericVector csample_num( NumericVector x,
@@ -192,6 +461,67 @@ double response_threshold(Rcpp::NumericVector dose, int day, int simduration, in
 //   return v;
 // }
 
+// [[Rcpp::export]]
+double starvation_mortality(double bc,
+                            Eigen::MatrixXd mortality,
+                            double starvation_death,
+                            double starvation_onset)
+{
+  double out;
+  int n = mortality.rows();
+  std::vector<double> p_x(n);
+  std::vector<double> p_y(n);
+  
+  for(int i = 0; i < n; i++){
+    p_x[i] = mortality(i,0);
+    p_y[i] = mortality(i,1);
+  }
+  
+  tk::spline s(p_x, p_y); // Fit cubic spline
+  
+  if(bc > starvation_onset){
+    out = 0.0L;
+  } else if (bc < starvation_death){
+    out = 1.0L;
+  } else {
+    out = s(bc);
+  }
+
+  return out;
+}
+                        
+// [[Rcpp::export]]
+Rcpp::NumericVector starvation_mortality_vec(Rcpp::NumericVector bc,
+                      Eigen::MatrixXd mortality,
+                      double starvation_death,
+                      double starvation_onset)
+{
+  int v = bc.size();
+  Rcpp::NumericVector out(v);
+  int n = mortality.rows();
+  std::vector<double> p_x(n);
+  std::vector<double> p_y(n);
+  
+  for(int i = 0; i < n; i++){
+    p_x[i] = mortality(i,0);
+    p_y[i] = mortality(i,1);
+  }
+  
+  tk::spline s(p_x, p_y); // Fit cubic spline  
+  
+  for(int j = 0; j < v; j++){
+    if(bc(j) > starvation_onset){
+      out(j) = 0.0L;
+    } else if (bc(j) < starvation_death){
+      out(j) = 1.0L;
+    } else {
+      out(j) = s(bc(j));
+    }
+  }
+
+  return out;
+}
+
 // // [[Rcpp::export]]
 // double prob_response(std::vector<double> x, // Range of dose - from 80 to 200 dB
 //                      Eigen::MatrixXd p, // Dose-response functions (5,000 realizations from expert elicitation)
@@ -208,46 +538,46 @@ double response_threshold(Rcpp::NumericVector dose, int day, int simduration, in
 //   return out; 
 // }
 
-//' Random deviate from a truncated Normal distribution
-//' @name rtnorm
-//' @param location Location parameter
-//' @param scale Scale parameter
-//' @param L Lower bound
-//' @param U Upper bound
-// [[Rcpp::export]]
-double rtnorm(double location,
-               double scale,
-               double L,
-               double U) {
-   
-   double tot = R::pnorm(L, location, scale, TRUE, FALSE) + R::runif(0,1) * (R::pnorm(U, location, scale, TRUE, FALSE) - R::pnorm(L, location, scale, TRUE, FALSE));
-   double out = location + scale * R::qnorm(tot, 0, 1, TRUE, FALSE);
-   return out;
-}
-
-//' Random deviate from a truncated Normal distribution
-//' @name rtnorm_vec
-//' @param location Location parameter
-//' @param scale Scale parameter
-//' @param L Lower bound
-//' @param U Upper bound
-// [[Rcpp::export]]
-Rcpp::NumericVector rtnorm_vec(int n,
-                                double location,
-                                double scale,
-                                double L,
-                                double U) {
-   
-   Rcpp::NumericVector out(n);
-   Rcpp::NumericVector tot(n);
-   
-   for(int i = 0; i<n; i++){
-     tot[i] = R::pnorm(L, location, scale, TRUE, FALSE) + R::runif(0,1) * (R::pnorm(U, location, scale, TRUE, FALSE) - R::pnorm(L, location, scale, TRUE, FALSE));
-     out[i] = location + scale * R::qnorm(tot[i], 0, 1, TRUE, FALSE);
-   }
-
-   return out;
- }
+// //' Random deviate from a truncated Normal distribution
+// //' @name rtnorm
+// //' @param location Location parameter
+// //' @param scale Scale parameter
+// //' @param L Lower bound
+// //' @param U Upper bound
+// // [[Rcpp::export]]
+// double rtnorm(double location,
+//                double scale,
+//                double L,
+//                double U) {
+// 
+//    double tot = R::pnorm(L, location, scale, TRUE, FALSE) + R::runif(0,1) * (R::pnorm(U, location, scale, TRUE, FALSE) - R::pnorm(L, location, scale, TRUE, FALSE));
+//    double out = location + scale * R::qnorm(tot, 0, 1, TRUE, FALSE);
+//    return out;
+// }
+// 
+// //' Random deviate from a truncated Normal distribution
+// //' @name rtnorm_vec
+// //' @param location Location parameter
+// //' @param scale Scale parameter
+// //' @param L Lower bound
+// //' @param U Upper bound
+// // [[Rcpp::export]]
+// Rcpp::NumericVector rtnorm_vec(int n,
+//                                 double location,
+//                                 double scale,
+//                                 double L,
+//                                 double U) {
+// 
+//    Rcpp::NumericVector out(n);
+//    Rcpp::NumericVector tot(n);
+// 
+//    for(int i = 0; i<n; i++){
+//      tot[i] = R::pnorm(L, location, scale, TRUE, FALSE) + R::runif(0,1) * (R::pnorm(U, location, scale, TRUE, FALSE) - R::pnorm(L, location, scale, TRUE, FALSE));
+//      out[i] = location + scale * R::qnorm(tot[i], 0, 1, TRUE, FALSE);
+//    }
+// 
+//    return out;
+//  }
 
 // [[Rcpp::export]]
 double is_female(int cohort){
@@ -308,65 +638,65 @@ Rcpp::NumericVector start_age_vec(Rcpp::NumericVector cohort){
 //    return is_entangled;
 //  }
 
-// [[Rcpp::export]]
-double survivorship(double age,
-                    double a1 = 0.1,
-                    double a2 = 0,
-                    double a3 = 0.01,
-                    double b1 = 60,
-                    double b3 = 8,
-                    double longevity = 69){
+// // [[Rcpp::export]]
+// double survivorship(double age,
+//                     double a1 = 0.1,
+//                     double a2 = 0,
+//                     double a3 = 0.01,
+//                     double b1 = 60,
+//                     double b3 = 8,
+//                     double longevity = 69){
+// 
+//   // From Barlow and Boveng (1991)
+// 
+//   double lj, lc, ls, out;
+// 
+//   // Exponentially decreasing risk due to juvenile mortality factors
+//   lj = std::exp((-a1/b1) * (1-std::exp(-b1*age/longevity)));
+//   
+//   // Constant risk due to other factors
+//   lc = std::exp(-a2*age/longevity);
+//   
+//   // Exponentially increasing risk due to senescent mortality factors
+//   ls = std::exp((a3/b3) * (1-exp(b3*age/longevity)));
+//   
+//   out = lj * ls * lc;
+//   
+//   return(out);
+// 
+// }
 
-  // From Barlow and Boveng (1991)
-
-  double lj, lc, ls, out;
-
-  // Exponentially decreasing risk due to juvenile mortality factors
-  lj = std::exp((-a1/b1) * (1-std::exp(-b1*age/longevity)));
-  
-  // Constant risk due to other factors
-  lc = std::exp(-a2*age/longevity);
-  
-  // Exponentially increasing risk due to senescent mortality factors
-  ls = std::exp((a3/b3) * (1-exp(b3*age/longevity)));
-  
-  out = lj * ls * lc;
-  
-  return(out);
-
-}
-
-// [[Rcpp::export]]
-Rcpp::NumericVector survivorship_vec(Rcpp::NumericVector age,
-                                     double a1 = 0.1,
-                                     double a2 = 0,
-                                     double a3 = 0.01,
-                                     double b1 = 60,
-                                     double b3 = 8,
-                                     double longevity = 69){
-  
-  // From Barlow and Boveng (1991)
-  
-  int n = age.size();
-  Rcpp::NumericVector out(n);
-  double lj, lc, ls;
-  
-  for(int i = 0; i<n; i++){
-    // Exponentially decreasing risk due to juvenile mortality factors
-    lj = std::exp((-a1/b1) * (1-std::exp(-b1*age(i)/longevity)));
-    
-    // Constant risk due to other factors
-    lc = std::exp(-a2*age(i)/longevity);
-    
-    // Exponentially increasing risk due to senescent mortality factors
-    ls = std::exp((a3/b3) * (1-exp(b3*age(i)/longevity)));
-    
-    out(i) = lj * ls * lc;
-  }
-
-  return(out);
-  
-}
+// // [[Rcpp::export]]
+// Rcpp::NumericVector survivorship_vec(Rcpp::NumericVector age,
+//                                      double a1 = 0.1,
+//                                      double a2 = 0,
+//                                      double a3 = 0.01,
+//                                      double b1 = 60,
+//                                      double b3 = 8,
+//                                      double longevity = 69){
+//   
+//   // From Barlow and Boveng (1991)
+//   
+//   int n = age.size();
+//   Rcpp::NumericVector out(n);
+//   double lj, lc, ls;
+//   
+//   for(int i = 0; i<n; i++){
+//     // Exponentially decreasing risk due to juvenile mortality factors
+//     lj = std::exp((-a1/b1) * (1-std::exp(-b1*age(i)/longevity)));
+//     
+//     // Constant risk due to other factors
+//     lc = std::exp(-a2*age(i)/longevity);
+//     
+//     // Exponentially increasing risk due to senescent mortality factors
+//     ls = std::exp((a3/b3) * (1-exp(b3*age(i)/longevity)));
+//     
+//     out(i) = lj * ls * lc;
+//   }
+// 
+//   return(out);
+//   
+// }
 
 
 //' Entanglement event
@@ -468,29 +798,34 @@ long double start_bcondition(double cohort){
   // Upper bound = maximum allowable BC (see <find_maxBC> function)
   
   long double bc;
+  double lower = 0.05;
+  double upper = 0.665289; // find_maxBC()
   
-   // Calves
-  if(cohort == 0){ 
-
-    bc = rtnorm(0.362901169, 0.08700064, 0.05, 0.665289);
+  // Calves
+  if(cohort == 0){
+    
+    bc = rtnorm(0.35884621, 0.07788818, lower, upper);
     
     // Juveniles (males and females)
   } else if(cohort == 1 | cohort == 2){
     
-    bc = rtnorm(0.28574784, 0.02027885, 0.05, 0.665289);
+    // bc = rtnorm(0.28574784, 0.02027885, 0.05, 0.665289);
+    bc = rtnorm(0.2904040, 0.0681619, lower, upper);
     
     // Adult males, resting females, pregnant females
   } else if(cohort == 3 | cohort == 4 | cohort == 6) {
     
-    bc = rtnorm(0.25940715, 0.01519702, 0.05, 0.665289);
+    // bc = rtnorm(0.25940715, 0.01519702, 0.05, 0.665289);
+    bc = rtnorm(0.27617455, 0.06969136, lower, upper);
     
     // Lactating females, which start simulation as late pregnant
-  } else { 
+  } else {
     
-    bc = rtnorm(0.41616393, 0.02267595, 0.05, 0.665289);
+    bc = rtnorm(0.40950094, 0.05721548, lower, upper);
     
   }
   return bc;
+  
 }
 
 //' Initialize body condition 
@@ -505,28 +840,32 @@ Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month =
 
   int n = cohort.size();
   Rcpp::NumericVector bc(n);
+  double lower = 0.05;
+  double upper = 0.665289; // find_maxBC()
 
   for(int i = 0; i < n; i++) {
 
     // Calves
     if(cohort[i] == 0){ 
       
-      bc[i] = rtnorm(0.362901169, 0.08700064, 0.05, 0.665289);
+      bc[i] = rtnorm(0.35884621, 0.07788818, lower, upper);
       
       // Juveniles (males and females)
     } else if(cohort[i] == 1 | cohort[i] == 2){
       
-      bc[i] = rtnorm(0.28574784, 0.02027885, 0.05, 0.665289);
+      // bc[i] = rtnorm(0.28574784, 0.02027885, 0.05, 0.665289);
+      bc[i] = rtnorm(0.2904040, 0.0681619, lower, upper);
       
       // Adult males, resting females, pregnant females
     } else if(cohort[i] == 3 | cohort[i] == 4 | cohort[i] == 6) {
       
-      bc[i] = rtnorm(0.25940715, 0.01519702, 0.05, 0.665289);
+      // bc[i] = rtnorm(0.25940715, 0.01519702, 0.05, 0.665289);
+      bc[i] = rtnorm(0.27617455, 0.06969136, lower, upper);
       
       // Lactating females, which start simulation as late pregnant
     } else if(cohort[i] == 5){ 
       
-      bc[i] = rtnorm(0.41616393, 0.02267595, 0.05, 0.665289);
+      bc[i] = rtnorm(0.40950094, 0.05721548, lower, upper);
       
     }
     
@@ -669,10 +1008,10 @@ Rcpp::NumericVector age2length_vec(Rcpp::NumericVector age){
 //   return a;
 // }
 
-// [[Rcpp::export]]
-Eigen::MatrixXd create_mat(){
-  return Eigen::MatrixXd(2,1);
-}
+// // [[Rcpp::export]]
+// Eigen::MatrixXd create_mat(){
+//   return Eigen::MatrixXd(2,1);
+// }
 
 // ' Parameters of the mass-at-length relationship
 // ' @description Generates pairs of coefficients (intercept and slope) from the logarithmic mass-at-length relationship
@@ -1060,36 +1399,36 @@ double gape_size(double L, double omega, double alpha){
 //    return m * rho * E_digest * E_hif;
 //  }
 
-//' Filtration rate
-//' @name filtration_rate
- //' @description Calculates the volume of water filtered per unit time
- //' @param A Area of the mouth gape (m^2)
- //' @param lambda_gape Percent reduction in the gape during an entanglement event (\%)
- //' @param V Swimming speed while filtering (m/s)
- //' @param E_capt Capture efficiency (\%)
- //' @param lambda_capt Percent reduction in capture efficiency during an entanglement event (\%)
- //' @return Estimated filtration rate (m^3/s)
- // [[Rcpp::export]]
- 
- double filtration_rate(double A, double lambda_gape, double V, double E_capt, double lambda_capt){ 
-   return A * (1 - lambda_gape) * V * E_capt * (1 - lambda_capt);
- }
+// //' Filtration rate
+// //' @name filtration_rate
+//  //' @description Calculates the volume of water filtered per unit time
+//  //' @param A Area of the mouth gape (m^2)
+//  //' @param lambda_gape Percent reduction in the gape during an entanglement event (\%)
+//  //' @param V Swimming speed while filtering (m/s)
+//  //' @param E_capt Capture efficiency (\%)
+//  //' @param lambda_capt Percent reduction in capture efficiency during an entanglement event (\%)
+//  //' @return Estimated filtration rate (m^3/s)
+//  // [[Rcpp::export]]
+//  
+//  double filtration_rate(double A, double lambda_gape, double V, double E_capt, double lambda_capt){ 
+//    return A * (1 - lambda_gape) * V * E_capt * (1 - lambda_capt);
+//  }
 
 
-//' Milk ingestion rate
-//' @name milk_ingestion
- //' @description Calculates the maximum volume of milk that a calf can ingest per unit time
- //' @param E_milk Milk transfer/assimilation efficiency (\%)
- //' @param M Scalar on milk provisioning by the mother (d.u.)
- //' @param E_gland Mammary gland efficiency (\%)
- //' @param mu_female Total mass of mammary glands (kg)
- //' @param delta_female Milk production rate by the mother (m^2)
- //' @param D Density of milk (kg/m^3)
- // [[Rcpp::export]]
- 
- double milk_ingestion(double E_milk, double M, double E_gland, double mu_female, double delta_female, double D){ 
-   return E_milk * M * E_gland * (mu_female * delta_female/D);
- }
+// //' Milk ingestion rate
+// //' @name milk_ingestion
+//  //' @description Calculates the maximum volume of milk that a calf can ingest per unit time
+//  //' @param E_milk Milk transfer/assimilation efficiency (\%)
+//  //' @param M Scalar on milk provisioning by the mother (d.u.)
+//  //' @param E_gland Mammary gland efficiency (\%)
+//  //' @param mu_female Total mass of mammary glands (kg)
+//  //' @param delta_female Milk production rate by the mother (m^2)
+//  //' @param D Density of milk (kg/m^3)
+//  // [[Rcpp::export]]
+//  
+//  double milk_ingestion(double E_milk, double M, double E_gland, double mu_female, double delta_female, double D){ 
+//    return E_milk * M * E_gland * (mu_female * delta_female/D);
+//  }
 
 //' Milk assimilation efficiency
 //' @name milk_assimilation
@@ -1654,30 +1993,27 @@ Rcpp::NumericVector fetal_length_vec(Rcpp::NumericVector days_to_birth,
 // }
 
 
-
-//' Energetic cost of growth
-//' @name growth_cost
-//' @param delta_m Body mass growth increment (kg/day)
-//' @param prop_blubber Proportion of the body that is blubber (\%)
-//' @param prop_water Proportion of lean body mass that is water (\%)
-//' @param P_lipid_blubber Proportion of blubber that is lipid (\%)
-//' @param rho_lipid Energy density of lipids (kJ/kg)
-//' @param rho_protein Energy density of protein (kJ/kg)
-//' @param D_lipid Efficiency of deposition of lipids (\%)
-//' @param D_protein Efficiency of deposition of protein (\%)
-// [[Rcpp::export]]
- 
- double growth_cost_old(double delta_m, double prop_blubber, double prop_water, double P_lipid_blubber,
-                    double rho_lipid, double rho_protein, double D_lipid, double D_protein){
-   
-   return delta_m * ((prop_blubber * P_lipid_blubber * rho_lipid * D_lipid) + 
-                     ((1 - prop_blubber) * (1 - prop_water) * rho_protein * D_protein));
- }
-
-
+// 
+// //' Energetic cost of growth
+// //' @name growth_cost
+// //' @param delta_m Body mass growth increment (kg/day)
+// //' @param prop_blubber Proportion of the body that is blubber (\%)
+// //' @param prop_water Proportion of lean body mass that is water (\%)
+// //' @param P_lipid_blubber Proportion of blubber that is lipid (\%)
+// //' @param rho_lipid Energy density of lipids (kJ/kg)
+// //' @param rho_protein Energy density of protein (kJ/kg)
+// //' @param D_lipid Efficiency of deposition of lipids (\%)
+// //' @param D_protein Efficiency of deposition of protein (\%)
+// // [[Rcpp::export]]
+//  
+//  double growth_cost_old(double delta_m, double prop_blubber, double prop_water, double P_lipid_blubber,
+//                     double rho_lipid, double rho_protein, double D_lipid, double D_protein){
+//    
+//    return delta_m * ((prop_blubber * P_lipid_blubber * rho_lipid * D_lipid) + 
+//                      ((1 - prop_blubber) * (1 - prop_water) * rho_protein * D_protein));
+//  }
 
 // [[Rcpp::export]]
-
 double growth_cost(double leanmass_increment,
                    double EDens_lipids, 
                    double EDens_protein,
@@ -1704,17 +2040,17 @@ double growth_cost(double leanmass_increment,
   return leanmass_increment * (cost_muscle * prop_muscle + cost_viscera * prop_viscera + cost_bones * prop_bones);
 }
 
-// [[Rcpp::export]]
-
-double fatdeposition_cost(double fatmass_increment,
-                          double energy_density_lipids, 
-                          double energy_density_protein,
-                          double lipid_in_blubber,
-                          double protein_in_blubber){
-  
-  double cost_blubber = (energy_density_lipids * lipid_in_blubber) + (energy_density_protein * protein_in_blubber);
-  return fatmass_increment * cost_blubber;
-}
+// // [[Rcpp::export]]
+// 
+// double fatdeposition_cost(double fatmass_increment,
+//                           double energy_density_lipids, 
+//                           double energy_density_protein,
+//                           double lipid_in_blubber,
+//                           double protein_in_blubber){
+//   
+//   double cost_blubber = (energy_density_lipids * lipid_in_blubber) + (energy_density_protein * protein_in_blubber);
+//   return fatmass_increment * cost_blubber;
+// }
 
 
 // §newind[year,"alive", 1] <- 1
@@ -1871,24 +2207,37 @@ Rcpp::NumericMatrix add_calf(int n,
 //    
 //    return M + fat_growth + lean_growth;
 //  }
-// [[Rcpp::export]]
+// // [[Rcpp::export]]
+// 
+// double findminval(double num1, double num2){
+//   if (num1 < num2){
+//     return num1;
+//   } else {
+//     return num2;
+//   }
+// }
 
-double findminval(double num1, double num2){
-  if (num1 < num2){
-    return num1;
-  } else {
-    return num2;
-  }
-}
+// // [[Rcpp::export]]
+// double pbirth(float now, 
+//               float enter,
+//               float timespan = 60){
+//   double out = (now - enter)/timespan;
+//   if(out > 1) out = 1;
+//   return out;
+// }
 
-// [[Rcpp::export]]
-double pbirth(float now, 
-              float enter,
-              float timespan = 60){
-  double out = (now - enter)/timespan;
-  if(out > 1) out = 1;
-  return out;
-}
+// // [[Rcpp::export]]
+// Rcpp::NumericVector pbirth_vec(Rcpp::NumericVector now, 
+//                                float enter,
+//                                float timespan = 60){
+//   int n = now.size();
+//   Rcpp::NumericVector out(n);
+//   for (int i = 0; i<n; i++){
+//     out(i)= (now(i) - enter)/timespan;
+//     if(out(i) > 1) out(i) = 1;
+//   }
+//   return out;
+// }
 
 // [[Rcpp::export]]
 double pleave(float now, 
@@ -1906,78 +2255,64 @@ double pleave(float now,
   return out;
 }
 
+  
+// // [[Rcpp::export]]
+// Rcpp::NumericVector seq_cpp(double start,
+//                             double end,
+//                             int npts){
+// 
+//   Rcpp::NumericVector out(npts);
+//   double interval = (end-start)/(npts + 1);
+//   for (int i = 0; i<npts; i++){
+//     out(i) = start + (i+1)*interval; 
+//   }
+//   return out;
+// }
 
-// [[Rcpp::export]]
-
-Rcpp::NumericVector pbirth_vec(Rcpp::NumericVector now, 
-                               float enter,
-                               float timespan = 60){
-  int n = now.size();
-  Rcpp::NumericVector out(n);
-  for (int i = 0; i<n; i++){
-    out(i)= (now(i) - enter)/timespan;
-    if(out(i) > 1) out(i) = 1;
-  }
-  return out;
-}
-  
-// [[Rcpp::export]]
-Rcpp::NumericVector seq_cpp(double start,
-                            double end,
-                            int npts){
-
-  Rcpp::NumericVector out(npts);
-  double interval = (end-start)/(npts + 1);
-  for (int i = 0; i<npts; i++){
-    out(i) = start + (i+1)*interval; 
-  }
-  return out;
-}
-
-// [[Rcpp::export]]
-double starvation_mortality(double bc,
-                            double starve_start, 
-                            double starve_threshold,
-                            double starve_scalar){
-  
-  double out;
-  
-  if(bc < starve_threshold){
-    out = 1.0L;
-  } else if(bc > starve_start) {
-    out = 0.0L;
-  } else {
-    out = starve_scalar *(starve_start * (1/bc) - 1);
-  }
-  
-  if(out < 0) out = 0;
-  if(out > 1) out = 1  ;
-  
-  return out;
-}  
-  
-// [[Rcpp::export]]
-Rcpp::NumericVector starvation_mortality_vec(Rcpp::NumericVector bc,
-                                             double starve_start, 
-                                             double starve_threshold,
-                                             double starve_scalar){
-  
-  int n = bc.size();
-  Rcpp::NumericVector out(n);
-  for (int i = 0; i<n; i++){
-    if(bc(i) < starve_threshold){
-      out(i) = 1.0L;
-    } else if(bc(i) > starve_start) {
-      out(i) = 0.0L;
-    } else {
-      out(i) = starve_scalar *(starve_start * (1/bc(i)) - 1);
-    }
-    if(out(i) < 0) out(i) = 0;
-    if(out(i) > 1) out(i) = 1;
-  }
-
-return out;
-  }  
+// // [[Rcpp::export]]
+// double starvation_mortality(double bc,
+//                             double starve_start, 
+//                             double starve_threshold,
+//                             double starve_scalar){
+//   
+//   double out;
+//   
+//   if(bc < starve_threshold){
+//     out = 1.0L;
+//   } else if(bc > starve_start) {
+//     out = 0.0L;
+//   } else {
+//     out = starve_scalar *(starve_start * (1/bc) - 1);
+//   }
+//   
+//   if(out < 0) out = 0;
+//   if(out > 1) out = 1  ;
+//   
+//   return out;
+// }  
+//   
+// // [[Rcpp::export]]
+// Rcpp::NumericVector starvation_mortality_vec(Rcpp::NumericVector bc,
+//                                              double starve_start, 
+//                                              double starve_threshold,
+//                                              double starve_scalar){
+//   
+//   int n = bc.size();
+//   Rcpp::NumericVector out(n);
+//   for (int i = 0; i<n; i++){
+//     if(bc(i) < starve_threshold){
+//       out(i) = 1.0L;
+//     } else if(bc(i) > starve_start) {
+//       out(i) = 0.0L;
+//     } else {
+//       out(i) = starve_scalar *(starve_start * (1/bc(i)) - 1);
+//     }
+//     if(out(i) < 0) out(i) = 0;
+//     if(out(i) > 1) out(i) = 1;
+//   }
+// 
+// return out;
+//   }  
 
 // [[Rcpp::export]]
 double entanglement_effect(double prob_survival,
@@ -2031,6 +2366,7 @@ double entanglement_effect(double prob_survival,
 
 // [[Rcpp::export]]
 double survival(double age,
+                int regime,
                 int female){
   
   // Linden (2023). Population size estimation of North Atlantic right whales from 1990-2022
@@ -2072,7 +2408,7 @@ double survival(double age,
   
   double age_5 = std::min(age, 5.0); // Daytime foraging
   
-  double y = b0 + b_female * female * is_adult + b_regime + b_age * age_5;
+  double y = b0 + b_female * female * is_adult + regime * b_regime + b_age * age_5;
   double out = std::exp(y)/(1+exp(y));
   return out;
 }
@@ -2091,5 +2427,6 @@ Rcpp::NumericVector clamp(Rcpp::NumericVector v, double threshold){
   }
   return out;
 }
+
 
 #endif

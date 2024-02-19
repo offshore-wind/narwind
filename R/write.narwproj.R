@@ -37,7 +37,7 @@ write.narwproj <- function(obj,
   console("Saving")
   
   # Retrieve column names
-  matt.attribs <- colnames(obj$dat$ind[[1]])
+  mat.attribs <- colnames(obj$dat$ind[[1]])
   
   # Extract population data
   narw.out <- purrr::map(.x = 1:obj$param$n, .f = ~{

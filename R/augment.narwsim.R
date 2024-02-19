@@ -16,7 +16,7 @@
 #' \dontrun{
 #' library(narwind)
 #' m <- narw(10000)
-#' plot(m)
+#' m <- augment(m)
 #' }
 #' @author Phil J. Bouchet
 
@@ -51,7 +51,7 @@ augment.narwsim <- function(obj,
   
   out.survbc <- purrr::map(.x = names(modlist), .f = ~{
     cat(ifelse(.x == "surv", "SURVIVAL MODEL", "\nHEALTH MODEL"),"\n")
-    out.mh <- mgcv::gam.mh(modlist[[.x]], ns = n, burn = burn, thin = thin, rw.scale = ifelse(.x == "surv", rw.scale[1], rw.scale[2]))
+    out.mh <- gam.mh(modlist[[.x]], ns = n, burn = burn, thin = thin, rw.scale = ifelse(.x == "surv", rw.scale[1], rw.scale[2]))
     out.mh$bs
   }) |> purrr::set_names(nm = names(modlist))
   
@@ -80,31 +80,37 @@ augment.narwsim <- function(obj,
   # Gestation ----
   #'------------------------------------------------------------
 
-  ilink.mbc <- family(gam_gest)$linkinv
-  xpred <- seq(15000, 45000, length.out = 100)
-  Xp <- predict(gam_gest, data.frame(mass = xpred), type = "lpmatrix")
-  preds.mbc <- matrix(data = NA, nrow = n.tot, ncol = length(xpred))
-  
-  cat("\nGESTATION MODEL\n")
-  out.minbc <- mgcv::gam.mh(gam_gest, 
-                      ns = n, 
-                      burn = burn, 
-                      rw.scale = rw.scale[3], 
-                      thin = thin)
-  
-  out.minbc <- out.minbc$bs
+  # The below is commented out as we only consider the mean prediction 
+  # in the population projections. Uncomment to account for uncertainty in the
+  # relationship between total body mass and minimum body condition required
+  # for gestation.
+  # ilink.mbc <- family(gam_gest)$linkinv
+  # xpred <- seq(15000, 45000, length.out = 100)
+  # Xp <- predict(gam_gest, data.frame(mass = xpred), type = "lpmatrix")
+  # preds.mbc <- matrix(data = NA, nrow = n.tot, ncol = length(xpred))
+  # 
+  # cat("\nGESTATION MODEL\n")
+  # out.minbc <- gam.mh(gam_gest, 
+  #                     ns = n, 
+  #                     burn = burn, 
+  #                     rw.scale = rw.scale[3], 
+  #                     thin = thin)
+  # 
+  # out.minbc <- out.minbc$bs
    
-  for (i in seq_len(n.tot)) {
-    preds.mbc[i, ] <- ilink.mbc(Xp %*% out.minbc[i, ])
-  }
+  # for (i in seq_len(n.tot)) {
+  #   preds.mbc[i, ] <- ilink.mbc(Xp %*% out.minbc[i, ])
+  # }
   
   # Save results
   obj$post <- list(nsamples = n.tot,
-                   samples = append(out.survbc, list("mbc" = out.minbc)),
-                   preds = list(survbc = preds.survbc, mbc = preds.mbc),
+                   samples = out.survbc,
+                   # samples = append(out.survbc, list("mbc" = out.minbc)),
+                   # preds = list(survbc = preds.survbc, mbc = preds.mbc),
+                   preds = list(survbc = preds.survbc),
                    bc.range = bc.range,
                    pred.x = pred.x,
-                   mbc.x = xpred,
+                   # mbc.x = xpred,
                    burn = burn,
                    thin = thin)
   

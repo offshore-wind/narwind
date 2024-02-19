@@ -11,6 +11,20 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// rtnorm
+double rtnorm(const double mean, const double sd, const double low, const double high);
+RcppExport SEXP _narwind_rtnorm(SEXP meanSEXP, SEXP sdSEXP, SEXP lowSEXP, SEXP highSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const double >::type mean(meanSEXP);
+    Rcpp::traits::input_parameter< const double >::type sd(sdSEXP);
+    Rcpp::traits::input_parameter< const double >::type low(lowSEXP);
+    Rcpp::traits::input_parameter< const double >::type high(highSEXP);
+    rcpp_result_gen = Rcpp::wrap(rtnorm(mean, sd, low, high));
+    return rcpp_result_gen;
+END_RCPP
+}
 // transpose_c
 Rcpp::NumericMatrix transpose_c(Rcpp::NumericMatrix m, int k);
 RcppExport SEXP _narwind_transpose_c(SEXP mSEXP, SEXP kSEXP) {
@@ -86,32 +100,31 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// rtnorm
-double rtnorm(double location, double scale, double L, double U);
-RcppExport SEXP _narwind_rtnorm(SEXP locationSEXP, SEXP scaleSEXP, SEXP LSEXP, SEXP USEXP) {
+// starvation_mortality
+double starvation_mortality(double bc, Eigen::MatrixXd mortality, double starvation_death, double starvation_onset);
+RcppExport SEXP _narwind_starvation_mortality(SEXP bcSEXP, SEXP mortalitySEXP, SEXP starvation_deathSEXP, SEXP starvation_onsetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type location(locationSEXP);
-    Rcpp::traits::input_parameter< double >::type scale(scaleSEXP);
-    Rcpp::traits::input_parameter< double >::type L(LSEXP);
-    Rcpp::traits::input_parameter< double >::type U(USEXP);
-    rcpp_result_gen = Rcpp::wrap(rtnorm(location, scale, L, U));
+    Rcpp::traits::input_parameter< double >::type bc(bcSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type mortality(mortalitySEXP);
+    Rcpp::traits::input_parameter< double >::type starvation_death(starvation_deathSEXP);
+    Rcpp::traits::input_parameter< double >::type starvation_onset(starvation_onsetSEXP);
+    rcpp_result_gen = Rcpp::wrap(starvation_mortality(bc, mortality, starvation_death, starvation_onset));
     return rcpp_result_gen;
 END_RCPP
 }
-// rtnorm_vec
-Rcpp::NumericVector rtnorm_vec(int n, double location, double scale, double L, double U);
-RcppExport SEXP _narwind_rtnorm_vec(SEXP nSEXP, SEXP locationSEXP, SEXP scaleSEXP, SEXP LSEXP, SEXP USEXP) {
+// starvation_mortality_vec
+Rcpp::NumericVector starvation_mortality_vec(Rcpp::NumericVector bc, Eigen::MatrixXd mortality, double starvation_death, double starvation_onset);
+RcppExport SEXP _narwind_starvation_mortality_vec(SEXP bcSEXP, SEXP mortalitySEXP, SEXP starvation_deathSEXP, SEXP starvation_onsetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type n(nSEXP);
-    Rcpp::traits::input_parameter< double >::type location(locationSEXP);
-    Rcpp::traits::input_parameter< double >::type scale(scaleSEXP);
-    Rcpp::traits::input_parameter< double >::type L(LSEXP);
-    Rcpp::traits::input_parameter< double >::type U(USEXP);
-    rcpp_result_gen = Rcpp::wrap(rtnorm_vec(n, location, scale, L, U));
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type bc(bcSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type mortality(mortalitySEXP);
+    Rcpp::traits::input_parameter< double >::type starvation_death(starvation_deathSEXP);
+    Rcpp::traits::input_parameter< double >::type starvation_onset(starvation_onsetSEXP);
+    rcpp_result_gen = Rcpp::wrap(starvation_mortality_vec(bc, mortality, starvation_death, starvation_onset));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -145,40 +158,6 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type cohort(cohortSEXP);
     rcpp_result_gen = Rcpp::wrap(start_age_vec(cohort));
-    return rcpp_result_gen;
-END_RCPP
-}
-// survivorship
-double survivorship(double age, double a1, double a2, double a3, double b1, double b3, double longevity);
-RcppExport SEXP _narwind_survivorship(SEXP ageSEXP, SEXP a1SEXP, SEXP a2SEXP, SEXP a3SEXP, SEXP b1SEXP, SEXP b3SEXP, SEXP longevitySEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type age(ageSEXP);
-    Rcpp::traits::input_parameter< double >::type a1(a1SEXP);
-    Rcpp::traits::input_parameter< double >::type a2(a2SEXP);
-    Rcpp::traits::input_parameter< double >::type a3(a3SEXP);
-    Rcpp::traits::input_parameter< double >::type b1(b1SEXP);
-    Rcpp::traits::input_parameter< double >::type b3(b3SEXP);
-    Rcpp::traits::input_parameter< double >::type longevity(longevitySEXP);
-    rcpp_result_gen = Rcpp::wrap(survivorship(age, a1, a2, a3, b1, b3, longevity));
-    return rcpp_result_gen;
-END_RCPP
-}
-// survivorship_vec
-Rcpp::NumericVector survivorship_vec(Rcpp::NumericVector age, double a1, double a2, double a3, double b1, double b3, double longevity);
-RcppExport SEXP _narwind_survivorship_vec(SEXP ageSEXP, SEXP a1SEXP, SEXP a2SEXP, SEXP a3SEXP, SEXP b1SEXP, SEXP b3SEXP, SEXP longevitySEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type age(ageSEXP);
-    Rcpp::traits::input_parameter< double >::type a1(a1SEXP);
-    Rcpp::traits::input_parameter< double >::type a2(a2SEXP);
-    Rcpp::traits::input_parameter< double >::type a3(a3SEXP);
-    Rcpp::traits::input_parameter< double >::type b1(b1SEXP);
-    Rcpp::traits::input_parameter< double >::type b3(b3SEXP);
-    Rcpp::traits::input_parameter< double >::type longevity(longevitySEXP);
-    rcpp_result_gen = Rcpp::wrap(survivorship_vec(age, a1, a2, a3, b1, b3, longevity));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -275,16 +254,6 @@ BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type age(ageSEXP);
     rcpp_result_gen = Rcpp::wrap(age2length_vec(age));
-    return rcpp_result_gen;
-END_RCPP
-}
-// create_mat
-Eigen::MatrixXd create_mat();
-RcppExport SEXP _narwind_create_mat() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(create_mat());
     return rcpp_result_gen;
 END_RCPP
 }
@@ -414,37 +383,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type omega(omegaSEXP);
     Rcpp::traits::input_parameter< double >::type alpha(alphaSEXP);
     rcpp_result_gen = Rcpp::wrap(gape_size(L, omega, alpha));
-    return rcpp_result_gen;
-END_RCPP
-}
-// filtration_rate
-double filtration_rate(double A, double lambda_gape, double V, double E_capt, double lambda_capt);
-RcppExport SEXP _narwind_filtration_rate(SEXP ASEXP, SEXP lambda_gapeSEXP, SEXP VSEXP, SEXP E_captSEXP, SEXP lambda_captSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type A(ASEXP);
-    Rcpp::traits::input_parameter< double >::type lambda_gape(lambda_gapeSEXP);
-    Rcpp::traits::input_parameter< double >::type V(VSEXP);
-    Rcpp::traits::input_parameter< double >::type E_capt(E_captSEXP);
-    Rcpp::traits::input_parameter< double >::type lambda_capt(lambda_captSEXP);
-    rcpp_result_gen = Rcpp::wrap(filtration_rate(A, lambda_gape, V, E_capt, lambda_capt));
-    return rcpp_result_gen;
-END_RCPP
-}
-// milk_ingestion
-double milk_ingestion(double E_milk, double M, double E_gland, double mu_female, double delta_female, double D);
-RcppExport SEXP _narwind_milk_ingestion(SEXP E_milkSEXP, SEXP MSEXP, SEXP E_glandSEXP, SEXP mu_femaleSEXP, SEXP delta_femaleSEXP, SEXP DSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type E_milk(E_milkSEXP);
-    Rcpp::traits::input_parameter< double >::type M(MSEXP);
-    Rcpp::traits::input_parameter< double >::type E_gland(E_glandSEXP);
-    Rcpp::traits::input_parameter< double >::type mu_female(mu_femaleSEXP);
-    Rcpp::traits::input_parameter< double >::type delta_female(delta_femaleSEXP);
-    Rcpp::traits::input_parameter< double >::type D(DSEXP);
-    rcpp_result_gen = Rcpp::wrap(milk_ingestion(E_milk, M, E_gland, mu_female, delta_female, D));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -718,24 +656,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// growth_cost_old
-double growth_cost_old(double delta_m, double prop_blubber, double prop_water, double P_lipid_blubber, double rho_lipid, double rho_protein, double D_lipid, double D_protein);
-RcppExport SEXP _narwind_growth_cost_old(SEXP delta_mSEXP, SEXP prop_blubberSEXP, SEXP prop_waterSEXP, SEXP P_lipid_blubberSEXP, SEXP rho_lipidSEXP, SEXP rho_proteinSEXP, SEXP D_lipidSEXP, SEXP D_proteinSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type delta_m(delta_mSEXP);
-    Rcpp::traits::input_parameter< double >::type prop_blubber(prop_blubberSEXP);
-    Rcpp::traits::input_parameter< double >::type prop_water(prop_waterSEXP);
-    Rcpp::traits::input_parameter< double >::type P_lipid_blubber(P_lipid_blubberSEXP);
-    Rcpp::traits::input_parameter< double >::type rho_lipid(rho_lipidSEXP);
-    Rcpp::traits::input_parameter< double >::type rho_protein(rho_proteinSEXP);
-    Rcpp::traits::input_parameter< double >::type D_lipid(D_lipidSEXP);
-    Rcpp::traits::input_parameter< double >::type D_protein(D_proteinSEXP);
-    rcpp_result_gen = Rcpp::wrap(growth_cost_old(delta_m, prop_blubber, prop_water, P_lipid_blubber, rho_lipid, rho_protein, D_lipid, D_protein));
-    return rcpp_result_gen;
-END_RCPP
-}
 // growth_cost
 double growth_cost(double leanmass_increment, double EDens_lipids, double EDens_protein, double lipid_in_muscle, double lipid_in_viscera, double lipid_in_bones, double protein_in_muscle, double protein_in_viscera, double protein_in_bones, double prop_muscle, double prop_viscera, double prop_bones);
 RcppExport SEXP _narwind_growth_cost(SEXP leanmass_incrementSEXP, SEXP EDens_lipidsSEXP, SEXP EDens_proteinSEXP, SEXP lipid_in_muscleSEXP, SEXP lipid_in_visceraSEXP, SEXP lipid_in_bonesSEXP, SEXP protein_in_muscleSEXP, SEXP protein_in_visceraSEXP, SEXP protein_in_bonesSEXP, SEXP prop_muscleSEXP, SEXP prop_visceraSEXP, SEXP prop_bonesSEXP) {
@@ -758,21 +678,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// fatdeposition_cost
-double fatdeposition_cost(double fatmass_increment, double energy_density_lipids, double energy_density_protein, double lipid_in_blubber, double protein_in_blubber);
-RcppExport SEXP _narwind_fatdeposition_cost(SEXP fatmass_incrementSEXP, SEXP energy_density_lipidsSEXP, SEXP energy_density_proteinSEXP, SEXP lipid_in_blubberSEXP, SEXP protein_in_blubberSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type fatmass_increment(fatmass_incrementSEXP);
-    Rcpp::traits::input_parameter< double >::type energy_density_lipids(energy_density_lipidsSEXP);
-    Rcpp::traits::input_parameter< double >::type energy_density_protein(energy_density_proteinSEXP);
-    Rcpp::traits::input_parameter< double >::type lipid_in_blubber(lipid_in_blubberSEXP);
-    Rcpp::traits::input_parameter< double >::type protein_in_blubber(protein_in_blubberSEXP);
-    rcpp_result_gen = Rcpp::wrap(fatdeposition_cost(fatmass_increment, energy_density_lipids, energy_density_protein, lipid_in_blubber, protein_in_blubber));
-    return rcpp_result_gen;
-END_RCPP
-}
 // add_calf
 Rcpp::NumericMatrix add_calf(int n, Rcpp::StringVector attr, Rcpp::NumericVector sex, Rcpp::NumericVector nonreprod);
 RcppExport SEXP _narwind_add_calf(SEXP nSEXP, SEXP attrSEXP, SEXP sexSEXP, SEXP nonreprodSEXP) {
@@ -784,31 +689,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type sex(sexSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type nonreprod(nonreprodSEXP);
     rcpp_result_gen = Rcpp::wrap(add_calf(n, attr, sex, nonreprod));
-    return rcpp_result_gen;
-END_RCPP
-}
-// findminval
-double findminval(double num1, double num2);
-RcppExport SEXP _narwind_findminval(SEXP num1SEXP, SEXP num2SEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type num1(num1SEXP);
-    Rcpp::traits::input_parameter< double >::type num2(num2SEXP);
-    rcpp_result_gen = Rcpp::wrap(findminval(num1, num2));
-    return rcpp_result_gen;
-END_RCPP
-}
-// pbirth
-double pbirth(float now, float enter, float timespan);
-RcppExport SEXP _narwind_pbirth(SEXP nowSEXP, SEXP enterSEXP, SEXP timespanSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< float >::type now(nowSEXP);
-    Rcpp::traits::input_parameter< float >::type enter(enterSEXP);
-    Rcpp::traits::input_parameter< float >::type timespan(timespanSEXP);
-    rcpp_result_gen = Rcpp::wrap(pbirth(now, enter, timespan));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -827,60 +707,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// pbirth_vec
-Rcpp::NumericVector pbirth_vec(Rcpp::NumericVector now, float enter, float timespan);
-RcppExport SEXP _narwind_pbirth_vec(SEXP nowSEXP, SEXP enterSEXP, SEXP timespanSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type now(nowSEXP);
-    Rcpp::traits::input_parameter< float >::type enter(enterSEXP);
-    Rcpp::traits::input_parameter< float >::type timespan(timespanSEXP);
-    rcpp_result_gen = Rcpp::wrap(pbirth_vec(now, enter, timespan));
-    return rcpp_result_gen;
-END_RCPP
-}
-// seq_cpp
-Rcpp::NumericVector seq_cpp(double start, double end, int npts);
-RcppExport SEXP _narwind_seq_cpp(SEXP startSEXP, SEXP endSEXP, SEXP nptsSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type start(startSEXP);
-    Rcpp::traits::input_parameter< double >::type end(endSEXP);
-    Rcpp::traits::input_parameter< int >::type npts(nptsSEXP);
-    rcpp_result_gen = Rcpp::wrap(seq_cpp(start, end, npts));
-    return rcpp_result_gen;
-END_RCPP
-}
-// starvation_mortality
-double starvation_mortality(double bc, double starve_start, double starve_threshold, double starve_scalar);
-RcppExport SEXP _narwind_starvation_mortality(SEXP bcSEXP, SEXP starve_startSEXP, SEXP starve_thresholdSEXP, SEXP starve_scalarSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type bc(bcSEXP);
-    Rcpp::traits::input_parameter< double >::type starve_start(starve_startSEXP);
-    Rcpp::traits::input_parameter< double >::type starve_threshold(starve_thresholdSEXP);
-    Rcpp::traits::input_parameter< double >::type starve_scalar(starve_scalarSEXP);
-    rcpp_result_gen = Rcpp::wrap(starvation_mortality(bc, starve_start, starve_threshold, starve_scalar));
-    return rcpp_result_gen;
-END_RCPP
-}
-// starvation_mortality_vec
-Rcpp::NumericVector starvation_mortality_vec(Rcpp::NumericVector bc, double starve_start, double starve_threshold, double starve_scalar);
-RcppExport SEXP _narwind_starvation_mortality_vec(SEXP bcSEXP, SEXP starve_startSEXP, SEXP starve_thresholdSEXP, SEXP starve_scalarSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type bc(bcSEXP);
-    Rcpp::traits::input_parameter< double >::type starve_start(starve_startSEXP);
-    Rcpp::traits::input_parameter< double >::type starve_threshold(starve_thresholdSEXP);
-    Rcpp::traits::input_parameter< double >::type starve_scalar(starve_scalarSEXP);
-    rcpp_result_gen = Rcpp::wrap(starvation_mortality_vec(bc, starve_start, starve_threshold, starve_scalar));
-    return rcpp_result_gen;
-END_RCPP
-}
 // entanglement_effect
 double entanglement_effect(double prob_survival, int severity, int ndays, Rcpp::NumericVector entgl_hit);
 RcppExport SEXP _narwind_entanglement_effect(SEXP prob_survivalSEXP, SEXP severitySEXP, SEXP ndaysSEXP, SEXP entgl_hitSEXP) {
@@ -896,14 +722,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // survival
-double survival(double age, int female);
-RcppExport SEXP _narwind_survival(SEXP ageSEXP, SEXP femaleSEXP) {
+double survival(double age, int regime, int female);
+RcppExport SEXP _narwind_survival(SEXP ageSEXP, SEXP regimeSEXP, SEXP femaleSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< double >::type age(ageSEXP);
+    Rcpp::traits::input_parameter< int >::type regime(regimeSEXP);
     Rcpp::traits::input_parameter< int >::type female(femaleSEXP);
-    rcpp_result_gen = Rcpp::wrap(survival(age, female));
+    rcpp_result_gen = Rcpp::wrap(survival(age, regime, female));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -969,8 +796,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // NARW_simulator
-Rcpp::List NARW_simulator(int cohortID, Rcpp::NumericVector seus, Rcpp::NumericVector gsl, Eigen::MatrixXd support, std::vector<Eigen::MatrixXd> densities, std::vector<Eigen::MatrixXd> densities_seus, std::vector<Eigen::MatrixXd> densities_gsl, std::vector<std::size_t> densitySeq, std::vector<std::size_t> latentDensitySeq, std::vector<Eigen::MatrixXd> prey, std::vector<Eigen::MatrixXd> fishing, std::vector<Eigen::MatrixXd> vessels, std::vector<Eigen::MatrixXd> noise, Rcpp::NumericMatrix doseresp_seed, Rcpp::NumericVector doseresp, std::vector<Eigen::MatrixXd> daylight, Eigen::MatrixXd regions, Eigen::VectorXd limits, Eigen::VectorXd limits_daylight, Eigen::VectorXd limits_regions, Eigen::VectorXd limits_prey, Eigen::VectorXd limits_fishing, Eigen::VectorXd limits_vessels, Eigen::VectorXd limits_noise, Eigen::VectorXd resolution, Eigen::VectorXd resolution_daylight, Eigen::VectorXd resolution_regions, Eigen::VectorXd resolution_prey, Eigen::VectorXd resolution_fishing, Eigen::VectorXd resolution_vessels, Eigen::VectorXd resolution_noise, std::size_t M, double stepsize, Eigen::MatrixXd xinit, Eigen::MatrixXd yinit, bool stressors, bool growth, double prey_scale, double starvation, double starvation_onset, Rcpp::NumericVector nursing_cessation, double piling_hrs, bool progress);
-RcppExport SEXP _narwind_NARW_simulator(SEXP cohortIDSEXP, SEXP seusSEXP, SEXP gslSEXP, SEXP supportSEXP, SEXP densitiesSEXP, SEXP densities_seusSEXP, SEXP densities_gslSEXP, SEXP densitySeqSEXP, SEXP latentDensitySeqSEXP, SEXP preySEXP, SEXP fishingSEXP, SEXP vesselsSEXP, SEXP noiseSEXP, SEXP doseresp_seedSEXP, SEXP doserespSEXP, SEXP daylightSEXP, SEXP regionsSEXP, SEXP limitsSEXP, SEXP limits_daylightSEXP, SEXP limits_regionsSEXP, SEXP limits_preySEXP, SEXP limits_fishingSEXP, SEXP limits_vesselsSEXP, SEXP limits_noiseSEXP, SEXP resolutionSEXP, SEXP resolution_daylightSEXP, SEXP resolution_regionsSEXP, SEXP resolution_preySEXP, SEXP resolution_fishingSEXP, SEXP resolution_vesselsSEXP, SEXP resolution_noiseSEXP, SEXP MSEXP, SEXP stepsizeSEXP, SEXP xinitSEXP, SEXP yinitSEXP, SEXP stressorsSEXP, SEXP growthSEXP, SEXP prey_scaleSEXP, SEXP starvationSEXP, SEXP starvation_onsetSEXP, SEXP nursing_cessationSEXP, SEXP piling_hrsSEXP, SEXP progressSEXP) {
+Rcpp::List NARW_simulator(int cohortID, Rcpp::NumericVector seus, Rcpp::NumericVector gsl, Eigen::MatrixXd support, std::vector<Eigen::MatrixXd> densities, std::vector<Eigen::MatrixXd> densities_seus, std::vector<Eigen::MatrixXd> densities_gsl, std::vector<std::size_t> densitySeq, std::vector<std::size_t> latentDensitySeq, std::vector<Eigen::MatrixXd> prey, std::vector<Eigen::MatrixXd> fishing, std::vector<Eigen::MatrixXd> vessels, std::vector<Eigen::MatrixXd> noise, Rcpp::NumericMatrix doseresp_seed, Rcpp::NumericVector doseresp, Eigen::MatrixXd regions, Eigen::VectorXd limits, Eigen::VectorXd limits_regions, Eigen::VectorXd limits_prey, Eigen::VectorXd limits_fishing, Eigen::VectorXd limits_vessels, Eigen::VectorXd limits_noise, Eigen::VectorXd resolution, Eigen::VectorXd resolution_regions, Eigen::VectorXd resolution_prey, Eigen::VectorXd resolution_fishing, Eigen::VectorXd resolution_vessels, Eigen::VectorXd resolution_noise, std::size_t M, double stepsize, Eigen::MatrixXd xinit, Eigen::MatrixXd yinit, bool stressors, bool growth, double prey_scale, Eigen::MatrixXd starvation_df, double starvation_death, double starvation_onset, Rcpp::NumericVector nursing_cessation, double piling_hrs, bool progress);
+RcppExport SEXP _narwind_NARW_simulator(SEXP cohortIDSEXP, SEXP seusSEXP, SEXP gslSEXP, SEXP supportSEXP, SEXP densitiesSEXP, SEXP densities_seusSEXP, SEXP densities_gslSEXP, SEXP densitySeqSEXP, SEXP latentDensitySeqSEXP, SEXP preySEXP, SEXP fishingSEXP, SEXP vesselsSEXP, SEXP noiseSEXP, SEXP doseresp_seedSEXP, SEXP doserespSEXP, SEXP regionsSEXP, SEXP limitsSEXP, SEXP limits_regionsSEXP, SEXP limits_preySEXP, SEXP limits_fishingSEXP, SEXP limits_vesselsSEXP, SEXP limits_noiseSEXP, SEXP resolutionSEXP, SEXP resolution_regionsSEXP, SEXP resolution_preySEXP, SEXP resolution_fishingSEXP, SEXP resolution_vesselsSEXP, SEXP resolution_noiseSEXP, SEXP MSEXP, SEXP stepsizeSEXP, SEXP xinitSEXP, SEXP yinitSEXP, SEXP stressorsSEXP, SEXP growthSEXP, SEXP prey_scaleSEXP, SEXP starvation_dfSEXP, SEXP starvation_deathSEXP, SEXP starvation_onsetSEXP, SEXP nursing_cessationSEXP, SEXP piling_hrsSEXP, SEXP progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -989,17 +816,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::vector<Eigen::MatrixXd> >::type noise(noiseSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type doseresp_seed(doseresp_seedSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type doseresp(doserespSEXP);
-    Rcpp::traits::input_parameter< std::vector<Eigen::MatrixXd> >::type daylight(daylightSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type regions(regionsSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits(limitsSEXP);
-    Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits_daylight(limits_daylightSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits_regions(limits_regionsSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits_prey(limits_preySEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits_fishing(limits_fishingSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits_vessels(limits_vesselsSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits_noise(limits_noiseSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type resolution(resolutionSEXP);
-    Rcpp::traits::input_parameter< Eigen::VectorXd >::type resolution_daylight(resolution_daylightSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type resolution_regions(resolution_regionsSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type resolution_prey(resolution_preySEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type resolution_fishing(resolution_fishingSEXP);
@@ -1012,18 +836,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type stressors(stressorsSEXP);
     Rcpp::traits::input_parameter< bool >::type growth(growthSEXP);
     Rcpp::traits::input_parameter< double >::type prey_scale(prey_scaleSEXP);
-    Rcpp::traits::input_parameter< double >::type starvation(starvationSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type starvation_df(starvation_dfSEXP);
+    Rcpp::traits::input_parameter< double >::type starvation_death(starvation_deathSEXP);
     Rcpp::traits::input_parameter< double >::type starvation_onset(starvation_onsetSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type nursing_cessation(nursing_cessationSEXP);
     Rcpp::traits::input_parameter< double >::type piling_hrs(piling_hrsSEXP);
     Rcpp::traits::input_parameter< bool >::type progress(progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(NARW_simulator(cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densitySeq, latentDensitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, daylight, regions, limits, limits_daylight, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_daylight, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, stepsize, xinit, yinit, stressors, growth, prey_scale, starvation, starvation_onset, nursing_cessation, piling_hrs, progress));
+    rcpp_result_gen = Rcpp::wrap(NARW_simulator(cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densitySeq, latentDensitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, stepsize, xinit, yinit, stressors, growth, prey_scale, starvation_df, starvation_death, starvation_onset, nursing_cessation, piling_hrs, progress));
     return rcpp_result_gen;
 END_RCPP
 }
 // evalEnvironment
-double evalEnvironment(Eigen::MatrixXd density, Eigen::MatrixXd density_seus, Eigen::MatrixXd density_gsl, Eigen::MatrixXd prey, Eigen::MatrixXd fishing, Eigen::MatrixXd vessels, Eigen::MatrixXd noise, Eigen::MatrixXd daylight, Eigen::MatrixXd regions, Eigen::VectorXd limits, Eigen::VectorXd limits_daylight, Eigen::VectorXd limits_regions, Eigen::VectorXd limits_prey, Eigen::VectorXd limits_fishing, Eigen::VectorXd limits_vessels, Eigen::VectorXd limits_noise, Eigen::VectorXd resolution, Eigen::VectorXd resolution_daylight, Eigen::VectorXd resolution_regions, Eigen::VectorXd resolution_prey, Eigen::VectorXd resolution_fishing, Eigen::VectorXd resolution_vessels, Eigen::VectorXd resolution_noise, double x, double y, char layer);
-RcppExport SEXP _narwind_evalEnvironment(SEXP densitySEXP, SEXP density_seusSEXP, SEXP density_gslSEXP, SEXP preySEXP, SEXP fishingSEXP, SEXP vesselsSEXP, SEXP noiseSEXP, SEXP daylightSEXP, SEXP regionsSEXP, SEXP limitsSEXP, SEXP limits_daylightSEXP, SEXP limits_regionsSEXP, SEXP limits_preySEXP, SEXP limits_fishingSEXP, SEXP limits_vesselsSEXP, SEXP limits_noiseSEXP, SEXP resolutionSEXP, SEXP resolution_daylightSEXP, SEXP resolution_regionsSEXP, SEXP resolution_preySEXP, SEXP resolution_fishingSEXP, SEXP resolution_vesselsSEXP, SEXP resolution_noiseSEXP, SEXP xSEXP, SEXP ySEXP, SEXP layerSEXP) {
+double evalEnvironment(Eigen::MatrixXd density, Eigen::MatrixXd density_seus, Eigen::MatrixXd density_gsl, Eigen::MatrixXd prey, Eigen::MatrixXd fishing, Eigen::MatrixXd vessels, Eigen::MatrixXd noise, Eigen::MatrixXd regions, Eigen::VectorXd limits, Eigen::VectorXd limits_regions, Eigen::VectorXd limits_prey, Eigen::VectorXd limits_fishing, Eigen::VectorXd limits_vessels, Eigen::VectorXd limits_noise, Eigen::VectorXd resolution, Eigen::VectorXd resolution_regions, Eigen::VectorXd resolution_prey, Eigen::VectorXd resolution_fishing, Eigen::VectorXd resolution_vessels, Eigen::VectorXd resolution_noise, double x, double y, char layer);
+RcppExport SEXP _narwind_evalEnvironment(SEXP densitySEXP, SEXP density_seusSEXP, SEXP density_gslSEXP, SEXP preySEXP, SEXP fishingSEXP, SEXP vesselsSEXP, SEXP noiseSEXP, SEXP regionsSEXP, SEXP limitsSEXP, SEXP limits_regionsSEXP, SEXP limits_preySEXP, SEXP limits_fishingSEXP, SEXP limits_vesselsSEXP, SEXP limits_noiseSEXP, SEXP resolutionSEXP, SEXP resolution_regionsSEXP, SEXP resolution_preySEXP, SEXP resolution_fishingSEXP, SEXP resolution_vesselsSEXP, SEXP resolution_noiseSEXP, SEXP xSEXP, SEXP ySEXP, SEXP layerSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -1034,17 +859,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type fishing(fishingSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type vessels(vesselsSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type noise(noiseSEXP);
-    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type daylight(daylightSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type regions(regionsSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits(limitsSEXP);
-    Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits_daylight(limits_daylightSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits_regions(limits_regionsSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits_prey(limits_preySEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits_fishing(limits_fishingSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits_vessels(limits_vesselsSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type limits_noise(limits_noiseSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type resolution(resolutionSEXP);
-    Rcpp::traits::input_parameter< Eigen::VectorXd >::type resolution_daylight(resolution_daylightSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type resolution_regions(resolution_regionsSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type resolution_prey(resolution_preySEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type resolution_fishing(resolution_fishingSEXP);
@@ -1053,25 +875,24 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type x(xSEXP);
     Rcpp::traits::input_parameter< double >::type y(ySEXP);
     Rcpp::traits::input_parameter< char >::type layer(layerSEXP);
-    rcpp_result_gen = Rcpp::wrap(evalEnvironment(density, density_seus, density_gsl, prey, fishing, vessels, noise, daylight, regions, limits, limits_daylight, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_daylight, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer));
+    rcpp_result_gen = Rcpp::wrap(evalEnvironment(density, density_seus, density_gsl, prey, fishing, vessels, noise, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_narwind_rtnorm", (DL_FUNC) &_narwind_rtnorm, 4},
     {"_narwind_transpose_c", (DL_FUNC) &_narwind_transpose_c, 2},
     {"_narwind_multinomial", (DL_FUNC) &_narwind_multinomial, 1},
     {"_narwind_random_int", (DL_FUNC) &_narwind_random_int, 3},
     {"_narwind_random_multivariate_normal", (DL_FUNC) &_narwind_random_multivariate_normal, 2},
     {"_narwind_prob_migration", (DL_FUNC) &_narwind_prob_migration, 3},
     {"_narwind_response_threshold", (DL_FUNC) &_narwind_response_threshold, 4},
-    {"_narwind_rtnorm", (DL_FUNC) &_narwind_rtnorm, 4},
-    {"_narwind_rtnorm_vec", (DL_FUNC) &_narwind_rtnorm_vec, 5},
+    {"_narwind_starvation_mortality", (DL_FUNC) &_narwind_starvation_mortality, 4},
+    {"_narwind_starvation_mortality_vec", (DL_FUNC) &_narwind_starvation_mortality_vec, 4},
     {"_narwind_is_female", (DL_FUNC) &_narwind_is_female, 1},
     {"_narwind_start_age", (DL_FUNC) &_narwind_start_age, 1},
     {"_narwind_start_age_vec", (DL_FUNC) &_narwind_start_age_vec, 1},
-    {"_narwind_survivorship", (DL_FUNC) &_narwind_survivorship, 7},
-    {"_narwind_survivorship_vec", (DL_FUNC) &_narwind_survivorship_vec, 7},
     {"_narwind_entanglement_event", (DL_FUNC) &_narwind_entanglement_event, 3},
     {"_narwind_start_mouth", (DL_FUNC) &_narwind_start_mouth, 2},
     {"_narwind_start_bcondition", (DL_FUNC) &_narwind_start_bcondition, 1},
@@ -1080,7 +901,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_narwind_agL_vec", (DL_FUNC) &_narwind_agL_vec, 2},
     {"_narwind_age2length", (DL_FUNC) &_narwind_age2length, 2},
     {"_narwind_age2length_vec", (DL_FUNC) &_narwind_age2length_vec, 1},
-    {"_narwind_create_mat", (DL_FUNC) &_narwind_create_mat, 0},
     {"_narwind_mL", (DL_FUNC) &_narwind_mL, 2},
     {"_narwind_length2mass", (DL_FUNC) &_narwind_length2mass, 3},
     {"_narwind_length2mass_vec", (DL_FUNC) &_narwind_length2mass_vec, 2},
@@ -1091,8 +911,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_narwind_feeding_effort_vec", (DL_FUNC) &_narwind_feeding_effort_vec, 3},
     {"_narwind_deg2radians", (DL_FUNC) &_narwind_deg2radians, 1},
     {"_narwind_gape_size", (DL_FUNC) &_narwind_gape_size, 3},
-    {"_narwind_filtration_rate", (DL_FUNC) &_narwind_filtration_rate, 5},
-    {"_narwind_milk_ingestion", (DL_FUNC) &_narwind_milk_ingestion, 6},
     {"_narwind_milk_assimilation", (DL_FUNC) &_narwind_milk_assimilation, 4},
     {"_narwind_milk_assimilation_vec", (DL_FUNC) &_narwind_milk_assimilation_vec, 4},
     {"_narwind_milk_supply", (DL_FUNC) &_narwind_milk_supply, 5},
@@ -1113,25 +931,17 @@ static const R_CallMethodDef CallEntries[] = {
     {"_narwind_fetal_mass_vec", (DL_FUNC) &_narwind_fetal_mass_vec, 4},
     {"_narwind_fetal_length", (DL_FUNC) &_narwind_fetal_length, 2},
     {"_narwind_fetal_length_vec", (DL_FUNC) &_narwind_fetal_length_vec, 2},
-    {"_narwind_growth_cost_old", (DL_FUNC) &_narwind_growth_cost_old, 8},
     {"_narwind_growth_cost", (DL_FUNC) &_narwind_growth_cost, 12},
-    {"_narwind_fatdeposition_cost", (DL_FUNC) &_narwind_fatdeposition_cost, 5},
     {"_narwind_add_calf", (DL_FUNC) &_narwind_add_calf, 4},
-    {"_narwind_findminval", (DL_FUNC) &_narwind_findminval, 2},
-    {"_narwind_pbirth", (DL_FUNC) &_narwind_pbirth, 3},
     {"_narwind_pleave", (DL_FUNC) &_narwind_pleave, 5},
-    {"_narwind_pbirth_vec", (DL_FUNC) &_narwind_pbirth_vec, 3},
-    {"_narwind_seq_cpp", (DL_FUNC) &_narwind_seq_cpp, 3},
-    {"_narwind_starvation_mortality", (DL_FUNC) &_narwind_starvation_mortality, 4},
-    {"_narwind_starvation_mortality_vec", (DL_FUNC) &_narwind_starvation_mortality_vec, 4},
     {"_narwind_entanglement_effect", (DL_FUNC) &_narwind_entanglement_effect, 4},
-    {"_narwind_survival", (DL_FUNC) &_narwind_survival, 2},
+    {"_narwind_survival", (DL_FUNC) &_narwind_survival, 3},
     {"_narwind_clamp", (DL_FUNC) &_narwind_clamp, 2},
     {"_narwind_create_hash", (DL_FUNC) &_narwind_create_hash, 4},
     {"_narwind_geoD", (DL_FUNC) &_narwind_geoD, 7},
     {"_narwind_geoDist", (DL_FUNC) &_narwind_geoDist, 8},
-    {"_narwind_NARW_simulator", (DL_FUNC) &_narwind_NARW_simulator, 43},
-    {"_narwind_evalEnvironment", (DL_FUNC) &_narwind_evalEnvironment, 26},
+    {"_narwind_NARW_simulator", (DL_FUNC) &_narwind_NARW_simulator, 41},
+    {"_narwind_evalEnvironment", (DL_FUNC) &_narwind_evalEnvironment, 23},
     {NULL, NULL, 0}
 };
 

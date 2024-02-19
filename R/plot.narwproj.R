@@ -37,7 +37,6 @@ plot.narwproj <- function(...,
   # Identify <narwproj> objects 
   which.obj <- which(purrr::map_lgl(.x = args, .f = ~inherits(.x, "narwproj")))
   if(length(which.obj)==0) stop("No object of class <narwproj> found.")
- 
   obj <- args[which.obj]
 
   if("vignette" %in% names(args)) vignette <- args[["vignette"]] else vignette <- FALSE
@@ -52,15 +51,12 @@ plot.narwproj <- function(...,
     x
   }
 
-  
   # Color scale for plotting
-  if ("colour" %in% names(args)){
-    colour <- args[["colour"]] 
-    } else {
-      if(noaa){
-        colour <- c("#0098A0", "black", "#BF0B98", "#FF9B19FA", "#289DE0", "#E6124B")
-        } else {
-          colour <- c("#0098A0", "#E0B200", "#BF0B98", "#FF9B19FA", "#289DE0", "#E6124B")}}
+  if ("colour" %in% names(args)) {
+    colour <- args[["colour"]]
+  } else {
+    colour <- c("#0098A0", "#E0B200", "#BF0B98", "#FF9B19FA", "#289DE0", "#E6124B")
+  }
   
   if (length(obj) > length(colour)) colour <- c(colour, 1:(length(obj) - length(colour)))
   
@@ -68,40 +64,47 @@ plot.narwproj <- function(...,
   start.year <- lubridate::year(lubridate::now())
   end.year <- start.year + obj[[1]]$param$yrs
   
-  # Extract the data
+  # Extract the trend data
   df <- purrr::map(.x = obj, .f = ~{
     nm <- .x$param$label
     if(nm == "") nm <- "narwind"
-    dplyr::mutate(.data = .x$prj$mean, label = nm)
+    dplyr::mutate(.data = .x$proj$mean, label = nm)
   }) |> do.call(what = rbind)
   
   if(!length(obj) == length(unique(df$label))) stop("Missing or incorrect labels")
 
-  
-  # Subset the data by cohort
+  # Subset the data by cohort if needed
   if(cohort){
     df <- df[cohort != "North Atlantic right whales"]
   } else {
     df <- df[cohort == "North Atlantic right whales"]
   }
   
-  # Generate plot(s)
-  p <- ggplot2::ggplot() +
-   {
-     if (interval) ggplot2::geom_ribbon(data = df, aes(x = year, y = mean, ymin = lwr, ymax = uppr, fill = label, group = label), alpha = 0.25)
-   } +
-   ggplot2::geom_path(data = df, aes(x = year, y = mean, colour = label, group = label), na.rm = TRUE) +
-   { if (noaa) ggplot2::geom_line(data = noaa_pva$pop, aes(x = year, y = popsize, group = label, fill = label, colour = label))
-} +
-   ggplot2::facet_wrap(~cohort, scales = scales, ncol = ncol) +
-   ggplot2::scale_fill_manual(values = colour, name = "") +
-   ggplot2::scale_colour_manual(values = colour, name = "") +
-   ggplot2::scale_y_continuous(breaks = ~ pretty(.x, n = ny), labels = function(x) format(x, big.mark = ",", scientific = FALSE)) +
-   ggplot2::scale_x_continuous(limits = c(start.year, end.year), breaks = pretty(c(start.year, end.year), n = nx)) +
-   xlab("") +
-   ylab("Abundance") +
-   theme_narw() 
+  p <- ggplot2::ggplot()
   
+  if(noaa) p <- p + 
+    {if (interval) ggplot2::geom_ribbon(data = noaa_pva, aes(x = year, y = median, ymin = low95, ymax = high95, fill = label, group = label), alpha = 0.25)} +
+    {if (interval) ggplot2::geom_ribbon(data = noaa_pva, aes(x = year, y = median, ymin = low50, ymax = high50, fill = label, group = label), alpha = 0.25)} +
+    ggplot2::geom_line(data = noaa_pva, aes(x = year, y = median, group = label, colour = label)) +
+    ggplot2::scale_colour_manual(values = "black", name = "") +
+    ggplot2::scale_fill_manual(values = "black", name = "")
+  
+  # Generate plot(s)
+  p <- p +
+    ggnewscale::new_scale_fill() + 
+    ggnewscale::new_scale_colour() + 
+    {if (interval) ggplot2::geom_ribbon(data = df, aes(x = year, y = mean, ymin = lwr, ymax = uppr, fill = label, group = label), alpha = 0.25)} +
+    ggplot2::geom_path(data = df, aes(x = year, y = mean, colour = label, group = label), na.rm = TRUE) +
+    ggplot2::facet_wrap(~cohort, scales = scales, ncol = ncol) +
+    ggplot2::scale_fill_manual(values = colour, name = "") +
+    ggplot2::scale_colour_manual(values = colour, name = "") +
+    ggplot2::scale_y_continuous(breaks = ~ pretty(.x, n = ny), labels = function(x) format(x, big.mark = ",", scientific = FALSE)) +
+    ggplot2::scale_x_continuous(limits = c(start.year, end.year), breaks = pretty(c(start.year, end.year), n = nx)) +
+    xlab("") +
+    ylab("Abundance") +
+    theme_narw()
+  
+   
   # Adapt layout for inclusion in package vignette
   if(vignette){
     p <- p + ggplot2::theme(panel.spacing.y = unit(0.0, "pt"))

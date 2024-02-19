@@ -33,17 +33,20 @@ summary.narwproj <- function(obj){
   cat("-------------------------------------------------------------\n")
   cat("-------------------------------------------------------------\n\n")
 
-  tot.df <- obj$prj$proj
+  # Extract projection parameters
   current.yr <- obj$param$current.yr
   yrs <- obj$param$yrs
   N <- obj$param$n
-  births.per.female <- obj$dat$birth$perfemale
-  tot.births <- obj$dat$birth$tot
-  time.resting <- obj$dat$rest
-  inter.birth <- obj$dat$birth$inter
-  nonreprod.females <- obj$dat$nonrepfem
   N_0 <- obj$init$N_0
   
+  # Extract results
+  tot.df <- obj$proj$tbl
+  births.per.female <- obj$dat$birth$perfemale
+  tot.births <- obj$dat$birth$tot
+  inter.birth <- obj$dat$birth$inter
+  time.resting <- obj$dat$rest
+  nonreprod.females <- obj$dat$nonrepfem
+
   cat("Replicates: N =", N, "\n")
   cat("Projection horizon:", yrs, "years\n\n")
   cat("Timeline:\n")
@@ -124,24 +127,36 @@ summary.narwproj <- function(obj){
   cat("=============================================================\n\n")
   
   # cat("Calving events [per year]:\n")
-  calving.events <- tibble::tibble(`Calving events` = c(paste0("Per year: N = ", 
-                                                               round(mean(tot.births$birth, na.rm = TRUE), 2), " ± ",
-                                                      round(sd(tot.births$birth, na.rm = TRUE), 2), " [",
-                                                      min(tot.births$birth, na.rm = TRUE), "–",
-                                                      max(tot.births$birth, na.rm = TRUE), "]"),
-                                              paste0("Per female: N = ", paste0(round(mean(births.per.female, na.rm = TRUE), 2), " ± ",
-                                                                   round(sd(births.per.female, na.rm = TRUE),2), " [",
-                                                                   min(births.per.female, na.rm = TRUE), "–",
-                                                                   max(births.per.female, na.rm = TRUE), "]"))))
+  calving.events <- tibble::tibble(`Calving events` = c(
+    paste0(
+      "Per year: N = ",
+      round(mean(tot.births$birth, na.rm = TRUE), 2), " ± ",
+      round(sd(tot.births$birth, na.rm = TRUE), 2), " [",
+      min(tot.births$birth, na.rm = TRUE), "–",
+      max(tot.births$birth, na.rm = TRUE), "]"
+    ),
+    paste0("Per female: N = ", paste0(
+      round(mean(births.per.female$nbirths, na.rm = TRUE), 2), " ± ",
+      round(sd(births.per.female$nbirths, na.rm = TRUE), 2), " [",
+      min(births.per.female$nbirths, na.rm = TRUE), "–",
+      max(births.per.female$nbirths, na.rm = TRUE), "]"
+    ))
+  ))
   
-  resting.period <- tibble::tibble(`Resting phase` = c(paste0("t(rest): ", paste0(median(time.resting, na.rm = TRUE), " ± ",
-                                                                                   round(sd(time.resting, na.rm = TRUE),0), " [",
-                                                                                   min(time.resting, na.rm = TRUE), "–",
-                                                                                   max(time.resting, na.rm = TRUE), "]")),
-                                                       paste0("t(inter-birth): ", paste0(median(inter.birth, na.rm = TRUE), " ± ",
-                                                                                          round(sd(inter.birth, na.rm = TRUE),0), " [",
-                                                                                          min(inter.birth, na.rm = TRUE), "–",
-                                                                                          max(inter.birth, na.rm = TRUE), "]"))))
+  resting.period <- tibble::tibble(`Resting phase` = c(
+    paste0("t(rest): ", paste0(
+      median(time.resting$t_rest, na.rm = TRUE), " ± ",
+      round(sd(time.resting$t_rest, na.rm = TRUE), 0), " [",
+      min(time.resting$t_rest, na.rm = TRUE), "–",
+      max(time.resting$t_rest, na.rm = TRUE), "]"
+    )),
+    paste0("t(inter-birth): ", paste0(
+      median(inter.birth$ibi, na.rm = TRUE), " ± ",
+      round(sd(inter.birth$ibi, na.rm = TRUE), 0), " [",
+      min(inter.birth$ibi, na.rm = TRUE), "–",
+      max(inter.birth$ibi, na.rm = TRUE), "]"
+    ))
+  ))
       
   calve.print <- trimws(knitr::kable(calving.events, format = "simple"))   
   rest.print <- trimws(knitr::kable(resting.period, format = "simple"))
@@ -179,18 +194,5 @@ summary.narwproj <- function(obj){
   abrt.print <- trimws(knitr::kable(abrt, format = "simple"))
   cat(abrt.print, sep = "\n")
   cat("\n")
-  
-  # nrf.tbl <- dplyr::bind_rows(nrf.tbl, tibble::tibble(`% Non-reproductive females` = "Per year: See plot"))
-  
-  # print(knitr::kable(nrf.tbl, format = "simple"))
-  
-  # nrf.byyear <- nrf[, list(mean = round(100*mean(nonrep), 2),
-  #                          sd = round(100*sd(nonrep), 2),
-  #                          min = round(100*min(nonrep), 2),
-  #                          max = round(100*max(nonrep), 2)), year] |>
-  #   dplyr::mutate(` ` = paste0(format(mean, digits = 3), " (±", format(sd, digits = 3), ") [", format(min, digits = 3), " –", format(max, digits = 3), "]")) |>
-  #   dplyr::select(-mean, -sd, -min, -max)
-  
-  # print(knitr::kable(nrf.byyear, format = "simple"))
   
   }

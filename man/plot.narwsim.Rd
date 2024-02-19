@@ -4,14 +4,12 @@
 \alias{plot.narwsim}
 \title{Model plots}
 \usage{
-\method{plot}{narwsim}(obj, what = "map", animate = FALSE, web = FALSE, ...)
+\method{plot}{narwsim}(obj, what = "map", web = FALSE, ...)
 }
 \arguments{
 \item{obj}{Object returned by run_model}
 
 \item{what}{}
-
-\item{animate}{Logical. If TRUE, creates a .gif animation of the tracks.}
 
 \item{web}{If TRUE, returns a plotly graph}
 }

@@ -30,7 +30,7 @@ The function reports the acceptance rate of the two samplers. As a general rule,
 \dontrun{
 library(narwind)
 m <- narw(10000)
-plot(m)
+m <- augment(m)
 }
 }
 \author{

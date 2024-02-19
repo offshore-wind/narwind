@@ -4,7 +4,15 @@
 \alias{predict.narwsim}
 \title{Predictions of right whale abundance}
 \usage{
-\method{predict}{narwsim}(..., n = 100, yrs = 35, param = TRUE, piling = 1, progress = TRUE)
+\method{predict}{narwsim}(
+  ...,
+  n = 100,
+  yrs = 35,
+  param = TRUE,
+  piling = 1,
+  survival_prob = NULL,
+  progress = TRUE
+)
 }
 \arguments{
 \item{...}{One or more objects of class \code{narwsim}.}
