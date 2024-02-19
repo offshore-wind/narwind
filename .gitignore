@@ -5,6 +5,9 @@
 # Session Data files
 .RData
 
+# Mac OS files
+**/.DS_Store*
+
 # User-specific files
 .Ruserdata
 
@@ -33,6 +36,8 @@ data/*
 
 # Targets
 _targets/
+_targets.R
+_targets.yaml
 
 # Temporary files created by R markdown
 *.utf8.md
