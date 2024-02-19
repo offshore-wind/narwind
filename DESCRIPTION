@@ -35,48 +35,32 @@ ByteCompile: true
 License: GPL (>= 2)
 Imports: 
     Rcpp (>= 1.0.8),
-    countreg,
     data.table,
-    dismo,
     doSNOW,
     dplyr,
+    fasterize,
     fields,
-    furrr,
-    future,
-    future.batchtools,
     ggnewscale,
     ggplot2,
-    glue,
     lubridate,
     mgcv,
-    move,
-    moveVis,
     openxlsx,
     pals,
     patchwork,
-    preseqR,
     purrr,
     raster,
     Rdpack,
-    readr,
-    rgdal,
-    rgeos,
     scales,
     sf,
     snow,
     sp,
-    spatstat,
     stringr,
-    tarchetypes,
-    targets,
-    terra,
     tibble,
     tidyr
 LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 7.2.3
 Depends: 
-    R (>= 2.10)
+    R (>= 3.5)
 Suggests: 
     knitr,
     rmarkdown
-VignetteBuilder: knitr
