@@ -4,7 +4,7 @@
 \alias{predict.narwsim}
 \title{Predictions of right whale abundance}
 \usage{
-predict.narwsim(
+\method{predict}{narwsim}(
   ...,
   n = 100,
   yrs = 35,

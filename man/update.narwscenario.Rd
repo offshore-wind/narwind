@@ -4,7 +4,7 @@
 \alias{update.narwscenario}
 \title{Update scenario object}
 \usage{
-update.narwscenario(obj, vessel.tbl)
+\method{update}{narwscenario}(obj, vessel.tbl)
 }
 \arguments{
 \item{obj}{An object of class \code{narwscenario}, as returned by \code{\link{scenario}}.}
