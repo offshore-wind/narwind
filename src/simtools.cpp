@@ -249,7 +249,6 @@ Rcpp::List movesim(
     Eigen::VectorXd resolution_fishing,
     Eigen::VectorXd resolution_vessels,
     Eigen::VectorXd resolution_noise,
-    double stepsize,
     bool stressors,
     bool growth,
     double prey_scale,
@@ -1298,60 +1297,12 @@ Rcpp::List movesim(
           // MOVEMENT
           // ------------------------------------------------------------
           
-          // bool crossland = false;
-          
-          // std::cout << current_x << "|" << current_y << std::endl;
-          
           // Update the animal's state
           m.update(*animal, *env, animal->region, support, 
                    limits, limits_regions, limits_prey,
                    limits_fishing, limits_vessels, limits_noise,
                    resolution, resolution_regions, resolution_prey, 
                    resolution_fishing, resolution_vessels, resolution_noise);
-          
-          // // Prevent movements through the Strait of Canso
-          // int canso_x0 = 1100;
-          // int canso_x1 = 1400;
-          // int canso_y0 = 1100;
-          // int canso_y1 = 1400;
-          // 
-          // // Prevent movements between SNE and CCB as well as through the Strait of Canso
-          // if((animal->region == 4 & layers[current_day](animal->x, animal->y, 'R') == 10) ||
-          //    (animal->region == 10 & layers[current_day](animal->x, animal->y, 'R') == 4) ||
-          //    ((current_x >= canso_x0 & current_x <= canso_x1 & current_y >= canso_y0 & current_y <= canso_y1) && 
-          //    layers[current_day](animal->x, animal->y, 'R') == 6) ||
-          //    (animal->region == 6 && (animal->x >= canso_x0 & animal->x <= canso_x1 & animal->y >= canso_y0 & animal->y <= canso_y1))) crossland = true;
-          //    
-          // while(crossland){
-          //   
-          //   // Reset location
-          //   animal->x = current_x;
-          //   animal->y = current_y;
-          //   
-          //   // Propose new location
-          //   m.update(*animal, *env, animal->region, support, 
-          //            limits, limits_daylight, limits_regions, limits_prey,
-          //            limits_fishing, limits_vessels, limits_noise,
-          //            resolution, resolution_daylight, resolution_regions, 
-          //            resolution_prey, resolution_fishing,
-          //            resolution_vessels, resolution_noise);
-          //   
-          //   // Check if the new candidate location passes criteria
-          //   if((animal->region == 4 & layers[current_day](animal->x, animal->y, 'R') == 10) ||
-          //      (animal->region == 10 & layers[current_day](animal->x, animal->y, 'R') == 4) ||
-          //      ((current_x >= canso_x0 & current_x <= canso_x1 & current_y >= canso_y0 & current_y <= canso_y1) && 
-          //      layers[current_day](animal->x, animal->y, 'R') == 6) ||
-          //      (animal->region == 6 && (animal->x >= canso_x0 & animal->x <= canso_x1 & animal->y >= canso_y0 & animal->y <= canso_y1))){
-          //     
-          //     crossland = true;
-          //     
-          //   } else {
-          //     
-          //     crossland = false;
-          //     
-          //   }
-          //   
-          // }
           
           // If pregnant females, resting females, or lactating females in their
           // last trimester move past Cape Hatteras, make them turn around and head north again
@@ -1837,6 +1788,9 @@ Rcpp::List movesim(
             // Body length
             animal->length = age2length(animal->age, animal->lengthatage);
             
+            // Mouth width
+            animal->mouth_width = animal->length * animal->mouth_ratio;
+            
             // Lean mass
             animal->lean_mass = lean_mass_nextday;
             
@@ -1964,8 +1918,6 @@ Rcpp::List movesim(
           } // End if stressors
         } // End if alive
       } // End if current_day > 0
-      
-      // std::cout << "Day: " << current_day << " | Animal:" << current_animal << std::endl;
       
       // ------------------------------------------------------------
       // STORE VALUES in output matrices
@@ -2634,7 +2586,7 @@ Rcpp::List movesim(
 //' @param limits vector (xmin, xmax, ymin, ymax) of spatial coordinate extents for spatial densities
 //' @param resolution vector (xres, yres) of spatial step sizes for spatial densities
 //' @param M Number of proposals used in the importance sampler for movement (Michelot, 2019)
-//' @param stepsize Rradius of the proposal circle for movement (Michelot, 2019)
+//' @param stepsize Radius of the proposal circle for movement (Michelot, 2019)
 //' @param xinit matrix of initial x coordinates for latent animals (nlatent x n)
 //' @param yinit matrix of initial y coordinates for latent animals (nlatent x n)
 //' @return List of coordinates
@@ -2669,7 +2621,6 @@ Rcpp::List NARW_simulator(
      Eigen::VectorXd resolution_vessels,
      Eigen::VectorXd resolution_noise,
      std::size_t M,
-     double stepsize, 
      Eigen::MatrixXd xinit, 
      Eigen::MatrixXd yinit,
      bool stressors,
@@ -2788,12 +2739,14 @@ Rcpp::List NARW_simulator(
    
    // typedef gives a type a new name
    typedef ReweightedRandomWalk<Animal, Environment> LatentMvmt;
-   LatentMvmt rm(M, stepsize);
+   LatentMvmt rm(M);
+   // LatentMvmt rm(M, stepsize); // Availability radius model
    
    // Initialize observed movement rule
    CoupledRandomWalk<
      CouplingAnimal, LatentAttractor, LatentMvmt, std::vector<Environment>
-   > crm(rm, latent_environments, M, stepsize);
+   > crm(rm, latent_environments, M);
+   // > crm(rm, latent_environments, M, stepsize); // Availability radius model
    
    // ------------------------------------------------------------------------
    // Run simulations
@@ -2807,7 +2760,8 @@ Rcpp::List NARW_simulator(
                   resolution, resolution_regions,
                   resolution_prey, resolution_fishing,
                   resolution_vessels, resolution_noise, 
-                  stepsize, stressors, growth, prey_scale, 
+                  // stepsize,
+                  stressors, growth, prey_scale, 
                   starvation_df, starvation_death, starvation_onset,
                   nursing_cessation, piling_hrs, progress);
    

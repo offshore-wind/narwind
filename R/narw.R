@@ -123,15 +123,10 @@ narw <- function(nsim = 1e3,
   # Scalar for prey surfaces
   # prey.scalar <- 100
   
-  # Step size for availability radius movement model (--unused)
+  # Step size for availability radius movement model
   # Need to divide by 2 as there are two half steps (Michelot, 2020)
+  # UNUSED - as using Normal kernel
   # step.size <- 120/2
-  
-  # Radius of neighborhood around latent animal
-  # If a simulated whale enters this zone, it will merge with the latent animal
-  # This value is lower than the shortest landward distance between adjacent regions
-  # to prevent movements across land
-  merge.distance <- 25
   
   # Number of proposals when sampling new location
   # In line with sample sizes used in case studies from Michelot (2020)
@@ -564,7 +559,7 @@ narw <- function(nsim = 1e3,
                                 doseresp = median_doseresponse,
                                 regions = regionsmap,
                                 M = n.prop, 
-                                step = merge.distance,
+                                # stepsize = step.size,
                                 xinit = matrix(data = coords[init.inds[[i]], 'x'], nrow = nrow(init.inds[[i]])),
                                 yinit = matrix(data = coords[init.inds[[i]], 'y'], nrow = nrow(init.inds[[i]])),
                                 support = geomap,
@@ -623,7 +618,7 @@ narw <- function(nsim = 1e3,
       doseresp = median_doseresponse,
       regions = regionsmap,
       M = n.prop,
-      step = merge.distance, 
+      # stepsize = step.size,
       xinit = matrix(data = coords[init.inds[[1]], "x"], nrow = nrow(init.inds[[1]])),
       yinit = matrix(data = coords[init.inds[[1]], "y"], nrow = nrow(init.inds[[1]])),
       support = geomap,
@@ -955,7 +950,7 @@ narw <- function(nsim = 1e3,
                        pair = match.test,
                        risk.scalar = risk.scalar,
                        prey.scalar = prey.scalar,
-                       step = merge.distance,
+                       # step = step.size,
                        n.prop = n.prop,
                        ambient.dB = ambient.dB)
   
