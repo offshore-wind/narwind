@@ -796,8 +796,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // NARW_simulator
-Rcpp::List NARW_simulator(int cohortID, Rcpp::NumericVector seus, Rcpp::NumericVector gsl, Eigen::MatrixXd support, std::vector<Eigen::MatrixXd> densities, std::vector<Eigen::MatrixXd> densities_seus, std::vector<Eigen::MatrixXd> densities_gsl, std::vector<std::size_t> densitySeq, std::vector<std::size_t> latentDensitySeq, std::vector<Eigen::MatrixXd> prey, std::vector<Eigen::MatrixXd> fishing, std::vector<Eigen::MatrixXd> vessels, std::vector<Eigen::MatrixXd> noise, Rcpp::NumericMatrix doseresp_seed, Rcpp::NumericVector doseresp, Eigen::MatrixXd regions, Eigen::VectorXd limits, Eigen::VectorXd limits_regions, Eigen::VectorXd limits_prey, Eigen::VectorXd limits_fishing, Eigen::VectorXd limits_vessels, Eigen::VectorXd limits_noise, Eigen::VectorXd resolution, Eigen::VectorXd resolution_regions, Eigen::VectorXd resolution_prey, Eigen::VectorXd resolution_fishing, Eigen::VectorXd resolution_vessels, Eigen::VectorXd resolution_noise, std::size_t M, double stepsize, Eigen::MatrixXd xinit, Eigen::MatrixXd yinit, bool stressors, bool growth, double prey_scale, Eigen::MatrixXd starvation_df, double starvation_death, double starvation_onset, Rcpp::NumericVector nursing_cessation, double piling_hrs, bool progress);
-RcppExport SEXP _narwind_NARW_simulator(SEXP cohortIDSEXP, SEXP seusSEXP, SEXP gslSEXP, SEXP supportSEXP, SEXP densitiesSEXP, SEXP densities_seusSEXP, SEXP densities_gslSEXP, SEXP densitySeqSEXP, SEXP latentDensitySeqSEXP, SEXP preySEXP, SEXP fishingSEXP, SEXP vesselsSEXP, SEXP noiseSEXP, SEXP doseresp_seedSEXP, SEXP doserespSEXP, SEXP regionsSEXP, SEXP limitsSEXP, SEXP limits_regionsSEXP, SEXP limits_preySEXP, SEXP limits_fishingSEXP, SEXP limits_vesselsSEXP, SEXP limits_noiseSEXP, SEXP resolutionSEXP, SEXP resolution_regionsSEXP, SEXP resolution_preySEXP, SEXP resolution_fishingSEXP, SEXP resolution_vesselsSEXP, SEXP resolution_noiseSEXP, SEXP MSEXP, SEXP stepsizeSEXP, SEXP xinitSEXP, SEXP yinitSEXP, SEXP stressorsSEXP, SEXP growthSEXP, SEXP prey_scaleSEXP, SEXP starvation_dfSEXP, SEXP starvation_deathSEXP, SEXP starvation_onsetSEXP, SEXP nursing_cessationSEXP, SEXP piling_hrsSEXP, SEXP progressSEXP) {
+Rcpp::List NARW_simulator(int cohortID, Rcpp::NumericVector seus, Rcpp::NumericVector gsl, Eigen::MatrixXd support, std::vector<Eigen::MatrixXd> densities, std::vector<Eigen::MatrixXd> densities_seus, std::vector<Eigen::MatrixXd> densities_gsl, std::vector<std::size_t> densitySeq, std::vector<std::size_t> latentDensitySeq, std::vector<Eigen::MatrixXd> prey, std::vector<Eigen::MatrixXd> fishing, std::vector<Eigen::MatrixXd> vessels, std::vector<Eigen::MatrixXd> noise, Rcpp::NumericMatrix doseresp_seed, Rcpp::NumericVector doseresp, Eigen::MatrixXd regions, Eigen::VectorXd limits, Eigen::VectorXd limits_regions, Eigen::VectorXd limits_prey, Eigen::VectorXd limits_fishing, Eigen::VectorXd limits_vessels, Eigen::VectorXd limits_noise, Eigen::VectorXd resolution, Eigen::VectorXd resolution_regions, Eigen::VectorXd resolution_prey, Eigen::VectorXd resolution_fishing, Eigen::VectorXd resolution_vessels, Eigen::VectorXd resolution_noise, std::size_t M, Eigen::MatrixXd xinit, Eigen::MatrixXd yinit, bool stressors, bool growth, double prey_scale, Eigen::MatrixXd starvation_df, double starvation_death, double starvation_onset, Rcpp::NumericVector nursing_cessation, double piling_hrs, bool progress);
+RcppExport SEXP _narwind_NARW_simulator(SEXP cohortIDSEXP, SEXP seusSEXP, SEXP gslSEXP, SEXP supportSEXP, SEXP densitiesSEXP, SEXP densities_seusSEXP, SEXP densities_gslSEXP, SEXP densitySeqSEXP, SEXP latentDensitySeqSEXP, SEXP preySEXP, SEXP fishingSEXP, SEXP vesselsSEXP, SEXP noiseSEXP, SEXP doseresp_seedSEXP, SEXP doserespSEXP, SEXP regionsSEXP, SEXP limitsSEXP, SEXP limits_regionsSEXP, SEXP limits_preySEXP, SEXP limits_fishingSEXP, SEXP limits_vesselsSEXP, SEXP limits_noiseSEXP, SEXP resolutionSEXP, SEXP resolution_regionsSEXP, SEXP resolution_preySEXP, SEXP resolution_fishingSEXP, SEXP resolution_vesselsSEXP, SEXP resolution_noiseSEXP, SEXP MSEXP, SEXP xinitSEXP, SEXP yinitSEXP, SEXP stressorsSEXP, SEXP growthSEXP, SEXP prey_scaleSEXP, SEXP starvation_dfSEXP, SEXP starvation_deathSEXP, SEXP starvation_onsetSEXP, SEXP nursing_cessationSEXP, SEXP piling_hrsSEXP, SEXP progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -830,7 +830,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type resolution_vessels(resolution_vesselsSEXP);
     Rcpp::traits::input_parameter< Eigen::VectorXd >::type resolution_noise(resolution_noiseSEXP);
     Rcpp::traits::input_parameter< std::size_t >::type M(MSEXP);
-    Rcpp::traits::input_parameter< double >::type stepsize(stepsizeSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type xinit(xinitSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type yinit(yinitSEXP);
     Rcpp::traits::input_parameter< bool >::type stressors(stressorsSEXP);
@@ -842,7 +841,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type nursing_cessation(nursing_cessationSEXP);
     Rcpp::traits::input_parameter< double >::type piling_hrs(piling_hrsSEXP);
     Rcpp::traits::input_parameter< bool >::type progress(progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(NARW_simulator(cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densitySeq, latentDensitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, stepsize, xinit, yinit, stressors, growth, prey_scale, starvation_df, starvation_death, starvation_onset, nursing_cessation, piling_hrs, progress));
+    rcpp_result_gen = Rcpp::wrap(NARW_simulator(cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densitySeq, latentDensitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, xinit, yinit, stressors, growth, prey_scale, starvation_df, starvation_death, starvation_onset, nursing_cessation, piling_hrs, progress));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -940,7 +939,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_narwind_create_hash", (DL_FUNC) &_narwind_create_hash, 4},
     {"_narwind_geoD", (DL_FUNC) &_narwind_geoD, 7},
     {"_narwind_geoDist", (DL_FUNC) &_narwind_geoDist, 8},
-    {"_narwind_NARW_simulator", (DL_FUNC) &_narwind_NARW_simulator, 41},
+    {"_narwind_NARW_simulator", (DL_FUNC) &_narwind_NARW_simulator, 40},
     {"_narwind_evalEnvironment", (DL_FUNC) &_narwind_evalEnvironment, 23},
     {NULL, NULL, 0}
 };

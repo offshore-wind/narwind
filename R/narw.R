@@ -118,7 +118,7 @@ narw <- function(nsim = 1e3,
 
   # Vessel strike risk scalar.
   # Factor by which vessel strike risk rasters are multiplied to scale to strike probabilities.
-  risk.scalar <- 1e-07
+  strike.scalar <- 1e-07
   
   # Scalar for prey surfaces
   # prey.scalar <- 100
@@ -334,7 +334,7 @@ narw <- function(nsim = 1e3,
   
   if(!is.null(scenario)){
     
-    vesselmaps <- map_vessels(obj = scenario, z = "risk", baseline = FALSE, spgdf = TRUE, strike_scalar = risk.scalar)
+    vesselmaps <- map_vessels(obj = scenario, z = "risk", baseline = FALSE, spgdf = TRUE, strike_scalar = strike.scalar)
       
   } else { # Baseline
     
@@ -344,7 +344,7 @@ narw <- function(nsim = 1e3,
         sf = tmp["tot_PLETH"],
         raster = raster::subset(vessel_grid$raster, "cellID"),
         field = "tot_PLETH")
-      r <- r * risk.scalar
+      r <- r * strike.scalar
       r[r>1] <- 1
       as(r, "SpatialGridDataFrame")
     }) |> purrr::set_names(nm = month.abb) # Monthly
@@ -948,7 +948,7 @@ narw <- function(nsim = 1e3,
                                          spline = splinefun(mortality_df[,1], mortality_df[,2])),
                        nurse_cease = cease.nursing,
                        pair = match.test,
-                       risk.scalar = risk.scalar,
+                       strike.scalar = strike.scalar,
                        prey.scalar = prey.scalar,
                        # step = step.size,
                        n.prop = n.prop,

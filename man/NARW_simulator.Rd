@@ -34,7 +34,6 @@ NARW_simulator(
   resolution_vessels,
   resolution_noise,
   M,
-  stepsize,
   xinit,
   yinit,
   stressors,
@@ -65,11 +64,11 @@ simulate comes from length of vector densitySeq}
 
 \item{M}{Number of proposals used in the importance sampler for movement (Michelot, 2019)}
 
-\item{stepsize}{Radius of the proposal circle for movement (Michelot, 2019)}
-
 \item{xinit}{matrix of initial x coordinates for latent animals (nlatent x n)}
 
 \item{yinit}{matrix of initial y coordinates for latent animals (nlatent x n)}
+
+\item{stepsize}{Radius of the proposal circle for movement (Michelot, 2019)}
 }
 \value{
 List of coordinates
