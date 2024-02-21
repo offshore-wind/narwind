@@ -16,6 +16,7 @@ narwind.Rproj
 ^data/dirichlet$
 ^data/elicitation$
 ^data/gear$
+^data/gis$
 ^data/parameters$
 ^data/popviability$
 ^data/regions$
