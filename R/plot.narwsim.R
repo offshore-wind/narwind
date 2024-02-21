@@ -160,63 +160,8 @@ plot.narwsim <- function(obj,
       
       purrr::walk(.x = p, .f = ~print(.x))
       
-      # # Create plot for minimum BC required for gestation
-      # mbc.df <- expand.grid(mass = mbc.x, mcmc = seq_len(nsamples))
-      # mbc.df$min_bc <- as.numeric(t(preds.mbc))
-      # 
-      # # Sample a subset of predictions 
-      # mbc.df <- mbc.df[mbc.df$mcmc %in% sample(nsamples, nL, replace = FALSE), ]
-      # 
-      # # Add mean response
-      # pdf <- data.frame(mass = mbc.x, min_bc = predict(gam_gest, data.frame(mass = mbc.x), "response"))
-      # 
-      # # Create plot
-      # gp <- ggplot2::ggplot(data = mbc.df, aes(x = mass, y = min_bc)) +
-      #   ggplot2::geom_line(aes(group = mcmc), colour = "grey", alpha = 0.2) +
-      #   ggplot2::geom_line(data = pdf, linewidth = linewidth) +
-      #   theme_narw() +
-      #   scale_x_continuous(labels = function(x) format(x, big.mark = ",", scientific = FALSE)) +
-      #   xlab("Total mass (kg)") +
-      #   ylab("Min body condition (%)")
-      # 
-      # print(gp)
-      
     }
-    # } else if (what == "prob") {
-    #   
-    #   cohorts <- obj$param$cohorts
-    #   
-    #   x_axis <- seq(0,1,0.01)
-    #   
-    #   bc_preds <- obj$gam$pred$bc
-    #   surv_preds <- obj$gam$pred$surv
-    #   
-    #   if(5 %in% cohort) which.cohorts <- c(0, cohort) else which.cohorts <- cohort
-    #   
-    #   pred.df <- tibble::tibble(cohort = factor(do.call(c, purrr::map(.x = which.cohorts, .f = ~rep(.x, each = length(x_axis))))),
-    #                             start_bc = rep(x_axis, length(which.cohorts)))
-    #   
-    #   pred.df$surv <- apply(X = pred.df, MARGIN = 1, FUN = function(x) surv_preds[[as.character(x[1])]](x[2]))
-    #   pred.df$bc <- apply(X = pred.df, MARGIN = 1, FUN = function(x) bc_preds[[as.character(x[1])]](x[2]))
-    #   
-    #   pred.df <- pred.df |> tidyr::pivot_longer(!c(cohort, start_bc), names_to = "variable", values_to = "value")
-    #   
-    # 
-    #   to_string <- ggplot2::as_labeller(c('bc' = "Body condition", 'surv' = "Survival"))
-    #   linecol <- c("black", "#f46a9b", "#ef9b20", "#edbf33", "#87bc45", "#27aeef", "#b33dc6")
-    #   
-    #   
-    #   ggplot2::ggplot(data = pred.df) +
-    #     ggplot2::geom_line(aes(x = start_bc, y = value, col = cohort), linewidth = 0.65) +
-    #     theme_narw() +
-    #     xlab("Body condition") +
-    #     ylab("Probability") +
-    #     ggplot2::scale_y_continuous(limits = c(0,1), breaks = seq(0,1,0.1)) +
-    #     ggplot2::scale_color_manual(values = linecol, labels = cohorts$name) +
-    #     ggplot2::facet_wrap(~variable, scales = "free", labeller = to_string) +
-    #     ggplot2::theme(legend.position = "right",
-    #                    legend.title = ggplot2::element_blank())
-    #   
+    
     #' -------------------------------------------------------
     # MOVEMENT TRACKS ----
     #' -------------------------------------------------------  
@@ -230,7 +175,7 @@ plot.narwsim <- function(obj,
     locs.birth <- obj$birth
     
     locations <- purrr::set_names(x = cohort.ab) |>
-      purrr::map(.f = ~sim[[.x]][day > 0, list(date, month, whale, easting, northing, region, cohort, cohort_name, feed, north)])
+      purrr::map(.f = ~sim[[.x]][day > 0, list(date, day, month, whale, easting, northing, region, cohort, cohort_name, feed, north)])
     
     tracks <- data.table::rbindlist(locations)
     
@@ -274,11 +219,10 @@ plot.narwsim <- function(obj,
                               "Juveniles" = "Adults/Juveniles",
                               "Calves" = "Calves")
     
-    
     locs.birth$event <- "Birth"
     
     # Extract movement tracks
-    tracks.cohort <- tracks[cohort %in% cohortID & whale %in% whaleID]
+    tracks.cohort <- tracks[cohort %in% cohortID & whale %in% whaleID & day >= 93]
     
     # Rename lactating cohort so that calves are plotted together with lactating females
     if(5 %in% cohortID){
@@ -303,17 +247,11 @@ plot.narwsim <- function(obj,
         
         out_p <- base_p +
           ggplot2::geom_path(data = input.tracks, 
-                             mapping = ggplot2::aes(x = easting, y = northing, group = whale, colour = factor(month)), 
-                             alpha = 0.7, linewidth = lwd) +
-          ggplot2::scale_color_manual(values = pals::viridis(12), labels = month.abb) +
-          labs(color = NULL) +
-          ggplot2::coord_sf(expand = FALSE) 
-        # ggplot2::theme(
-        #   legend.title = element_blank(),
-        #   legend.position = c(1000, -500),
-        #   legend.background = element_rect(fill = "white", colour = NA),
-        #   legend.text = element_text(size = 10),
-        #   legend.key = element_rect(fill = "transparent"))
+                             mapping = ggplot2::aes(x = easting, y = northing, group = whale), 
+                             linewidth = 1.5) +
+          ggplot2::facet_wrap(~month) +
+          labs(color = NULL)
+
         
       } else {
         
@@ -391,15 +329,15 @@ plot.narwsim <- function(obj,
         }
       }
       
-      out_p +
-        ggplot2::theme(
-          legend.background = ggplot2::element_rect(fill = "white", colour = NA),
-          legend.text = ggplot2::element_text(size = 10),
-          legend.key = ggplot2::element_rect(fill = "transparent"))  +
-        ggplot2::theme(legend.title = element_text(face = "bold")) +
-        ggplot2::facet_wrap(~cohort_name) +
-        ggplot2::coord_sf(expand = FALSE) +
-        {if(!5 %in% unique(input.tracks$cohort)) ggplot2::guides(shape = "none")}
+        out_p +
+          ggplot2::theme(
+            legend.background = ggplot2::element_rect(fill = "white", colour = NA),
+            legend.text = ggplot2::element_text(size = 10),
+            legend.key = ggplot2::element_rect(fill = "transparent"))  +
+          ggplot2::theme(legend.title = element_text(face = "bold")) +
+          {if(!bymonth) ggplot2::facet_wrap(~cohort_name)} +
+          ggplot2::coord_sf(expand = FALSE) +
+          {if(!5 %in% unique(input.tracks$cohort)) ggplot2::guides(shape = "none")}
       
     } # End create_map
     
