@@ -1220,3 +1220,13 @@ format_dt <- function(dt, relative = FALSE, N, direction = "col") {
     dt
   }
 }
+
+# ++ [FUNCTION] Convert a 3D array to a data.table
+# ++ [PARAM] a –– Input array
+array2dt <- function(a){
+  y <- aperm(a, c(1, 3, 2))
+  dim(y) <- c(prod(dim(a)[-2]), dim(a)[2])
+  y <- data.table::data.table(y)
+  names(y) <- colnames(a)
+  return(y)
+}
