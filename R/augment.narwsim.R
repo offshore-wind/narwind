@@ -12,13 +12,13 @@
 #' @return The original \code{narwsim} object, augmented with posterior samples (list element named \code{post}).
 #' @import mgcv
 #' @export
+#' @author Phil J. Bouchet
 #' @examples
 #' \dontrun{
 #' library(narwind)
 #' m <- narw(10000)
 #' m <- augment(m)
 #' }
-#' @author Phil J. Bouchet
 
 augment.narwsim <- function(obj,
                            n = 100000,
@@ -30,11 +30,10 @@ augment.narwsim <- function(obj,
   
   if("thin" %in% names(args)) thin <- args[["thin"]] else thin <- 10
   if("burn" %in% names(args)) burn <- args[["burn"]] else burn <- 0.5*n
-  if("rw.scale" %in% names(args)) rw.scale <- args[["rw.scale"]] else rw.scale <- c(0.25, 0.1, 0.625)
+  if("rw.scale" %in% names(args)) rw.scale <- args[["rw.scale"]] else rw.scale <- 0.25 # Default value from mgcv::gam.mh
   
   # Function checks
   if(!inherits(obj, "narwsim")) stop("Object must be of class <narwsim>")
-  if(!length(rw.scale)==3) stop("<rw.scale> must be of length 3")
 
   # Prediction data
   pred.x <- expand.grid(start_bc = seq(bc.range[1], bc.range[2], length.out = 100), cohort = cohorts$id)
@@ -51,7 +50,7 @@ augment.narwsim <- function(obj,
   
   out.survbc <- purrr::map(.x = names(modlist), .f = ~{
     cat(ifelse(.x == "surv", "SURVIVAL MODEL", "\nHEALTH MODEL"),"\n")
-    out.mh <- gam.mh(modlist[[.x]], ns = n, burn = burn, thin = thin, rw.scale = ifelse(.x == "surv", rw.scale[1], rw.scale[2]))
+    out.mh <- gam.mh(modlist[[.x]], ns = n, burn = burn, thin = thin, rw.scale = rw.scale)
     out.mh$bs
   }) |> purrr::set_names(nm = names(modlist))
   
