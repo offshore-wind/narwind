@@ -24,9 +24,9 @@
 #' }
 plot.narwproj <- function(...,
                           interval = TRUE,
-                          cohort = FALSE, 
+                          cohort = FALSE,
                           noaa = FALSE,
-                          scales = "free", 
+                          scales = "free",
                           ncol = 3,
                           nx = 5,
                           ny = 5){
@@ -91,8 +91,8 @@ plot.narwproj <- function(...,
   
   # Generate plot(s)
   p <- p +
-    ggnewscale::new_scale_fill() + 
-    ggnewscale::new_scale_colour() + 
+    {if(noaa) ggnewscale::new_scale_fill() } + 
+    {if(noaa) ggnewscale::new_scale_colour()} + 
     {if (interval) ggplot2::geom_ribbon(data = df, aes(x = year, y = mean, ymin = lwr, ymax = uppr, fill = label, group = label), alpha = 0.25)} +
     ggplot2::geom_path(data = df, aes(x = year, y = mean, colour = label, group = label), na.rm = TRUE) +
     ggplot2::facet_wrap(~cohort, scales = scales, ncol = ncol) +
@@ -104,7 +104,6 @@ plot.narwproj <- function(...,
     ylab("Abundance") +
     theme_narw()
   
-   
   # Adapt layout for inclusion in package vignette
   if(vignette){
     p <- p + ggplot2::theme(panel.spacing.y = unit(0.0, "pt"))
