@@ -1,6 +1,9 @@
 # Define methods
+#' @export
 augment <- function (x, ...) UseMethod("augment", x)
+#' @export
 write <- function(x, ...) UseMethod("write")
+#' @export
 animate <- function (x, ...) UseMethod("animate", x)
 
 # PACKAGE DEVELOPMENT ------------------------------------------------------
