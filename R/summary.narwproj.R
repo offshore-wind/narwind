@@ -126,6 +126,12 @@ summary.narwproj <- function(obj){
   cat("FECUNDITY\n")
   cat("=============================================================\n\n")
   
+  plot(tot.births[prj == 1, (list(year, birth))], type = "l", col = "grey", ylim = range(tot.births$birth),
+       xlab = "", ylab = "Total No. births")
+  for(i in 2:prj$param$n){
+    lines(tot.births[prj == i, (list(year, birth))], col = "grey")
+  }
+  
   # cat("Calving events [per year]:\n")
   calving.events <- tibble::tibble(`Calving events` = c(
     paste0(
