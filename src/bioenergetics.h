@@ -601,9 +601,9 @@ double is_female(int cohort){
    if(cohort == 0){
      return 0;
    } else if(cohort >= 1 && cohort <= 2){
-     return R::runif(1, 8);
+     return R::runif(1, 8-(92/365));
    } else {
-     return R::runif(9, 68); // Longevity of 69 years (-1 for 1 year simulation)
+     return R::runif(9, 68-(92/365)); // Longevity of 69 years
    }
  }
 
@@ -619,9 +619,9 @@ Rcpp::NumericVector start_age_vec(Rcpp::NumericVector cohort){
     if(cohort[i] == 0){
       a[i] = 0;
     } else if(cohort[i] >= 1 && cohort[i] <= 2){
-      a[i] = R::runif(1, 8);
+      a[i] = R::runif(1, 8-(92/365));
     } else {
-      a[i] = R::runif(9, 68);
+      a[i] = R::runif(9, 68-(92/365));
     }
   }
   return(a);
@@ -821,7 +821,7 @@ long double start_bcondition(double cohort){
     // Lactating females, which start simulation as late pregnant
   } else {
     
-    bc = rtnorm(0.40950094, 0.05721548, lower, upper);
+    bc = rtnorm(0.40950094, 0.05721548, 0.35, upper);
     
   }
   return bc;
@@ -865,7 +865,7 @@ Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month =
       // Lactating females, which start simulation as late pregnant
     } else if(cohort[i] == 5){ 
       
-      bc[i] = rtnorm(0.40950094, 0.05721548, lower, upper);
+      bc[i] = rtnorm(0.40950094, 0.05721548, 0.35, upper);
       
     }
     
@@ -2427,6 +2427,5 @@ Rcpp::NumericVector clamp(Rcpp::NumericVector v, double threshold){
   }
   return out;
 }
-
 
 #endif
