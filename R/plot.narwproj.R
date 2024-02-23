@@ -83,18 +83,24 @@ plot.narwproj <- function(...,
   p <- ggplot2::ggplot()
   
   if(noaa) p <- p + 
-    {if (interval) ggplot2::geom_ribbon(data = noaa_pva, aes(x = year, y = median, ymin = low95, ymax = high95, fill = label, group = label), alpha = 0.25)} +
-    {if (interval) ggplot2::geom_ribbon(data = noaa_pva, aes(x = year, y = median, ymin = low50, ymax = high50, fill = label, group = label), alpha = 0.25)} +
-    ggplot2::geom_line(data = noaa_pva, aes(x = year, y = median, group = label, colour = label)) +
+    {if (interval) ggplot2::geom_ribbon(data = noaa_pva, aes(x = year, y = median, ymin = low95, ymax = high95, fill = label, group = label), alpha = 0.15)} +
+    {if (interval) ggplot2::geom_ribbon(data = noaa_pva, aes(x = year, y = median, ymin = low50, ymax = high50, fill = label, group = label), alpha = 0.15)} +
+    # ggplot2::geom_line(data = noaa_pva, aes(x = year, y = low95, group = label, colour = label), linetype = "dotted") +
+    # ggplot2::geom_line(data = noaa_pva, aes(x = year, y = high95, group = label, colour = label), linetype = "dotted") +
+    # ggplot2::geom_line(data = noaa_pva, aes(x = year, y = low50, group = label, colour = label), linetype = "dotdash") +
+    # ggplot2::geom_line(data = noaa_pva, aes(x = year, y = high50, group = label, colour = label), linetype = "dotdash") +
+    ggplot2::geom_line(data = noaa_pva, aes(x = year, y = median, group = label, colour = label), linetype = "solid", 
+                       linewidth = 0.8, alpha = 0.75) +
     ggplot2::scale_colour_manual(values = "black", name = "") +
     ggplot2::scale_fill_manual(values = "black", name = "")
   
   # Generate plot(s)
   p <- p +
-    {if(noaa) ggnewscale::new_scale_fill() } + 
+    {if(noaa) ggnewscale::new_scale_fill() } +
     {if(noaa) ggnewscale::new_scale_colour()} + 
-    {if (interval) ggplot2::geom_ribbon(data = df, aes(x = year, y = mean, ymin = lwr, ymax = uppr, fill = label, group = label), alpha = 0.25)} +
-    ggplot2::geom_path(data = df, aes(x = year, y = mean, colour = label, group = label), na.rm = TRUE) +
+    {if (interval) ggplot2::geom_ribbon(data = df, aes(x = year, y = mean, ymin = lwr, ymax = uppr, fill = label, group = label),
+                                        alpha = 0.3)} +
+    ggplot2::geom_path(data = df, aes(x = year, y = mean, colour = label, group = label), linewidth = 0.8, na.rm = TRUE) +
     ggplot2::facet_wrap(~cohort, scales = scales, ncol = ncol) +
     ggplot2::scale_fill_manual(values = colour, name = "") +
     ggplot2::scale_colour_manual(values = colour, name = "") +

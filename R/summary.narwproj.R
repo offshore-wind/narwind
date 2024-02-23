@@ -36,6 +36,7 @@ summary.narwproj <- function(obj){
   # Extract projection parameters
   current.yr <- obj$param$current.yr
   yrs <- obj$param$yrs
+  burn <- obj$param$burn
   N <- obj$param$n
   N_0 <- obj$init$N_0
   
@@ -43,14 +44,19 @@ summary.narwproj <- function(obj){
   tot.df <- obj$proj$tbl
   births.per.female <- obj$dat$birth$perfemale
   tot.births <- obj$dat$birth$tot
+  tot.deaths <- obj$dat$death
   inter.birth <- obj$dat$birth$inter
   time.resting <- obj$dat$rest
   nonreprod.females <- obj$dat$nonrepfem
 
+  schedule <- data.table::data.table(phase = obj$param$phases[obj$param$schedule + 1]) |> 
+    dplyr::mutate(year = 0:(obj$param$yrs+burn)) |> 
+    dplyr::mutate(year = 2019 + year)
+  
   cat("Replicates: N =", N, "\n")
   cat("Projection horizon:", yrs, "years\n\n")
   cat("Timeline:\n")
-  proj_timeline(obj$param$schedule)
+  proj_timeline(obj$param$schedule, burn)
   
   cat("=============================================================\n")
   cat("ABUNDANCE\n")
@@ -83,6 +89,7 @@ summary.narwproj <- function(obj){
   cat("=============================================================\n\n")
   
   health.df <- obj$dat$health |> 
+    dplyr::select(-prj, -year) |> 
     tidyr::pivot_longer(!cohort, names_to = "param", values_to = "value") |> 
     dplyr::mutate(row = dplyr::row_number()) |> 
     data.table::as.data.table()
@@ -126,11 +133,19 @@ summary.narwproj <- function(obj){
   cat("FECUNDITY\n")
   cat("=============================================================\n\n")
   
-  plot(tot.births[prj == 1, (list(year, birth))], type = "l", col = "grey", ylim = range(tot.births$birth),
-       xlab = "", ylab = "Total No. births")
-  for(i in 2:prj$param$n){
-    lines(tot.births[prj == i, (list(year, birth))], col = "grey")
-  }
+  # Combine data on births and deaths
+  plot.df <- rbind(
+    tot.deaths |> dplyr::mutate(param = "No. deaths") |> dplyr::rename(N = death),
+    tot.births |> dplyr::mutate(param = "No. births") |> dplyr::rename(N = birth)
+  )
+  
+  p <- ggplot2::ggplot(data = plot.df, aes(x = year, y = N, group = prj)) +
+    ggplot2::geom_line(col = "grey50", alpha = 0.5) +
+    ggplot2::facet_wrap(vars(param), scales = "free_y") +
+    theme_narw() +
+    labs(x = "", y = "")
+  
+  print(p)
   
   # cat("Calving events [per year]:\n")
   calving.events <- tibble::tibble(`Calving events` = c(
@@ -189,15 +204,33 @@ summary.narwproj <- function(obj){
   cat("Non-reproductive females:\n", as.character(nrf.tbl), " %", sep ="")
   cat("\n\n")
   
-  abrt <- tibble::enframe(obj$param$abort) |> 
+  # Abortion rates
+  abrt.proj <- dplyr::left_join(obj$dat$pregfem, obj$dat$abort, by = c("year", "prj")) |> 
+    dplyr::filter(n_pregfem > 0) |> 
+    dplyr::mutate(year = as.integer(year)) |> 
+    dplyr::mutate(rate = n_abort / n_pregfem) |> 
+    dplyr::filter(year >= current.yr) |> 
+    dplyr::left_join(y = schedule, by = "year")
+  
+  abrt.summary <- abrt.proj[,list(mean = round(100*mean(rate),2),
+                                  sd = round(100*sd(rate),2),
+                                  min = round(100*min(rate),2),
+                                  max = round(100*max(rate),2)), phase] |> 
+    dplyr::mutate(`Projection (%)` = paste0(mean, " (±", sd, ") [", min, "–", max, "]")) |> 
+    dplyr::select(-mean, -sd, -min, -max)
+  
+  abrt.sim <- tibble::enframe(obj$param$abort) |> 
     dplyr::mutate(value = 100*value) |> 
-    dplyr::rename(phase = name, `Abortion (%)` = value)
-  abrt$phase <- obj$param$phases
-  abrt$phase <- sapply(X = abrt$phase, FUN = function(x) switch(x,
+    dplyr::rename(phase = name, `Simulation (%)` = value)
+  
+  abrt.out <- dplyr::left_join(abrt.sim, abrt.summary, by = "phase")
+  
+  abrt.out$phase <- obj$param$phases
+  abrt.out$phase <- sapply(X = abrt.out$phase, FUN = function(x) switch(x,
                        "base" = "Baseline",
                        "const" = "Construction",
                        "ops" = "Operation & maintenance"))
-  abrt.print <- trimws(knitr::kable(abrt, format = "simple"))
+  abrt.print <- trimws(knitr::kable(abrt.out, format = "simple"))
   cat(abrt.print, sep = "\n")
   cat("\n")
   

@@ -23,6 +23,7 @@ predict.narwsim <- function(...,
                             param = TRUE,
                             piling = 1,
                             survival_prob = NULL,
+                            min_gest = NULL,
                             progress = TRUE) {
 
   cat("--------------------------------------------------------------------------------\n")
@@ -91,6 +92,11 @@ predict.narwsim <- function(...,
   # User can specify the <yrs> argument either as a number of years from now or as a target end year
   if(yrs > 2000) yrs <- yrs - current.yr
   if(piling > 2000) piling <- piling - current.yr
+  
+  # The initial population vector from NOAA is for 2019, so need to adjust the time horizon
+  burn.in <- current.yr - 2019
+  yrs <- yrs + burn.in
+  piling <- piling + burn.in
   
   # Cohort information (augmented to separate out male/female calves)
   # cohortID <- obj[[1]]$param$cohort
@@ -179,10 +185,11 @@ predict.narwsim <- function(...,
   cat("––– Projections:\n\n")
   
   cat("+ Replicates: N =", formatC(n, big.mark = ","), "\n")
-  cat("+ Horizon:", yrs, "years\n")
+  cat("+ Burn-in:", adjust.yrs, "years\n")
+  cat("+ Horizon:", yrs - adjust.yrs, "years\n")
   cat("+ Parameter uncertainty:", ifelse(param, "Yes", "No"), "\n")
   cat("\n––– Timeline:\n\n")
-  proj_timeline(schedule)
+  proj_timeline(schedule, burn.in)
   cat("––– Execution:\n\n")
   
   # Define initial population vector using predictions from NOAA model
@@ -217,8 +224,17 @@ predict.narwsim <- function(...,
   tot.pop <- matrix(0, n, yrs + 1, dimnames = list(paste0("prj", 1:n), paste0("yr ", 0:yrs)))
   tot.pop[, 1] <- sum(N_0)
   
-  # Initialise array to store numbers of births
-  births <- array(
+  # # Initialise array to store numbers of births
+  # births <- array(
+  #   data = NA, c(yrs + 1, n),
+  #   dimnames = list(
+  #     paste0("yr ", 0:yrs),
+  #     paste0("prj ", 1:n)
+  #   )
+  # )
+  
+  # Initialise array to store numbers of abortion
+  abortions <- array(
     data = NA, c(yrs + 1, n),
     dimnames = list(
       paste0("yr ", 0:yrs),
@@ -226,6 +242,7 @@ predict.narwsim <- function(...,
     )
   )
   
+  # Maximum allowable body condition
   maxbc <- find_maxBC()
   
   #'------------------------------------------------------
@@ -320,21 +337,26 @@ predict.narwsim <- function(...,
     
     # Reserves needed to leave resting state and initiate pregnancy
     # if(param){
-# 
+    # 
+    if(!is.null(min_gest)){
+      narw.indiv[1, "min_bc", ] <- (cohort.vec == 6) * min_gest
+    } else {
       Xp <- predict(gam_gest, data.frame(mass = narw.indiv[1, "tot_mass", ]), type = "lpmatrix")
-#       
-#       # mbc.sample <- sample(
-#       #   x = seq_len(mcmc[[initial.phase]]$n),
-#       #   size = nrow(Xp),
-#       #   replace = TRUE)
-#       
-#       mbc.curves <- mcmc[[initial.phase]]$mbc[1,]
-#       narw.indiv[1, "min_bc", ] <- (cohort.vec == 6) * ilink.mbc(rowSums(Xp*mbc.curves))  
-#       
-#     } else {
+      #       
+      #       # mbc.sample <- sample(
+      #       #   x = seq_len(mcmc[[initial.phase]]$n),
+      #       #   size = nrow(Xp),
+      #       #   replace = TRUE)
+      #       
+      #       mbc.curves <- mcmc[[initial.phase]]$mbc[1,]
+      #       narw.indiv[1, "min_bc", ] <- (cohort.vec == 6) * ilink.mbc(rowSums(Xp*mbc.curves))  
+      #       
+      #     } else {
       
-
+      
+      
       narw.indiv[1, "min_bc", ] <- (cohort.vec == 6) * ilink.mbc(Xp %*% coef(gam_gest))
+    }
       
     # }
     
@@ -435,6 +457,12 @@ predict.narwsim <- function(...,
             reprod = narw.indiv[i-1, "reprod", ],
             abort = abort.rate[current.phase])
         
+        # Compare females that are in resting phase at time t with females that were in pregnant phase at time t-1
+        n.abortions <- sum((narw.indiv[i, "cohort", ] == 6) * (narw.indiv[i-1, "cohort", ] == 4))
+        
+        # Record abortions
+        abortions[i, prj] <- n.abortions
+        
         #' ----------------------------
         # GROWTH
         #' ----------------------------
@@ -479,6 +507,10 @@ predict.narwsim <- function(...,
         # Time spent in resting phase
         narw.indiv[i, "time_rest", ] <- alive * (narw.indiv[i, "cohort", ] == 6) * (narw.indiv[i-1, "time_rest", ] + 1)
         
+        if(!is.null(min_gest)){
+          narw.indiv[i, "min_bc", ] <- alive * (narw.indiv[i, "cohort", ] == 6) * min_gest
+        } else {
+        
         # Minimum body condition needed to successfully bring fetus to term without starving
         # No evidence of reproductive senescence in right whales - Hamilton et al. (1998)
         # if (param) {
@@ -488,11 +520,12 @@ predict.narwsim <- function(...,
           narw.indiv[i, "min_bc", ] <- alive * (narw.indiv[i, "cohort", ] == 6) * 
             ilink.mbc(Xp %*% coef(gam_gest))
         # }
+        }
           
         # Birth of new calf, conditional on the mother being alive and in pregnant state
         narw.indiv[i, "birth", ] <- alive * (narw.indiv[i, "cohort", ] == 4)
         new.births <- sum(narw.indiv[i, "birth", ])
-        births[i, prj] <- new.births
+        # births[i, prj] <- new.births
         
         # Number of non-reproductive females in the population
         Nr <- nrow(t(narw.indiv[i, ,])[t(narw.indiv[i, ,])[,"alive"] == 1 & t(narw.indiv[i, ,])[,"female"] == 1 & t(narw.indiv[i, ,])[,"reprod"] == 0, ])
@@ -631,15 +664,19 @@ predict.narwsim <- function(...,
   console(msg = "Running projections", suffix = tickmark())
   console(msg = "Summarizing outputs")
   
-  # **** Survival probability ****
+  # Survival probability ----
   
-  prjpreds <- purrr::map(.x = narw.individuals, .f = ~ {
-    out <- apply(.x, 3, function(x) x[x[, "alive"] == 1 & !is.na(x[, "alive"]), c("cohort", "p_surv", "bc", "min_bc"), drop = FALSE])
+  prjpreds <- purrr::map(.x = seq_len(n), .f = ~ {
+    out <- apply(narw.individuals[[.x]], 3, function(x) x[x[, "alive"] == 1 & !is.na(x[, "alive"]), c("cohort", "p_surv", "bc", "min_bc"), drop = FALSE])
     if(inherits(out, "list")) out <- do.call(rbind, out)
+     out <- cbind(out, .x, rep(0:yrs, length.out = nrow(out)))
+     colnames(out)[5:6] <- c("prj", "year")
+     out
   }) |> do.call(what = rbind) |> 
     data.table::as.data.table()
+  prjpreds[, year:= 2019 + year]
   
-  # **** Total births ****
+  # Total births ----
   
   births.df <- purrr::map(.x = 1:n, .f = ~{
     m <- matrix(rowSums(narw.individuals[[.x]][2:(yrs+1),"birth",], na.rm = TRUE), ncol = 1)
@@ -654,8 +691,9 @@ predict.narwsim <- function(...,
     dplyr::arrange(prj, year) |>
     data.table::data.table() |> 
     dplyr::mutate(prj = as.numeric(prj))
+  births.df[, year:= 2019 + year]
   
-  # **** Total deaths ****
+  # Total deaths ----
   
   deaths.df <- purrr::map(.x = 1:n, .f = ~{
     m <- matrix(apply(X = narw.individuals[[.x]][2:(yrs+1),"alive",],
@@ -677,7 +715,11 @@ predict.narwsim <- function(...,
     data.table::data.table() |> 
     dplyr::mutate(prj = as.numeric(prj))
   
-  # **** Number of births per female ****
+  deaths.df[, year:= 2019 + year]
+  n.deaths <- deaths.df[, list(n = c(death[1], diff(death))), prj]
+  deaths.df$death <- n.deaths$n
+  
+  # Number of births per female ----
   
   births.per.female <- purrr::map(.x = seq_len(n), .f = ~ {
     lapply(X = seq_len(dim(narw.individuals[[.x]])[3]), FUN = function(d) {
@@ -688,31 +730,8 @@ predict.narwsim <- function(...,
     }) |> data.table::rbindlist()
   }) |> data.table::rbindlist()
     
-    # # For each projection
-    # out <- apply(narw.individuals[[.x]], 3, function(x) {
-    #   
-    #   x
-    #   
-    #   # Filter data to retain instances of pregnant females being alive
-    #   fem <- x[x[, "alive"] == 1 & x[, "female"] == 1 & x[, "cohort"] == 4 & x[, "reprod"] == 1, , drop = FALSE]
-    #   # Remove NAs (from new individuals born during the simulation)
-    #   fem <- fem[complete.cases(fem), , drop = FALSE]
-    #   # Calculate the number of births 
-    #   ifelse(nrow(fem) == 0, 0, sum(fem[, "birth"], na.rm = TRUE))
-    # })
-    # if(inherits(out, "list")) out <- do.call(c, out)
-    # 
-    # tibble::enframe(out) |> 
-    #   dplyr::rename(nbirths = value, whale = name) |> 
-    #   dplyr::mutate(whale = stringr::str_replace(string = whale, pattern = "whale ", replacement = "")) |> 
-    #   dplyr::mutate(prj = .x) |> 
-    #   dplyr::relocate(prj, .before = whale) |> 
-    #   data.table::as.data.table()
 
-  # }) |> data.table::rbindlist()
-
-  
-  # **** Time spent in resting phase ****
+  # Time spent in resting phase ----
   
   time.resting <- purrr::map(.x = seq_len(n), .f = ~ {
     lapply(X = seq_len(dim(narw.individuals[[.x]])[3]), FUN = function(d) {
@@ -731,34 +750,19 @@ predict.narwsim <- function(...,
           
           data.table::data.table(
             prj = .x, whale = d,
-            year = current.yr + as.numeric(gsub("yr ", "", names(tr))),
+            year = 2019 + as.numeric(gsub("yr ", "", names(tr))),
             t_rest = tr)
         }
       }
     }) |> data.table::rbindlist()
  }) |> data.table::rbindlist()
-  
-        # narw.individuals[[.x]][,"time_rest",d] |> 
-        #   tibble::enframe() |> 
-        #   dplyr::rename(year = name, t_rest = value) |> 
-        #   dplyr::mutate(whale = d, prj = .x, year = current.yr + as.numeric(gsub("yr ", "", 0:yrs))) |> 
-        #   dplyr::relocate(prj, .before = year) |> 
-        #   dplyr::relocate(c("prj", "whale"), .before = year) |> 
-        #   dplyr::filter(t_rest > 0 & !is.na(t_rest))
-        # tr <- tr[tr[,"alive"] == 1 & tr[,"female"]==1 & tr[, "cohort"] == 6 & tr[, "reprod"] == 1,,drop =FALSE]
-        # tr <- tr[, "time_rest"]
-        # tr[tr == 0] <- NA
-        # if(all(is.na(tr))){
-        #   NA
-        # } else {
-        #   unname(purrr::map(.x = split_byNA(tr), .f = ~max(.x))) |> do.call(what = c)
-        # }
 
-  # **** Inter-birth interval ****
+  # Inter-birth interval ----
 
   inter.birth <- purrr::map(.x = seq_len(n), .f = ~ {
     lapply(X = seq_len(dim(narw.individuals[[.x]])[3]), FUN = function(d) {
-      birth.record <- narw.individuals[[.x]][, "birth", d]
+      x <- narw.individuals[[.x]][,,d]
+      birth.record <- x[x[, "alive"] == 1, "birth"]
       if (length(birth.record) == 0 | sum(birth.record, na.rm = TRUE) <=1) {
         NULL
       } else {
@@ -766,32 +770,13 @@ predict.narwsim <- function(...,
         birth.record[birth.record == 1] <- NA
         data.table::data.table(
           prj = .x, whale = d,
-          ibi = sapply(split_NA(birth.record), length)
+          ibi = sapply(split_NA(birth.record), length) + 1
         )
       }
     }) |> data.table::rbindlist()
   }) |> data.table::rbindlist()
   
-  # inter.birth <- purrr::map(.x = seq_len(n), .f = ~ {
-  #   lapply(1:dim(narw.individuals[[.x]])[3], FUN = function(i) {
-  #     x <- narw.individuals[[.x]][,,i]
-  #     # Filter out NA records for individuals born during the simulation
-  #     x <- x[complete.cases(x),,drop = FALSE]
-  #     # Exclude juveniles
-  #     birth.record <- x[x[, "alive"] == 1 & x[, "female"] == 1 & x[, "cohort"] > 2 & x[, "reprod"] == 1, , drop = FALSE]
-  #     birth.record <- birth.record[, "birth"]
-  #     if (length(birth.record) == 0 | all(birth.record == 0) | all(is.na(birth.record))) {
-  #       NA
-  #     } else {
-  #       # Extract timeline of births
-  #       birth.record <- birth.record[tapply(seq_along(birth.record), birth.record, min)[2]:tapply(seq_along(birth.record), birth.record, max)[2]]
-  #       birth.record[birth.record == 1] <- NA
-  #       unname(purrr::map_dbl(.x = split_NA(birth.record), .f = ~ length(.x)))
-  #     }
-  #   }) |> do.call(what = c)
-  # }) |> do.call(what = c)
-  
-  # **** Non-reproductive females ****
+  # Non-reproductive females ----
   
   nonreprod.females <- purrr::map(.x = seq_len(n), .f = ~ {
 
@@ -813,7 +798,27 @@ predict.narwsim <- function(...,
     
   }) |> do.call(what = rbind)
   
+  # Abortions ----
+ abort.df <- as.data.frame.table(abortions[2:nrow(abortions), ], responseName = "value") |>
+   dplyr::rename(year = Var1, prj = Var2, n_abort = value) |>
+   dplyr::mutate(
+     year = gsub(pattern = "yr ", replacement = "", year),
+     prj = gsub(pattern = "prj ", replacement = "", prj)
+   ) |>
+   data.table::as.data.table() |>
+   dplyr::mutate(year = 2019 + as.numeric(gsub("yr ", "", year)))
   
+ # Pregnant females ----
+ preg.fem <- as.data.frame.table(narw.pop[, , cohorts.proj[id == 4, name]]) |>
+   dplyr::rename(year = Var2, prj = Var1, n_pregfem = Freq) |>
+   dplyr::mutate(
+     year = gsub(pattern = "yr ", replacement = "", year),
+     prj = gsub(pattern = "prj ", replacement = "", prj)
+   ) |>
+   data.table::as.data.table() |>
+   dplyr::filter(year > 0) |>
+   dplyr::mutate(year = 2019 + as.numeric(gsub("yr ", "", year)))
+ 
   narw.df <- purrr::map(.x = cohorts.proj$name, .f = ~{
     tmp <- narw.pop[,,.x] |>
       tibble::as_tibble() |> 
@@ -822,23 +827,25 @@ predict.narwsim <- function(...,
       tmp |>
         dplyr::rename(year = "prj") |> 
         dplyr::mutate(prj = 1, year = as.numeric(year) - 1) |>
-        dplyr::mutate(year = current.yr + as.numeric(gsub("yr ", "", year))) |> 
+        dplyr::mutate(year = 2019 + as.numeric(gsub("yr ", "", year))) |> 
         dplyr::rename(N = "value") |> 
         dplyr::mutate(cohort = stringr::str_to_sentence(.x)) |> 
         dplyr::relocate(prj, .before = year)
     } else {
       tmp |>
         tidyr::pivot_longer(!prj, names_to = "year", values_to = "N") |> 
-        dplyr::mutate(year = current.yr + as.numeric(gsub("yr ", "", year))) |> 
+        dplyr::mutate(year = 2019 + as.numeric(gsub("yr ", "", year))) |> 
         dplyr::mutate(cohort = stringr::str_to_sentence(.x))
     }
   }) |> do.call(what = rbind) |> 
     data.table::data.table()
  
+  # Population totals ----
+  
   tot.df <- tibble::as_tibble(tot.pop) |> 
     tibble::rownames_to_column(var = "prj") |> 
     tidyr::pivot_longer(!prj, names_to = "year", values_to = "N") |> 
-    dplyr::mutate(year = current.yr + as.numeric(gsub("yr ", "", year))) |> 
+    dplyr::mutate(year = 2019 + as.numeric(gsub("yr ", "", year))) |> 
     dplyr::mutate(cohort = "North Atlantic right whales") |> data.table::data.table()
   
   narw.conf <- narw.df[
@@ -883,15 +890,20 @@ predict.narwsim <- function(...,
   cat("---------------------------------\n")
   cat(paste0("Done | Time elapsed: ", run_time), "\n")
   
+  # Output list ----
+  
   outproj <- list(param = list(label = obj[[1]]$param$label,
-                               yrs = yrs,
+                               yrs = yrs - burn.in,
+                               burn = burn.in,
                                n = n,
+                               cohorts = cohorts.proj,
                                current.yr = current.yr,
                                abort = abort.rate,
                                nonrep = nonrep,
                                phases = phase.names,
                                schedule = schedule),
                   init = list(N_0 = N_0,
+                              cohort = cohort.vec,
                               reprod.fem = reprod.fem),
                   dat = list(ind = narw.individuals,
                              birth = list(tot = births.df, 
@@ -899,7 +911,9 @@ predict.narwsim <- function(...,
                                           inter = inter.birth),
                              death = deaths.df,
                              health = prjpreds,
+                             abort = abort.df,
                              nonrepfem = nonreprod.females,
+                             pregfem = preg.fem,
                              rest = time.resting,
                              pop = narw.pop,
                              tot = tot.pop),
