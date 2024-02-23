@@ -261,7 +261,7 @@ Rcpp::List movesim(
   
   // Number of animals and time points to simulate
   std::size_t n = animals.size();  // nsim
-  std::size_t t = environments.size(); // 366 days (365 days + initial conditions)
+  std::size_t t = environments.size(); // 458 days (365 days + 3 month burn-in + initial conditions)
   
   // Initialize list in which results will be stored
   Rcpp::List results;
