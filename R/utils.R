@@ -901,6 +901,39 @@ theme_narw <- function(vertical = FALSE){
     )
 }
 
+# ++ [FUNCTION] Additional ggplot2 theme parameters for maps
+# ++ [PARAM] p –– Input plot.
+theme_map <- function(p, arrow = TRUE) {
+  scale.colour <- "#35484E"
+  p + ggplot2::theme(
+    panel.background = ggplot2::element_rect(fill = ocean.colour),
+    panel.grid.major = ggplot2::element_line(linewidth = 0.01, colour = grid.line.colour),
+    panel.grid.minor = ggplot2::element_line(linewidth = 0.01, colour = grid.line.colour),
+    legend.title = ggplot2::element_blank(),
+    axis.ticks = element_blank(),
+    axis.text = element_text(size = 12, colour = "black"),
+    axis.title = element_text(size = 10),
+    axis.text.y = element_text(angle = 90, hjust = 0.5, vjust = 0.5),
+    plot.margin = margin(t = 0, r = 0, b = 0, l = 0, "cm"),
+    panel.border = ggplot2::element_rect(colour = "black", fill = NA, size = 1)
+  ) +
+    ggspatial::annotation_scale(
+      location = "br", width_hint = 0.2,
+      bar_cols = c(scale.colour, "white"),
+      text_cex = 0.9, text_col = scale.colour, line_width = 0
+    ) +
+    {if(arrow) ggspatial::annotation_north_arrow(
+      location = "br", which_north = "true",
+      pad_x = unit(0.5, "in"), pad_y = unit(0.25, "in"),
+      style = ggspatial::north_arrow_fancy_orienteering(
+        fill = c("white", scale.colour),
+        line_width = 0, line_col = scale.colour, text_col = scale.colour
+      )
+    )} +
+    xlab("") +
+    ylab("")
+}
+
 # ++ [FUNCTION] Plot rasters and SpatialGridDataFrames using ggplot
 # ++ [PARAM] r –– Input raster or SpatialGridDataFrame.
 # ++ [PARAM] duke –– Logical. Whether to match the formatting of Jason Roberts' density maps.
