@@ -1098,9 +1098,11 @@ label <- function(obj, lb){
 
 # ++ [FUNCTION] Text-based timeline of wind farm development activities
 # ++ [PARAM] schedule –– Vector of integers indicating which phase of development takes place in which year
-proj_timeline <- function(schedule){
+proj_timeline <- function(schedule, burn){
   
   operator <- " -----> "
+  
+  schedule <- schedule[(burn+1):length(schedule)]
   
   # Baseline
   if(any(schedule == 0)){
