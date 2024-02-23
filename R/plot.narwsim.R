@@ -93,23 +93,23 @@ plot.narwsim <- function(obj,
     } else {
       
       # Extract objects
-      modlist <- obj$gam$fit
-      pred.x <- obj$post$pred.x
-      bc.range <- obj$post$bc.range
-      nsamples <- obj$post$nsamples
+      modlist <- obj$gam$fit # Fitted GAMs
+      pred.x <- obj$post$pred.x # Prediction points -- used for mean curve
+      bc.range <- obj$post$bc.range # Allowable range of BC
+      nsamples <- obj$post$nsamples # Number of posterior draws
       # mbc.x <- obj$post$mbc.x
-      preds.surv <- obj$post$preds$survbc$surv
-      preds.bc <- obj$post$preds$survbc$bc
+      preds.surv <- obj$post$preds$survbc$surv # Posterior samples from survival model
+      preds.bc <- obj$post$preds$survbc$bc # Posterior samples from body condition model
       # preds.mbc <- obj$post$preds$mbc
       
       # Create prediction data.frame
       pred.df <- expand.grid(start_bc = seq(bc.range[1], bc.range[2], length.out = 100), 
                              cohort = cohorts$id, 
                              mcmc = seq_len(nsamples))
-      
       pred.df$pred_surv <- as.numeric(t(preds.surv))
       pred.df$pred_bc <- as.numeric(t(preds.bc))
       
+      # Thickness of lines on plot
       linewidth <- 0.65
       
       # Randomly picks 5 spline parameters and plots their trace
@@ -132,6 +132,7 @@ plot.narwsim <- function(obj,
           # Sample a subset of predictions
           sample.df <- pred.df[pred.df$mcmc %in% sample(nsamples, nL, replace = FALSE), ] |> 
             dplyr::select(start_bc, cohort, mcmc, paste0("pred_", .x))
+          
           if(.x == "bc") sample.df$pred_bc <- clamp(sample.df$pred_bc, find_maxBC())
           
           # Rename columns (remove pred_)
@@ -142,12 +143,17 @@ plot.narwsim <- function(obj,
           facet.names <- cohorts$name
           names(facet.names) <- cohorts$id
           
+          data.pts <- obj$gam$dat
+          names(data.pts) <- gsub(pattern = ifelse(.x == "bc", "end_bc", "alive"), replacement = "pred", names(data.pts))
+          
           ggplot2::ggplot(data = sample.df, aes(x = start_bc, y = pred)) +
             ggplot2::geom_line(aes(group = mcmc), colour = "grey", alpha = 0.2) +
             ggplot2::geom_line(data = mean_pred, linewidth = linewidth) +
+            ggplot2::geom_rug(data = data.pts, sides = "b") +
             ggplot2::facet_wrap(vars(cohort), scales = "free_y", 
                                 labeller = ggplot2::labeller(cohort = facet.names)) +
-            # ggplot2::scale_y_continuous(limits = c(0,1)) +
+            {if(.x == "surv") ggplot2::scale_y_continuous(limits = c(0,1))} +
+            {if(.x == "bc") ggplot2::scale_y_continuous(limits = c(0, find_maxBC()))} +
             theme_narw() +
             xlab("Starting body condition (%)") +
             ylab(dplyr::case_when(
