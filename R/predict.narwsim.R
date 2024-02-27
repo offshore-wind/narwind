@@ -185,8 +185,8 @@ predict.narwsim <- function(...,
   cat("––– Projections:\n\n")
   
   cat("+ Replicates: N =", formatC(n, big.mark = ","), "\n")
-  cat("+ Burn-in:", adjust.yrs, "years\n")
-  cat("+ Horizon:", yrs - adjust.yrs, "years\n")
+  cat("+ Burn-in:", burn.in, "years\n")
+  cat("+ Horizon:", yrs - burn.in, "years\n")
   cat("+ Parameter uncertainty:", ifelse(param, "Yes", "No"), "\n")
   cat("\n––– Timeline:\n\n")
   proj_timeline(schedule, burn.in)
