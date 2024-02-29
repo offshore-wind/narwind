@@ -63,4 +63,5 @@ Depends:
     R (>= 3.5)
 Suggests: 
     knitr,
+    sf,
     rmarkdown
