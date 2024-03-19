@@ -42,6 +42,7 @@ Imports:
     fields,
     ggnewscale,
     ggplot2,
+    hms,
     lubridate,
     mgcv,
     openxlsx,
