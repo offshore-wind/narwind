@@ -85,6 +85,7 @@ struct Animal {
   double mouth_ratio;
   double mouth_angle;
   double mouth_width;
+  double gape;
   Rcpp::NumericVector entangled;
   int strike;
   int respnoise;
@@ -117,6 +118,7 @@ struct Animal {
     mouth_ratio(start_mouth(cohortID, age)), 
     mouth_angle(76.7), 
     mouth_width(length*mouth_ratio), 
+    gape(gape_size(length, mouth_width, mouth_angle)),
     entangled(Rcpp::NumericVector::create(0,0,0,0,0,0,0,0)),
     strike(0), 
     respnoise(0),
@@ -150,6 +152,7 @@ struct Animal {
     mouth_ratio(start_mouth(cohort, age)), 
     mouth_angle(76.7), 
     mouth_width(length*mouth_ratio),
+    gape(gape_size(length, mouth_width, mouth_angle)),
     entangled(Rcpp::NumericVector::create(0,0,0,0,0,0,0,0)),
     strike(0), 
     respnoise(0),
@@ -214,8 +217,8 @@ template<typename AnimalType,
          typename EnvironmentContainer,
          typename MovementRule, 
          int CoordSize = 7,
-         int nparam_animal = 25,
-         int nparam_calves = 25,
+         int nparam_animal = 26,
+         int nparam_calves = 26,
          int nparam_E = 8,
          int nparam_E_calves = 4,
          int nparam_fetus = 25,
@@ -252,7 +255,7 @@ Rcpp::List movesim(
     bool stressors,
     bool growth,
     double prey_scale,
-    Eigen::MatrixXd starvation_df,
+    Rcpp::NumericVector starvation_coefs,
     double starvation_death,
     double starvation_onset,
     Rcpp::NumericVector nursing_cessation,
@@ -288,6 +291,7 @@ Rcpp::List movesim(
     "fatmass",
     "mass_a",
     "mass_b",
+    "gape",
     "mouth_r",
     "mouth_a",
     "mouth_w",
@@ -322,6 +326,7 @@ Rcpp::List movesim(
     "fatmass_calf",
     "ma_calf",
     "mb_calf",
+    "gape_calf",
     "mouth_r_calf",
     "mouth_a_calf",
     "mouth_w_calf",
@@ -433,7 +438,6 @@ Rcpp::List movesim(
     "feed",
     "preyconc", 
     "minprey",
-    "gape",
     "feedspeed",
     "captEff",
     "impedance",
@@ -447,7 +451,8 @@ Rcpp::List movesim(
     "digestEff",
     "metabEff_juv",
     "metabEff_ad",
-    "E_cop"};
+    "E_cop",
+    "calf_feed"};
   
   // Create a separate array for data associated with energy intake in calves
   Rcpp::NumericVector attrib_nursing(n*t*nparam_nursing);
@@ -564,7 +569,6 @@ Rcpp::List movesim(
   
   double D_cop = 0.0L;
   bool is_feeding = 0.0L;
-  double mouth_gape = 0.0L;
   double swim_speed = 0.0L;
   double E_calanus = 0.0L;
   double E_in = 0.0L;
@@ -572,6 +576,8 @@ Rcpp::List movesim(
   double p_starve_calf = 0.0L;
   int has_starved = 0;
   int has_starved_calf = 0;
+  double calf_foraging = 0.0L;
+  double min_feed = 0.0L;
   
   // Nursing +++
   
@@ -849,24 +855,20 @@ Rcpp::List movesim(
   // -------------------------------
   // PROPORTION OF LIPIDS IN MILK
   // -------------------------------
-  // Notes: Remove value for closest relative (Balaena mysticetus), which is deemed low.
+  // Value: Average of values reported for bowhead whales in McHuron et al. (2023)
   // Consistent with data from humpback whales as reported in Oftedal (1997) -- Figure 4
-  // Value: meta function applied to spreadsheet of model parameters
   // Units: % (d.u.)
-  // Source(s): Zenkovich et al. (1938), White et al. (1953), Chittleborough et al. (1958)
-  // Lauer et al. (1968), Best et al. (1982), Oftedal et al. (1997), Oftedal et al. (2000)
-  const double milk_lipids = 0.3602;
+  // Source(s): See Supplementary Information in McHuron et al. (2023)
+  const double milk_lipids = 0.316;
   
   // -------------------------------
   // PROPORTION OF PROTEIN IN MILK
   // -------------------------------
-  // Notes: Remove value for closest relative (Balaena mysticetus), which is deemed low.
+  // Value: Average of values reported for bowhead whales in McHuron et al. (2023)
   // Consistent with data from humpback whales as reported in Oftedal (1997) -- Figure 4
-  // Value: meta function applied to spreadsheet of model parameters
   // Units: % (d.u.)
-  // Source(s): Zenkovich et al. (1938), White et al. (1953), Ben Shaul et al. (1962), Chittleborough et al. (1958)
-  // Lauer et al. (1968), Best et al. (1982), Oftedal et al. (1997), Oftedal et al. (2000)
-  const double milk_protein = 0.1364501;
+  // Source(s): See Supplementary Information in McHuron et al. (2023)
+  const double milk_protein = 0.082;
   
   // -------------------------------
   // MAMMARY GLAND EFFICIENCY
@@ -874,13 +876,14 @@ Rcpp::List movesim(
   // Definition: Efficiency of milk production from nutrients consumed
   // Units: % (d.u.)
   // Source(s): Brody et al. (1968)
-  const double mammary_efficiency = 0.9;
+  const double mammary_efficiency = 0.95; 
   
   // -------------------------------
   // NONLINEARITY BETWEEN MILK SUPPLY AND BODY CONDITION OF THE MOTHER
   // -------------------------------
   // Units: d.u.
-  const int zeta = -2;
+  // const int zeta = -2;
+  const double zeta = -7.5;
   
   // -------------------------------
   // AGE AT WHICH MILK COMNSUMPTION STARTS TO DECREASE
@@ -1045,13 +1048,12 @@ Rcpp::List movesim(
   for(auto env = environments.begin(); env != env_end; ++env) {
     
     current_day = env - environments.begin();
-    
+
     if(progress) bar.update();
     // if(progress) pbar++;
     
     // env is a vector iterator, so env - environments.begin() returns the associated index
     current_month = densitySeq[env - environments.begin()];
-    
     for(auto animal = animals.begin(); animal != animals_end; ++animal) {
       
       current_animal = animal - animals.begin();
@@ -1078,8 +1080,15 @@ Rcpp::List movesim(
         depart_SEUS = current_day;
       }
       
+      if(animal->alive == 0) animal->calvgrounds = 0;
+      
       // Reset northward pull after 20 days
       if(animal->north == 1 && current_day == (depart_SEUS + 20)) animal->north = 0;
+      
+      // Stop second migration to SEUS
+      if(current_day > 365 && cohortID == 5){
+        animal->seus = 0;
+      }
       
       // ------------------------------------------------------------
       // TARGET BC
@@ -1096,8 +1105,7 @@ Rcpp::List movesim(
       // in Christiansen et al. (2022) Fig 7
       
       // Pregnant females
-      if((animal->cohortID == 4 && current_day >= start_simulation) | 
-         (animal->cohortID == 5 && current_day < start_simulation && born[current_animal] == 0)){  
+      if((animal->cohortID == 4 && current_day >= start_simulation)){
         
         target_bc[0] = 0.6;
         target_bc[1] = 0;
@@ -1105,7 +1113,8 @@ Rcpp::List movesim(
       // Lactating mothers and their calves
       } else if(animal->cohortID == 5 && current_day >= start_simulation && born[current_animal] == 1){ 
           
-          target_bc[0] = 0.41718;
+          target_bc[0] = 0.3674076;
+          // target_bc[0] = 0.665289;
           
           if(calves[current_animal].alive == 1){
             
@@ -1120,7 +1129,8 @@ Rcpp::List movesim(
       // All other cohorts
       } else { 
         
-        target_bc[0] = 0.41718;
+        target_bc[0] = 0.3674076;
+        // target_bc[0] = 0.41718;
         target_bc[1] = 0;
         
       }
@@ -1143,6 +1153,47 @@ Rcpp::List movesim(
         if(animal->alive){
           
           if(stressors){
+            
+            // ------------------------------------------------------------
+            // STARVATION MORTALITY
+            // ------------------------------------------------------------
+              
+              if(current_day >= start_simulation){
+                
+                // Body condition-dependent mortality, similar to Hin et al. (2019)
+                // Probability of the animal starving given its health
+                // p_starve = starvation_mortality(animal->bc, starvation_onset, starvation, starvation_scalar);
+                p_starve = starvation_mortality(animal->bc, starvation_coefs, starvation_death, starvation_onset);
+                p_starve = 1-(std::pow(1-p_starve, 1.0L/365.0L));
+                has_starved = R::rbinom(1, p_starve);
+                
+                // p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_onset, starvation, starvation_scalar);
+                p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_coefs, starvation_death, starvation_onset);
+                p_starve_calf = 1-(std::pow(1-p_starve_calf, 1.0L/365.0L));
+                has_starved_calf = R::rbinom(1, p_starve_calf);
+                
+              }
+              
+              if(has_starved){
+                
+                animal->alive = 0;
+                animal->starve = 1;
+                date_death[current_animal] = current_day;
+                
+                if(calves[current_animal].alive == 1){
+                  calves[current_animal].alive = 0;
+                  date_death_calf[current_animal] = current_day;
+                }
+              }
+              
+              if(calves[current_animal].alive == 1 && born[current_animal] == 1) {
+                if(has_starved_calf){
+                  calves[current_animal].alive = 0;
+                  calves[current_animal].starve = 1;
+                  date_death_calf[current_animal] = current_day;
+                  animal->north = 1;
+                }
+              }
             
             // ===================================
             // ENTANGLEMENT
@@ -1261,21 +1312,21 @@ Rcpp::List movesim(
               if(animal->mort == 0) animal->mort = R::rbinom(1, 1-p_surv);
               if(calves[current_animal].mort==0) calves[current_animal].mort = R::rbinom(1, 1-p_surv_calf);
               
-              if(animal->alive && animal->mort){
+              if(animal->alive == 1 && animal->mort == 1){
                 
                 // Record death and date
                 animal->alive = 0;
                 date_death[current_animal] = current_day;
                 
-                // Kill the calf
                 if(calves[current_animal].alive == 1){
+                  // Kill the calf
                   calves[current_animal].alive = 0;
                   date_death_calf[current_animal] = current_day;
                 }
                 
               }
               
-              if(calves[current_animal].alive == 1 && calves[current_animal].mort){
+              if(calves[current_animal].alive == 1 && calves[current_animal].mort == 1){
                 
                 // Record death and date
                 calves[current_animal].alive = 0;
@@ -1357,7 +1408,7 @@ Rcpp::List movesim(
           // Distance traveled
           // ------------------------------------------------------------
 
-          travel_dist = std::sqrt(std::pow(current_x - animal->x, 2) +  std::pow(current_y - animal->y, 2));
+          travel_dist = std::sqrt(std::pow(current_x - animal->x, 2) + std::pow(current_y - animal->y, 2));
           
           // ------------------------------------------------------------
           // PREY
@@ -1415,8 +1466,12 @@ Rcpp::List movesim(
             
             // tmax = std::min(24 - travel_time, daylight_hours); // Daytime foraging
             tmax = 24 - travel_time; // Round-the-clock foraging
-            feeding_time = is_feeding * rtnorm(12.88101, 2.515253, 0, tmax);
+            // Cannot have tmax < lower bound
+            if(tmax > 12) min_feed = 12;
+            else min_feed = 0.0L;
             
+            feeding_time = is_feeding * rtnorm(16.11904, 0.6199398, min_feed, tmax);
+ 
           }
           
           // ------------------------------------------------------------
@@ -1425,7 +1480,8 @@ Rcpp::List movesim(
           
           // Lower the time spent foraging following a behavioral response
           if(animal->respnoise){
-            feeding_time -= piling_hrs; 
+            feeding_time -= piling_hrs;
+            if(feeding_time < 0) feeding_time = 0;
           }
 
           resting_nursing_time = 24 - (travel_time + feeding_time);
@@ -1433,9 +1489,6 @@ Rcpp::List movesim(
           // ------------------------------------------------------------
           // ENERGY INTAKE - FORAGING
           // ------------------------------------------------------------
-          
-          // Mouth gape area -- (m^2)
-          mouth_gape = gape_size(animal->length, animal->mouth_width, animal->mouth_angle);
           
           // Foraging / nursing response to body condition -- (d.u.)
           // ---------------------
@@ -1463,7 +1516,7 @@ Rcpp::List movesim(
           E_calanus = (1-water_content) * cop_kJ * digestive_efficiency * urinary_efficiency * metabolizing_efficiency[meta];
           
           // ENERGY INTAKE (MJ)
-          E_in = (1 - animal->respnoise) * is_feeding * D_cop * mouth_gape * (1 - animal->entangled(3)) *
+          E_in = is_feeding * D_cop * animal->gape * (1 - animal->entangled(3)) *
             swim_speed * capture_efficiency * (feeding_time * 3600) * feeding_nursing_effort[0] *
             E_calanus;
           
@@ -1471,70 +1524,89 @@ Rcpp::List movesim(
           // ENERGY INTAKE - SUCKLING
           // ------------------------------------------------------------
           
-          if(cohortID == 5 && calves[current_animal].alive == 1){
-            
-            // Skeleton code --------------------------------------------
-            // // Incidence of mother-calf separation outside of SEUS -- (d.u.)
-            // // Reported to be between 10 and 40% of sightings as per Hamilton et al. (2022) - take mean = 25%
-            // bool is_separated = 0;
-            // int separation_days = 0;
-            // bool previously_separated = 0;
-            // 
-            // if(!previously_separated & animal->y > -12){
-            //   is_separated = R::rbinom(1, 0.25);
-            // }
-            // 
-            // // Separation duration -- (days)
-            // // Using half-normal with mean of 5.9 and max of 23, as per Hamilton et al. (2022)
-            // // Coded as truncated Normal centered on zero
-            // if(is_separated){
-            //   separation_days = separation_duration();
-            //   end_separation = current_day + separation_days;
-            //   previously_separated = 1;
-            // }
-            // 
-            // // Terminate separation event if needed
-            // if(current_day <= end_separation){
-            //   is_separated = 0;
-            // }
-            
-            // if(!is_separated){
-            // --------------------------------------------
-            
-            // Milk assimilation -- (d.u.)
-            // Varies with calf age
-            milk_assim = milk_assimilation(current_day, T_lac, milk_decrease, eta_milk);
-            
-            // Milk provisioning -- (d.u.)
-            // Varies with mother's body condition
-            milk_provisioning = milk_supply(starvation_onset, target_bc[0], animal->tot_mass, animal->fat_mass, zeta);
-            
-            // Total mass of mammary glands -- (kg)
-            mammary_M = mammary_mass(animal->tot_mass);
-            
-            // Milk production rate by the mother -- (kg per sec)
-            milk_production_rate = milk_production(mammary_M);
-            
-            // Time spent nursing/suckling per day -- (hours to sec)
-            // Meta:: No filter on time spent nursing, time spent suckling during nursing bouts filtered by species (value for E. australis)
-            // t_suckling = rtnorm(0, 3.688672, 0, nursing_time) * 3600;
-            // t_suckling = 10*3600;
-            
-            // ENERGY INTAKE (MJ)
-            E_lac = milk_provisioning * mammary_efficiency * milk_production_rate * 
-              feeding_nursing_effort[1] * (milk_lipids * ED_lipids + milk_protein * ED_protein);
- 
-            E_in_calves = milk_assim * E_lac;
-            
-            if(animal->respnoise){
-              if(nursing_cessation(0)){
-                E_in_calves *= ((24-nursing_cessation(1))/24);
+          if(cohortID == 5){
+              
+              // Skeleton code --------------------------------------------
+              // // Incidence of mother-calf separation outside of SEUS -- (d.u.)
+              // // Reported to be between 10 and 40% of sightings as per Hamilton et al. (2022) - take mean = 25%
+              // bool is_separated = 0;
+              // int separation_days = 0;
+              // bool previously_separated = 0;
+              // 
+              // if(!previously_separated & animal->y > -12){
+              //   is_separated = R::rbinom(1, 0.25);
+              // }
+              // 
+              // // Separation duration -- (days)
+              // // Using half-normal with mean of 5.9 and max of 23, as per Hamilton et al. (2022)
+              // // Coded as truncated Normal centered on zero
+              // if(is_separated){
+              //   separation_days = separation_duration();
+              //   end_separation = current_day + separation_days;
+              //   previously_separated = 1;
+              // }
+              // 
+              // // Terminate separation event if needed
+              // if(current_day <= end_separation){
+              //   is_separated = 0;
+              // }
+              
+              // if(!is_separated){
+              // --------------------------------------------
+              
+              // Milk assimilation -- (d.u.)
+              // Varies with calf age
+              milk_assim = (calves[current_animal].alive == 1) * 
+                milk_assimilation(current_day-start_simulation+1, T_lac, milk_decrease, eta_milk);
+              
+              // Milk provisioning -- (d.u.)
+              // Varies with mother's body condition
+              milk_provisioning = (calves[current_animal].alive == 1) * 
+                milk_supply(starvation_onset, target_bc[0], animal->tot_mass, animal->fat_mass, zeta);
+              
+              // Total mass of mammary glands -- (kg)
+              mammary_M = mammary_mass(animal->tot_mass);
+              
+              // Milk production rate by the mother -- (kg per day)
+              milk_production_rate = milk_production(mammary_M);
+              
+              // Time spent nursing/suckling per day -- (hours to sec)
+              // Meta:: No filter on time spent nursing, time spent suckling during nursing bouts filtered by species (value for E. australis)
+              // t_suckling = rtnorm(0, 3.688672, 0, nursing_time) * 3600;
+              // t_suckling = 10*3600;
+              
+              // ENERGY INTAKE (MJ)
+              
+              // Nursing cessation coded as reduction in energy intake as time spent nursing
+              // is combined with time spent resting
+              if(animal->respnoise){
+                if(nursing_cessation(0)){
+                  feeding_nursing_effort[1] *= ((24-nursing_cessation(1))/24);
+                  if(feeding_nursing_effort[1] < 0) feeding_nursing_effort[1] = 0;
+                }
               }
-            }
+              
+              E_lac = (calves[current_animal].alive == 1) * 
+                milk_provisioning * milk_production_rate * 
+                feeding_nursing_effort[1] * milk_assim * 
+                (milk_lipids * ED_lipids + milk_protein * ED_protein);
+              
+              // Calves start independently foraging only once milk consumption begins to decrease
+              if(current_day >= start_simulation + milk_decrease){
 
-            // } # Separation conditional
+                calf_foraging = (calves[current_animal].alive == 1) * is_feeding * 
+                  D_cop * calves[current_animal].gape * 
+                  (1 - calves[current_animal].entangled(3)) * swim_speed * capture_efficiency * 
+                  feeding_nursing_effort[1] * (feeding_time * 3600) * (1-milk_assim) *
+                  E_calanus;
+                
+              }
+              
+              E_in_calves = mammary_efficiency * E_lac + calf_foraging;
+              
+              // } # Separation conditional
             
-          }
+          } // End if cohort == 5
           
           // ------------------------------------------------------------
           // LOCOMOTORY COSTS
@@ -1618,13 +1690,16 @@ Rcpp::List movesim(
           // ------------------------------------------------------------
             
             // Nil gestation costs for:
-            // (1) Pregnant females during burn-in
-            // (2) Lactating females after burn-in
-            // (3) Pregnant females on very last day (birth) 
-            // 
-            if(cohortID < 4 | cohortID == 6 |
+            // (1) Calves, juveniles, adult males
+            // (2) Resting females
+            // (3) Females that have terminated their pregnancy
+            // (4) Pregnant females during burn-in
+            // (5) Pregnant females on very last day (birth) 
+            // (6) Lactating females after burn-in
+
+            if(cohortID < 4 | cohortID == 6 | animal->abort == 1 |
                (cohortID == 4 && current_day < start_simulation) |
-               (cohortID == 4 && animal->abort == 0 && current_day == densitySeq.size()) |
+               (cohortID == 4 && current_day == densitySeq.size()) |
                (cohortID == 5 && current_day > start_simulation))
               {
               
@@ -1756,9 +1831,6 @@ Rcpp::List movesim(
                                                prop_viscera,
                                                prop_bones);
             
-            // Cost of lactation estimated from the energy requirements of the calf
-            // E_lac = resting_metab_calves + LC_tot_calves + E_growth_calves;
-            
           }
           
           // ------------------------------------------------------------
@@ -1775,7 +1847,6 @@ Rcpp::List movesim(
             if(calves[current_animal].entangled(0) == 1) E_out_calves = E_out_calves + entanglement_cost;
           }
           
-          
           // ------------------------------------------------------------
           // ENERGY ALLOCATION
           // ------------------------------------------------------------
@@ -1791,6 +1862,9 @@ Rcpp::List movesim(
             // Mouth width
             animal->mouth_width = animal->length * animal->mouth_ratio;
             
+            // Mouth gape area -- (m^2)
+            animal->gape = gape_size(animal->length, animal->mouth_width, animal->mouth_angle);
+              
             // Lean mass
             animal->lean_mass = lean_mass_nextday;
             
@@ -1833,6 +1907,17 @@ Rcpp::List movesim(
               calves[current_animal].length = age2length(calves[current_animal].age, calves[current_animal].lengthatage);
               calves[current_animal].lean_mass = lean_mass_nextday_calves;
               
+              // Update mouth ratio and mouth width for calves > 1 month of age
+              if(current_day == start_simulation + 30){
+                calves[current_animal].mouth_ratio = start_mouth(0,31.0L/365.0L);
+              }
+              
+              calves[current_animal].mouth_width = calves[current_animal].mouth_ratio*calves[current_animal].length;
+              
+              calves[current_animal].gape = gape_size(calves[current_animal].length,
+                                                      calves[current_animal].mouth_width, 
+                                                      calves[current_animal].mouth_angle);
+              
               // Lipid growth or breakdown
               delta_blubber_calves = (E_in_calves - E_out_calves) * anabolism_efficiency[E_balance_calves] / (ED_lipids * catabolism_efficiency[E_balance_calves]);
               // delta_blubber_calves = lipid_anacat_calves[E_balance_calves] * (E_in_calves - E_out_calves) / ED_lipids;
@@ -1853,7 +1938,7 @@ Rcpp::List movesim(
           // ------------------------------------------------------------
           
           if((cohortID == 4 && animal->abort == 0) |
-             (cohortID == 5 && animal->abort == 0 && current_day <= 93)){
+             (cohortID == 5 && animal->abort == 0 && current_day <= start_simulation)){
             
             bc_gest = abortion_scalar * (((E_out / (ED_lipids * catabolism_efficiency[1])) + starvation_onset*animal->tot_mass) / animal->tot_mass);
             
@@ -1870,52 +1955,10 @@ Rcpp::List movesim(
 
           // Probability of migrating north is conditional on time already spent on calving grounds
           if(animal->north == 0 && animal->region == 9){
-            double p_leave = pleave(current_day, enter_SEUS, cohortID, 2.5, residency_seus);
+            double p_leave = pleave(current_day, enter_SEUS, cohortID, 3, residency_seus);
             animal->north = R::rbinom(1, p_leave);
           }
           
-          // ------------------------------------------------------------
-          // STARVATION MORTALITY
-          // ------------------------------------------------------------
-          
-          if(stressors){
-            
-            if(current_day >= start_simulation){
-              
-              // Body condition-dependent mortality, similar to Hin et al. (2019)
-              // Probability of the animal starving given its health
-              // p_starve = starvation_mortality(animal->bc, starvation_onset, starvation, starvation_scalar);
-              p_starve = starvation_mortality(animal->bc, starvation_df, starvation_death, starvation_onset);
-              has_starved = R::rbinom(1, p_starve);
-              
-              // p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_onset, starvation, starvation_scalar);
-              p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_df, starvation_death, starvation_onset);
-              has_starved_calf = R::rbinom(1, p_starve_calf);
-              
-            }
-            
-            if(has_starved){
-              
-              animal->alive = 0;
-              animal->starve = 1;
-              date_death[current_animal] = current_day;
-              
-              if(calves[current_animal].alive == 1){
-                calves[current_animal].alive = 0;
-                date_death_calf[current_animal] = current_day;
-              }
-            }
-            
-            if(calves[current_animal].alive == 1 && born[current_animal] == 1) {
-              if(has_starved_calf){
-                calves[current_animal].alive = 0;
-                calves[current_animal].starve = 1;
-                date_death_calf[current_animal] = current_day;
-                animal->north = 1;
-              }
-            }
-            
-          } // End if stressors
         } // End if alive
       } // End if current_day > 0
       
@@ -1942,6 +1985,7 @@ Rcpp::List movesim(
         *(attrib_out++) = animal->fat_mass;                // Blubber mass
         *(attrib_out++) = animal->massatlength(0,0);       // Intercept of the logarithmic mass-at-length relationship
         *(attrib_out++) = animal->massatlength(0,1);       // Slope of the logarithmic mass-at-length relationship
+        *(attrib_out++) = animal->gape;                    // Size of the gape
         *(attrib_out++) = animal->mouth_ratio;             // Ratio of mouth width to total body length
         *(attrib_out++) = animal->mouth_angle;             // Upper angle of the mouth
         *(attrib_out++) = animal->mouth_width;             // Width of the mouth
@@ -2001,7 +2045,6 @@ Rcpp::List movesim(
         *(attrib_feeding_out++) = 0.0L;             // Incidence of foraging
         *(attrib_feeding_out++) = 0.0L;             // Prey concentration
         *(attrib_feeding_out++) = 0.0L;             // Minimum prey concentration needed for foraging
-        *(attrib_feeding_out++) = 0.0L;             // Energy gain (adults and juveniles)
         *(attrib_feeding_out++) = 0.0L;             // Swimming speed while foraging
         *(attrib_feeding_out++) = 0.0L;             // Capture efficiency
         *(attrib_feeding_out++) = 0.0L;             // % reduction in the gape when entangled
@@ -2016,6 +2059,7 @@ Rcpp::List movesim(
         *(attrib_feeding_out++) = 0.0L;             // Metabolizing efficiency (calves and juveniles)
         *(attrib_feeding_out++) = 0.0L;             // Metabolizing efficiency (adults)
         *(attrib_feeding_out++) = 0.0L;             // Prey energy content
+        *(attrib_feeding_out++) = 0.0L;             // Calf foraging
         
         // +++ Energy costs +++
         
@@ -2093,12 +2137,13 @@ Rcpp::List movesim(
         *(attrib_calves_out++) = 0.0L;                             // Blubber mass
         *(attrib_calves_out++) = 0.0L;                             // Intercept of the logarithmic mass-at-length relationship
         *(attrib_calves_out++) = 0.0L;                             // Slope of the logarithmic mass-at-length relationship
+        *(attrib_calves_out++) = 0.0L;                             // Size of the gape
         *(attrib_calves_out++) = 0.0L;                             // Ratio of mouth width to total body length
         *(attrib_calves_out++) = 0.0L;                             // Upper angle of the mouth
         *(attrib_calves_out++) = 0.0L;                             // Width of the mouth
         *(attrib_calves_out++) = p_starve_calf;                    // Starvation-induced mortality rate
         *(attrib_calves_out++) = calves[current_animal].starve;    // Incidence of starvation
-        *(attrib_calves_out++) = calves[current_animal].mort;   // Age-dependent mortality
+        *(attrib_calves_out++) = calves[current_animal].mort;      // Age-dependent mortality
         *(attrib_calves_out++) = date_death_calf[current_animal];  // Date of death
         *(attrib_calves_out++) = p_surv_calf;                      // Survival probability
         
@@ -2147,6 +2192,7 @@ Rcpp::List movesim(
           *(attrib_out++) = animal->fat_mass;                // Blubber mass
           *(attrib_out++) = animal->massatlength(0,0);       // Intercept of the logarithmic mass-at-length relationship
           *(attrib_out++) = animal->massatlength(0,1);       // Slope of the logarithmic mass-at-length relationship
+          *(attrib_out++) = animal->gape;                    // Size of the gape
           *(attrib_out++) = animal->mouth_ratio;             // Ratio of mouth width to total body length
           *(attrib_out++) = animal->mouth_angle;             // Upper angle of the mouth
           *(attrib_out++) = animal->mouth_width;             // Width of the mouth
@@ -2210,7 +2256,6 @@ Rcpp::List movesim(
           *(attrib_feeding_out++) = is_feeding;                          // Incidence of foraging
           *(attrib_feeding_out++) = D_cop;                               // Prey concentration
           *(attrib_feeding_out++) = min_calanus;                         // Minimum prey concentration needed for foraging
-          *(attrib_feeding_out++) = mouth_gape;                          // Energy gain (adults and juveniles)
           *(attrib_feeding_out++) = swim_speed;                          // Swimming speed while foraging
           *(attrib_feeding_out++) = capture_efficiency;                  // Capture efficiency
           *(attrib_feeding_out++) = animal->entangled(3);                // Reduction in mouth gape when entangled
@@ -2225,6 +2270,7 @@ Rcpp::List movesim(
           *(attrib_feeding_out++) = metabolizing_efficiency(0);          // Metabolizing efficiency (calves and juveniles)
           *(attrib_feeding_out++) = metabolizing_efficiency(1);          // Metabolizing efficiency (adults)
           *(attrib_feeding_out++) = E_calanus;                           // Prey energy content
+          *(attrib_feeding_out++) = calf_foraging;                       // Calf foraging
           
           // +++ Energy costs +++
           
@@ -2306,6 +2352,7 @@ Rcpp::List movesim(
           *(attrib_out++) = 0.0L;              // Blubber mass
           *(attrib_out++) = 0.0L;              // Intercept of the logarithmic mass-at-length relationship
           *(attrib_out++) = 0.0L;              // Slope of the logarithmic mass-at-length relationship
+          *(attrib_out++) = 0.0L;              // Size of the gape
           *(attrib_out++) = 0.0L;              // Ratio of mouth width to total body length
           *(attrib_out++) = 0.0L;              // Upper angle of the mouth
           *(attrib_out++) = 0.0L;              // Width of the mouth
@@ -2365,7 +2412,6 @@ Rcpp::List movesim(
           *(attrib_feeding_out++) = 0.0L;        // Incidence of foraging
           *(attrib_feeding_out++) = 0.0L;        // Prey concentration
           *(attrib_feeding_out++) = 0.0L;        // Minimum prey concentration needed for foraging
-          *(attrib_feeding_out++) = 0.0L;        // Energy gain (adults and juveniles)
           *(attrib_feeding_out++) = 0.0L;        // Swimming speed while foraging
           *(attrib_feeding_out++) = 0.0L;        // Capture efficiency
           *(attrib_feeding_out++) = 0.0L;        // % reduction in the gape when entangled
@@ -2380,6 +2426,7 @@ Rcpp::List movesim(
           *(attrib_feeding_out++) = 0.0L;        // Metabolizing efficiency (calves and juveniles)
           *(attrib_feeding_out++) = 0.0L;        // Metabolizing efficiency (adults)
           *(attrib_feeding_out++) = 0.0L;        // Prey energy content
+          *(attrib_feeding_out++) = 0.0L;        // Calf foraging
           
           // +++ Energy costs +++
           
@@ -2465,6 +2512,7 @@ Rcpp::List movesim(
           *(attrib_calves_out++) = calves[current_animal].fat_mass;            // Blubber mass
           *(attrib_calves_out++) = calves[current_animal].massatlength(0,0);   // Intercept of the logarithmic mass-at-length relationship
           *(attrib_calves_out++) = calves[current_animal].massatlength(0,1);   // Slope of the logarithmic mass-at-length relationship
+          *(attrib_calves_out++) = calves[current_animal].gape;                // Size of the gape
           *(attrib_calves_out++) = calves[current_animal].mouth_ratio;         // Ratio of mouth width to total body length
           *(attrib_calves_out++) = calves[current_animal].mouth_angle;         // Upper angle of the mouth
           *(attrib_calves_out++) = calves[current_animal].mouth_width;         // Width of the mouth
@@ -2518,6 +2566,7 @@ Rcpp::List movesim(
           *(attrib_calves_out++) = 0.0L;                             // Blubber mass
           *(attrib_calves_out++) = 0.0L;                             // Intercept of the logarithmic mass-at-length relationship
           *(attrib_calves_out++) = 0.0L;                             // Slope of the logarithmic mass-at-length relationship
+          *(attrib_calves_out++) = 0.0L;                             // Size of the gape
           *(attrib_calves_out++) = 0.0L;                             // Ratio of mouth width to total body length
           *(attrib_calves_out++) = 0.0L;                             // Upper angle of the mouth
           *(attrib_calves_out++) = 0.0L;                             // Width of the mouth
@@ -2574,6 +2623,8 @@ Rcpp::List movesim(
   return results;
 }
 
+//      std::vector<std::size_t> latentDensitySeq,
+      
 //' Simulate right whale movements
 //' @name NARW_simulator
 //' @param densities array of density maps, stored in column-major order with 
@@ -2599,8 +2650,8 @@ Rcpp::List NARW_simulator(
      std::vector<Eigen::MatrixXd> densities,
      std::vector<Eigen::MatrixXd> densities_seus,
      std::vector<Eigen::MatrixXd> densities_gsl,
+     std::vector<Eigen::MatrixXd> densities_gom,
      std::vector<std::size_t> densitySeq,
-     std::vector<std::size_t> latentDensitySeq,
      std::vector<Eigen::MatrixXd> prey,
      std::vector<Eigen::MatrixXd> fishing,
      std::vector<Eigen::MatrixXd> vessels,
@@ -2626,7 +2677,7 @@ Rcpp::List NARW_simulator(
      bool stressors,
      bool growth,
      double prey_scale,
-     Eigen::MatrixXd starvation_df,
+     Rcpp::NumericVector starvation_coefs,
      double starvation_death,
      double starvation_onset,
      Rcpp::NumericVector nursing_cessation,
@@ -2641,8 +2692,8 @@ Rcpp::List NARW_simulator(
    // Coming from R, we assume latentDensitySeq is 1-indexed
    // .begin = Returns an iterator pointing to the first element in the sequence
    // .end = Returns an iterator pointing to the last element in the sequence
-   for(auto d = latentDensitySeq.begin(); d != latentDensitySeq.end(); ++d)
-     --(*d);
+   // for(auto d = latentDensitySeq.begin(); d != latentDensitySeq.end(); ++d)
+   //   --(*d);
    
    // Ditto for densitySeq
    for(auto d = densitySeq.begin(); d != densitySeq.end(); ++d)
@@ -2658,6 +2709,7 @@ Rcpp::List NARW_simulator(
    // 
    // for(auto d = latentDensitySeq.begin(); d != dend; ++d)
    //   latent_environments.emplace_back(densities[*d], densities_seus[*d], densities_gsl[*d],
+   //                                    densities_gom[*d],
    //                                    prey[*d], fishing[*d], vessels[*d], noise[*d],
    //                                    daylight[*d], regions,
    //                                    limits, limits_daylight, limits_regions,
@@ -2678,6 +2730,7 @@ Rcpp::List NARW_simulator(
      latent_environments.emplace_back(densities[*d],
                                       densities_seus[*d],
                                       densities_gsl[*d],
+                                      densities_gom[*d],
                                       prey[*d],
                                       fishing[*d],
                                       vessels[*d],
@@ -2762,7 +2815,7 @@ Rcpp::List NARW_simulator(
                   resolution_vessels, resolution_noise, 
                   // stepsize,
                   stressors, growth, prey_scale, 
-                  starvation_df, starvation_death, starvation_onset,
+                  starvation_coefs, starvation_death, starvation_onset,
                   nursing_cessation, piling_hrs, progress);
    
  }
@@ -2785,6 +2838,7 @@ Rcpp::List NARW_simulator(
 double evalEnvironment(Eigen::MatrixXd density, 
                        Eigen::MatrixXd density_seus, 
                        Eigen::MatrixXd density_gsl, 
+                       Eigen::MatrixXd density_gom, 
                        Eigen::MatrixXd prey, 
                        Eigen::MatrixXd fishing, 
                        Eigen::MatrixXd vessels, 
@@ -2803,7 +2857,7 @@ double evalEnvironment(Eigen::MatrixXd density,
                        Eigen::VectorXd resolution_vessels,
                        Eigen::VectorXd resolution_noise,
                        double x, double y, char layer) {
-  Environment e(density, density_seus, density_gsl, prey, fishing, vessels, noise, regions, 
+  Environment e(density, density_seus, density_gsl, density_gom, prey, fishing, vessels, noise, regions, 
                 limits, limits_regions, limits_prey, limits_fishing, 
                 limits_vessels, limits_noise, resolution, resolution_regions, 
                 resolution_prey, resolution_fishing,
