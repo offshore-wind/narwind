@@ -32,10 +32,6 @@ get_scenarios <- function(scenario = 1){
   # BOEM offshore wind scenarios
   if(scenario > 0){
   
-  turbines <- targets::tar_read(turbines)
-  vessel_routes <- targets::tar_read(vessel_routes)
-  vessel_transits <- targets::tar_read(vessel_transits)
-  
   # vparams <- vessel_transits[, list(speed_knt = unique(speed_knt), Nvessels = sum(Nvessels)), list(category, windfarm, routeID, phase)]
   
   vparams <- vessel_transits[phase == ifelse(scenario < 3, "Construction", "Operation and maintenance")]
@@ -534,7 +530,7 @@ add_SPL <- function(spl, raster = FALSE){
 # ++ [NOTE] The dummy raster has the same extent and resolution as the NARW density surfaces.
 # ++ [RETURN] Output raster
 dummy_raster <- function(value = NULL){
-  dummy.r <- targets::tar_read(density_support) |> raster::raster()
+  dummy.r <- density_support |> raster::raster()
   dummy.r <- dummy.r - 1
   dummy.r[dummy.r < 0] <- NA
   if(!is.null(value)) dummy.r[dummy.r == 0] <- value
@@ -836,39 +832,6 @@ theme_narw <- function(vertical = FALSE, grey = TRUE, bbox = FALSE){
     )
 }
 
-# ++ [FUNCTION] Additional ggplot2 theme parameters for maps
-# ++ [PARAM] p –– Input plot.
-theme_map <- function(p, arrow = TRUE) {
-  scale.colour <- "#35484E"
-  p + ggplot2::theme(
-    panel.background = ggplot2::element_rect(fill = ocean.colour),
-    panel.grid.major = ggplot2::element_line(linewidth = 0.01, colour = grid.line.colour),
-    panel.grid.minor = ggplot2::element_line(linewidth = 0.01, colour = grid.line.colour),
-    legend.title = ggplot2::element_blank(),
-    axis.ticks = element_blank(),
-    axis.text = element_text(size = 12, colour = "black"),
-    axis.title = element_text(size = 10),
-    axis.text.y = element_text(angle = 90, hjust = 0.5, vjust = 0.5),
-    plot.margin = margin(t = 0, r = 0, b = 0, l = 0, "cm"),
-    panel.border = ggplot2::element_rect(colour = "black", fill = NA, size = 1)
-  ) +
-    ggspatial::annotation_scale(
-      location = "br", width_hint = 0.2,
-      bar_cols = c(scale.colour, "white"),
-      text_cex = 0.9, text_col = scale.colour, line_width = 0
-    ) +
-    {if(arrow) ggspatial::annotation_north_arrow(
-      location = "br", which_north = "true",
-      pad_x = unit(0.5, "in"), pad_y = unit(0.25, "in"),
-      style = ggspatial::north_arrow_fancy_orienteering(
-        fill = c("white", scale.colour),
-        line_width = 0, line_col = scale.colour, text_col = scale.colour
-      )
-    )} +
-    xlab("") +
-    ylab("")
-}
-
 # ++ [FUNCTION] Plot rasters and SpatialGridDataFrames using ggplot
 # ++ [PARAM] r –– Input raster or SpatialGridDataFrame.
 # ++ [PARAM] duke –– Logical. Whether to match the formatting of Jason Roberts' density maps.
@@ -890,8 +853,6 @@ plot_raster <- function(r,
                         xmax = NULL,
                         ymin = NULL,
                         ymax = NULL){
-  
-  world <- targets::tar_read(world)
   
   if(class(r) == "SpatialGridDataFrame") r <- raster::raster(r)
   
@@ -977,6 +938,14 @@ colour_breaks <- function(dat){
 }
 
 # UTILITIES ------------------------------------------------------
+
+# ++ [FUNCTION] Round any number to desired accuracy
+# ++ [PARAM] x –– Numeric vector
+# ++ [PARAM] accuracy –– Number to round to
+# ++ [PARAM] f –– Rounding function
+roundany <- function(x, accuracy, f = round) {
+  f(x / accuracy) * accuracy
+}
 
 # ++ [FUNCTION] Print current date and time
 date_time <- function(){
