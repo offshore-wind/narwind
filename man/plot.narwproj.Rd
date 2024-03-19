@@ -9,7 +9,11 @@
   interval = TRUE,
   cohort = FALSE,
   noaa = FALSE,
+  full = FALSE,
+  timeline = TRUE,
+  timeline.y = 0,
   scales = "free",
+  nudge.y = 20,
   ncol = 3,
   nx = 5,
   ny = 5
@@ -24,7 +28,15 @@
 
 \item{noaa}{Logical. If \code{TRUE}, the population trajectory predicted as part of NOAA's population viability analysis (Runge et al., 2023) is also plotted. Defaults to \code{FALSE}.}
 
+\item{full}{Logical. If \code{TRUE}, the trend plot includes historical population size estimates (dating back to 2000).}
+
+\item{timeline}{Logical. If \code{TRUE}, the plot includes timeline(s) of offshore wind development.}
+
+\item{timeline.y}{Numeric. Position of the timeline on the y-axis.}
+
 \item{scales}{Character. Defines whether axis scales should be constant or vary across plots. Can be one of "fixed" or "free" (the default).}
+
+\item{nudge.y}{Numeric. Vertical adjustment to nudge timeline labels by.}
 
 \item{ncol}{Integer. Number of columns for the plot layout when \code{cohort = TRUE}. Defaults to \code{3}.}
 

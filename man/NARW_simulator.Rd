@@ -12,8 +12,8 @@ NARW_simulator(
   densities,
   densities_seus,
   densities_gsl,
+  densities_gom,
   densitySeq,
-  latentDensitySeq,
   prey,
   fishing,
   vessels,
@@ -39,7 +39,7 @@ NARW_simulator(
   stressors,
   growth,
   prey_scale,
-  starvation_df,
+  starvation_coefs,
   starvation_death,
   starvation_onset,
   nursing_cessation,
@@ -56,8 +56,6 @@ yind is index for a projected lat)}
 used to simulate movement at each timepoint; number of timepoints to
 simulate comes from length of vector densitySeq}
 
-\item{latentDensitySeq}{1-indexed vector specifying which density maps should be used to simulate movement for each latent animal}
-
 \item{limits}{vector (xmin, xmax, ymin, ymax) of spatial coordinate extents for spatial densities}
 
 \item{resolution}{vector (xres, yres) of spatial step sizes for spatial densities}
@@ -67,6 +65,8 @@ simulate comes from length of vector densitySeq}
 \item{xinit}{matrix of initial x coordinates for latent animals (nlatent x n)}
 
 \item{yinit}{matrix of initial y coordinates for latent animals (nlatent x n)}
+
+\item{latentDensitySeq}{1-indexed vector specifying which density maps should be used to simulate movement for each latent animal}
 
 \item{stepsize}{Radius of the proposal circle for movement (Michelot, 2019)}
 }

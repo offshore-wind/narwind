@@ -26,17 +26,6 @@ In many cases, a Gaussian approximation to the posterior of the model coefficien
 
 The function reports the acceptance rate of the two samplers. As a general rule, the random walk acceptance probability should not be higher than ca. 0.25. If it is, the \code{rw.scale} argument can be used to increase the factor by which the posterior covariance matrix is scaled.
 }
-\examples{
-\dontrun{
-library(narwind)
-m <- narw(10000)
-m <- augment(m)
-}
-}
 \author{
 Phil J. Bouchet
-...............................
-'...............................
-------------------------------------------------------------
-------------------------------------------------------------
 }

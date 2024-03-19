@@ -37,6 +37,10 @@ rtnorm <- function(mean, sd, low, high) {
     .Call('_narwind_rtnorm', PACKAGE = 'narwind', mean, sd, low, high)
 }
 
+estBetaParams <- function(mu, std) {
+    .Call('_narwind_estBetaParams', PACKAGE = 'narwind', mu, std)
+}
+
 transpose_c <- function(m, k) {
     .Call('_narwind_transpose_c', PACKAGE = 'narwind', m, k)
 }
@@ -61,12 +65,12 @@ response_threshold <- function(dose, day, simduration, seed) {
     .Call('_narwind_response_threshold', PACKAGE = 'narwind', dose, day, simduration, seed)
 }
 
-starvation_mortality <- function(bc, mortality, starvation_death, starvation_onset) {
-    .Call('_narwind_starvation_mortality', PACKAGE = 'narwind', bc, mortality, starvation_death, starvation_onset)
+starvation_mortality <- function(bc, coefs, starvation_death, starvation_onset) {
+    .Call('_narwind_starvation_mortality', PACKAGE = 'narwind', bc, coefs, starvation_death, starvation_onset)
 }
 
-starvation_mortality_vec <- function(bc, mortality, starvation_death, starvation_onset) {
-    .Call('_narwind_starvation_mortality_vec', PACKAGE = 'narwind', bc, mortality, starvation_death, starvation_onset)
+starvation_mortality_vec <- function(bc, coefs, starvation_death, starvation_onset) {
+    .Call('_narwind_starvation_mortality_vec', PACKAGE = 'narwind', bc, coefs, starvation_death, starvation_onset)
 }
 
 is_female <- function(cohort) {
@@ -406,11 +410,11 @@ geoDist <- function(mat, x0, y0, x1, y1, limits, resolution, r) {
 #' @param xinit matrix of initial x coordinates for latent animals (nlatent x n)
 #' @param yinit matrix of initial y coordinates for latent animals (nlatent x n)
 #' @return List of coordinates
-NARW_simulator <- function(cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densitySeq, latentDensitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, xinit, yinit, stressors, growth, prey_scale, starvation_df, starvation_death, starvation_onset, nursing_cessation, piling_hrs, progress) {
-    .Call('_narwind_NARW_simulator', PACKAGE = 'narwind', cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densitySeq, latentDensitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, xinit, yinit, stressors, growth, prey_scale, starvation_df, starvation_death, starvation_onset, nursing_cessation, piling_hrs, progress)
+NARW_simulator <- function(cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densities_gom, densitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, xinit, yinit, stressors, growth, prey_scale, starvation_coefs, starvation_death, starvation_onset, nursing_cessation, piling_hrs, progress) {
+    .Call('_narwind_NARW_simulator', PACKAGE = 'narwind', cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densities_gom, densitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, xinit, yinit, stressors, growth, prey_scale, starvation_coefs, starvation_death, starvation_onset, nursing_cessation, piling_hrs, progress)
 }
 
-evalEnvironment <- function(density, density_seus, density_gsl, prey, fishing, vessels, noise, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer) {
-    .Call('_narwind_evalEnvironment', PACKAGE = 'narwind', density, density_seus, density_gsl, prey, fishing, vessels, noise, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer)
+evalEnvironment <- function(density, density_seus, density_gsl, density_gom, prey, fishing, vessels, noise, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer) {
+    .Call('_narwind_evalEnvironment', PACKAGE = 'narwind', density, density_seus, density_gsl, density_gom, prey, fishing, vessels, noise, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer)
 }
 

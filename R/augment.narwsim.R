@@ -87,16 +87,16 @@ augment.narwsim <- function(obj,
   # xpred <- seq(15000, 45000, length.out = 100)
   # Xp <- predict(gam_gest, data.frame(mass = xpred), type = "lpmatrix")
   # preds.mbc <- matrix(data = NA, nrow = n.tot, ncol = length(xpred))
-  # 
+  #
   # cat("\nGESTATION MODEL\n")
-  # out.minbc <- gam.mh(gam_gest, 
-  #                     ns = n, 
-  #                     burn = burn, 
-  #                     rw.scale = rw.scale[3], 
+  # out.minbc <- gam.mh(gam_gest,
+  #                     ns = n,
+  #                     burn = burn,
+  #                     rw.scale = rw.scale[3],
   #                     thin = thin)
-  # 
+  #
   # out.minbc <- out.minbc$bs
-   
+
   # for (i in seq_len(n.tot)) {
   #   preds.mbc[i, ] <- ilink.mbc(Xp %*% out.minbc[i, ])
   # }

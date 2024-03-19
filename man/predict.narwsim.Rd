@@ -10,7 +10,9 @@
   yrs = 35,
   param = TRUE,
   piling = 1,
+  noaa = FALSE,
   survival_prob = NULL,
+  min_gest = NULL,
   progress = TRUE
 )
 }

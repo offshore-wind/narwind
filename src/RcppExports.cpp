@@ -25,6 +25,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// estBetaParams
+Rcpp::NumericVector estBetaParams(Rcpp::NumericVector mu, Rcpp::NumericVector std);
+RcppExport SEXP _narwind_estBetaParams(SEXP muSEXP, SEXP stdSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type std(stdSEXP);
+    rcpp_result_gen = Rcpp::wrap(estBetaParams(mu, std));
+    return rcpp_result_gen;
+END_RCPP
+}
 // transpose_c
 Rcpp::NumericMatrix transpose_c(Rcpp::NumericMatrix m, int k);
 RcppExport SEXP _narwind_transpose_c(SEXP mSEXP, SEXP kSEXP) {
@@ -101,30 +113,30 @@ BEGIN_RCPP
 END_RCPP
 }
 // starvation_mortality
-double starvation_mortality(double bc, Eigen::MatrixXd mortality, double starvation_death, double starvation_onset);
-RcppExport SEXP _narwind_starvation_mortality(SEXP bcSEXP, SEXP mortalitySEXP, SEXP starvation_deathSEXP, SEXP starvation_onsetSEXP) {
+double starvation_mortality(double bc, Rcpp::NumericVector coefs, double starvation_death, double starvation_onset);
+RcppExport SEXP _narwind_starvation_mortality(SEXP bcSEXP, SEXP coefsSEXP, SEXP starvation_deathSEXP, SEXP starvation_onsetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< double >::type bc(bcSEXP);
-    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type mortality(mortalitySEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type coefs(coefsSEXP);
     Rcpp::traits::input_parameter< double >::type starvation_death(starvation_deathSEXP);
     Rcpp::traits::input_parameter< double >::type starvation_onset(starvation_onsetSEXP);
-    rcpp_result_gen = Rcpp::wrap(starvation_mortality(bc, mortality, starvation_death, starvation_onset));
+    rcpp_result_gen = Rcpp::wrap(starvation_mortality(bc, coefs, starvation_death, starvation_onset));
     return rcpp_result_gen;
 END_RCPP
 }
 // starvation_mortality_vec
-Rcpp::NumericVector starvation_mortality_vec(Rcpp::NumericVector bc, Eigen::MatrixXd mortality, double starvation_death, double starvation_onset);
-RcppExport SEXP _narwind_starvation_mortality_vec(SEXP bcSEXP, SEXP mortalitySEXP, SEXP starvation_deathSEXP, SEXP starvation_onsetSEXP) {
+Rcpp::NumericVector starvation_mortality_vec(Rcpp::NumericVector bc, Rcpp::NumericVector coefs, double starvation_death, double starvation_onset);
+RcppExport SEXP _narwind_starvation_mortality_vec(SEXP bcSEXP, SEXP coefsSEXP, SEXP starvation_deathSEXP, SEXP starvation_onsetSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type bc(bcSEXP);
-    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type mortality(mortalitySEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type coefs(coefsSEXP);
     Rcpp::traits::input_parameter< double >::type starvation_death(starvation_deathSEXP);
     Rcpp::traits::input_parameter< double >::type starvation_onset(starvation_onsetSEXP);
-    rcpp_result_gen = Rcpp::wrap(starvation_mortality_vec(bc, mortality, starvation_death, starvation_onset));
+    rcpp_result_gen = Rcpp::wrap(starvation_mortality_vec(bc, coefs, starvation_death, starvation_onset));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -693,15 +705,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // pleave
-double pleave(float now, float enter, float cohortID, float factor, Rcpp::NumericMatrix resid);
+double pleave(int now, int enter, int cohortID, double factor, Rcpp::NumericMatrix resid);
 RcppExport SEXP _narwind_pleave(SEXP nowSEXP, SEXP enterSEXP, SEXP cohortIDSEXP, SEXP factorSEXP, SEXP residSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< float >::type now(nowSEXP);
-    Rcpp::traits::input_parameter< float >::type enter(enterSEXP);
-    Rcpp::traits::input_parameter< float >::type cohortID(cohortIDSEXP);
-    Rcpp::traits::input_parameter< float >::type factor(factorSEXP);
+    Rcpp::traits::input_parameter< int >::type now(nowSEXP);
+    Rcpp::traits::input_parameter< int >::type enter(enterSEXP);
+    Rcpp::traits::input_parameter< int >::type cohortID(cohortIDSEXP);
+    Rcpp::traits::input_parameter< double >::type factor(factorSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type resid(residSEXP);
     rcpp_result_gen = Rcpp::wrap(pleave(now, enter, cohortID, factor, resid));
     return rcpp_result_gen;
@@ -796,8 +808,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // NARW_simulator
-Rcpp::List NARW_simulator(int cohortID, Rcpp::NumericVector seus, Rcpp::NumericVector gsl, Eigen::MatrixXd support, std::vector<Eigen::MatrixXd> densities, std::vector<Eigen::MatrixXd> densities_seus, std::vector<Eigen::MatrixXd> densities_gsl, std::vector<std::size_t> densitySeq, std::vector<std::size_t> latentDensitySeq, std::vector<Eigen::MatrixXd> prey, std::vector<Eigen::MatrixXd> fishing, std::vector<Eigen::MatrixXd> vessels, std::vector<Eigen::MatrixXd> noise, Rcpp::NumericMatrix doseresp_seed, Rcpp::NumericVector doseresp, Eigen::MatrixXd regions, Eigen::VectorXd limits, Eigen::VectorXd limits_regions, Eigen::VectorXd limits_prey, Eigen::VectorXd limits_fishing, Eigen::VectorXd limits_vessels, Eigen::VectorXd limits_noise, Eigen::VectorXd resolution, Eigen::VectorXd resolution_regions, Eigen::VectorXd resolution_prey, Eigen::VectorXd resolution_fishing, Eigen::VectorXd resolution_vessels, Eigen::VectorXd resolution_noise, std::size_t M, Eigen::MatrixXd xinit, Eigen::MatrixXd yinit, bool stressors, bool growth, double prey_scale, Eigen::MatrixXd starvation_df, double starvation_death, double starvation_onset, Rcpp::NumericVector nursing_cessation, double piling_hrs, bool progress);
-RcppExport SEXP _narwind_NARW_simulator(SEXP cohortIDSEXP, SEXP seusSEXP, SEXP gslSEXP, SEXP supportSEXP, SEXP densitiesSEXP, SEXP densities_seusSEXP, SEXP densities_gslSEXP, SEXP densitySeqSEXP, SEXP latentDensitySeqSEXP, SEXP preySEXP, SEXP fishingSEXP, SEXP vesselsSEXP, SEXP noiseSEXP, SEXP doseresp_seedSEXP, SEXP doserespSEXP, SEXP regionsSEXP, SEXP limitsSEXP, SEXP limits_regionsSEXP, SEXP limits_preySEXP, SEXP limits_fishingSEXP, SEXP limits_vesselsSEXP, SEXP limits_noiseSEXP, SEXP resolutionSEXP, SEXP resolution_regionsSEXP, SEXP resolution_preySEXP, SEXP resolution_fishingSEXP, SEXP resolution_vesselsSEXP, SEXP resolution_noiseSEXP, SEXP MSEXP, SEXP xinitSEXP, SEXP yinitSEXP, SEXP stressorsSEXP, SEXP growthSEXP, SEXP prey_scaleSEXP, SEXP starvation_dfSEXP, SEXP starvation_deathSEXP, SEXP starvation_onsetSEXP, SEXP nursing_cessationSEXP, SEXP piling_hrsSEXP, SEXP progressSEXP) {
+Rcpp::List NARW_simulator(int cohortID, Rcpp::NumericVector seus, Rcpp::NumericVector gsl, Eigen::MatrixXd support, std::vector<Eigen::MatrixXd> densities, std::vector<Eigen::MatrixXd> densities_seus, std::vector<Eigen::MatrixXd> densities_gsl, std::vector<Eigen::MatrixXd> densities_gom, std::vector<std::size_t> densitySeq, std::vector<Eigen::MatrixXd> prey, std::vector<Eigen::MatrixXd> fishing, std::vector<Eigen::MatrixXd> vessels, std::vector<Eigen::MatrixXd> noise, Rcpp::NumericMatrix doseresp_seed, Rcpp::NumericVector doseresp, Eigen::MatrixXd regions, Eigen::VectorXd limits, Eigen::VectorXd limits_regions, Eigen::VectorXd limits_prey, Eigen::VectorXd limits_fishing, Eigen::VectorXd limits_vessels, Eigen::VectorXd limits_noise, Eigen::VectorXd resolution, Eigen::VectorXd resolution_regions, Eigen::VectorXd resolution_prey, Eigen::VectorXd resolution_fishing, Eigen::VectorXd resolution_vessels, Eigen::VectorXd resolution_noise, std::size_t M, Eigen::MatrixXd xinit, Eigen::MatrixXd yinit, bool stressors, bool growth, double prey_scale, Rcpp::NumericVector starvation_coefs, double starvation_death, double starvation_onset, Rcpp::NumericVector nursing_cessation, double piling_hrs, bool progress);
+RcppExport SEXP _narwind_NARW_simulator(SEXP cohortIDSEXP, SEXP seusSEXP, SEXP gslSEXP, SEXP supportSEXP, SEXP densitiesSEXP, SEXP densities_seusSEXP, SEXP densities_gslSEXP, SEXP densities_gomSEXP, SEXP densitySeqSEXP, SEXP preySEXP, SEXP fishingSEXP, SEXP vesselsSEXP, SEXP noiseSEXP, SEXP doseresp_seedSEXP, SEXP doserespSEXP, SEXP regionsSEXP, SEXP limitsSEXP, SEXP limits_regionsSEXP, SEXP limits_preySEXP, SEXP limits_fishingSEXP, SEXP limits_vesselsSEXP, SEXP limits_noiseSEXP, SEXP resolutionSEXP, SEXP resolution_regionsSEXP, SEXP resolution_preySEXP, SEXP resolution_fishingSEXP, SEXP resolution_vesselsSEXP, SEXP resolution_noiseSEXP, SEXP MSEXP, SEXP xinitSEXP, SEXP yinitSEXP, SEXP stressorsSEXP, SEXP growthSEXP, SEXP prey_scaleSEXP, SEXP starvation_coefsSEXP, SEXP starvation_deathSEXP, SEXP starvation_onsetSEXP, SEXP nursing_cessationSEXP, SEXP piling_hrsSEXP, SEXP progressSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -808,8 +820,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< std::vector<Eigen::MatrixXd> >::type densities(densitiesSEXP);
     Rcpp::traits::input_parameter< std::vector<Eigen::MatrixXd> >::type densities_seus(densities_seusSEXP);
     Rcpp::traits::input_parameter< std::vector<Eigen::MatrixXd> >::type densities_gsl(densities_gslSEXP);
+    Rcpp::traits::input_parameter< std::vector<Eigen::MatrixXd> >::type densities_gom(densities_gomSEXP);
     Rcpp::traits::input_parameter< std::vector<std::size_t> >::type densitySeq(densitySeqSEXP);
-    Rcpp::traits::input_parameter< std::vector<std::size_t> >::type latentDensitySeq(latentDensitySeqSEXP);
     Rcpp::traits::input_parameter< std::vector<Eigen::MatrixXd> >::type prey(preySEXP);
     Rcpp::traits::input_parameter< std::vector<Eigen::MatrixXd> >::type fishing(fishingSEXP);
     Rcpp::traits::input_parameter< std::vector<Eigen::MatrixXd> >::type vessels(vesselsSEXP);
@@ -835,25 +847,26 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type stressors(stressorsSEXP);
     Rcpp::traits::input_parameter< bool >::type growth(growthSEXP);
     Rcpp::traits::input_parameter< double >::type prey_scale(prey_scaleSEXP);
-    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type starvation_df(starvation_dfSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type starvation_coefs(starvation_coefsSEXP);
     Rcpp::traits::input_parameter< double >::type starvation_death(starvation_deathSEXP);
     Rcpp::traits::input_parameter< double >::type starvation_onset(starvation_onsetSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type nursing_cessation(nursing_cessationSEXP);
     Rcpp::traits::input_parameter< double >::type piling_hrs(piling_hrsSEXP);
     Rcpp::traits::input_parameter< bool >::type progress(progressSEXP);
-    rcpp_result_gen = Rcpp::wrap(NARW_simulator(cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densitySeq, latentDensitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, xinit, yinit, stressors, growth, prey_scale, starvation_df, starvation_death, starvation_onset, nursing_cessation, piling_hrs, progress));
+    rcpp_result_gen = Rcpp::wrap(NARW_simulator(cohortID, seus, gsl, support, densities, densities_seus, densities_gsl, densities_gom, densitySeq, prey, fishing, vessels, noise, doseresp_seed, doseresp, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, M, xinit, yinit, stressors, growth, prey_scale, starvation_coefs, starvation_death, starvation_onset, nursing_cessation, piling_hrs, progress));
     return rcpp_result_gen;
 END_RCPP
 }
 // evalEnvironment
-double evalEnvironment(Eigen::MatrixXd density, Eigen::MatrixXd density_seus, Eigen::MatrixXd density_gsl, Eigen::MatrixXd prey, Eigen::MatrixXd fishing, Eigen::MatrixXd vessels, Eigen::MatrixXd noise, Eigen::MatrixXd regions, Eigen::VectorXd limits, Eigen::VectorXd limits_regions, Eigen::VectorXd limits_prey, Eigen::VectorXd limits_fishing, Eigen::VectorXd limits_vessels, Eigen::VectorXd limits_noise, Eigen::VectorXd resolution, Eigen::VectorXd resolution_regions, Eigen::VectorXd resolution_prey, Eigen::VectorXd resolution_fishing, Eigen::VectorXd resolution_vessels, Eigen::VectorXd resolution_noise, double x, double y, char layer);
-RcppExport SEXP _narwind_evalEnvironment(SEXP densitySEXP, SEXP density_seusSEXP, SEXP density_gslSEXP, SEXP preySEXP, SEXP fishingSEXP, SEXP vesselsSEXP, SEXP noiseSEXP, SEXP regionsSEXP, SEXP limitsSEXP, SEXP limits_regionsSEXP, SEXP limits_preySEXP, SEXP limits_fishingSEXP, SEXP limits_vesselsSEXP, SEXP limits_noiseSEXP, SEXP resolutionSEXP, SEXP resolution_regionsSEXP, SEXP resolution_preySEXP, SEXP resolution_fishingSEXP, SEXP resolution_vesselsSEXP, SEXP resolution_noiseSEXP, SEXP xSEXP, SEXP ySEXP, SEXP layerSEXP) {
+double evalEnvironment(Eigen::MatrixXd density, Eigen::MatrixXd density_seus, Eigen::MatrixXd density_gsl, Eigen::MatrixXd density_gom, Eigen::MatrixXd prey, Eigen::MatrixXd fishing, Eigen::MatrixXd vessels, Eigen::MatrixXd noise, Eigen::MatrixXd regions, Eigen::VectorXd limits, Eigen::VectorXd limits_regions, Eigen::VectorXd limits_prey, Eigen::VectorXd limits_fishing, Eigen::VectorXd limits_vessels, Eigen::VectorXd limits_noise, Eigen::VectorXd resolution, Eigen::VectorXd resolution_regions, Eigen::VectorXd resolution_prey, Eigen::VectorXd resolution_fishing, Eigen::VectorXd resolution_vessels, Eigen::VectorXd resolution_noise, double x, double y, char layer);
+RcppExport SEXP _narwind_evalEnvironment(SEXP densitySEXP, SEXP density_seusSEXP, SEXP density_gslSEXP, SEXP density_gomSEXP, SEXP preySEXP, SEXP fishingSEXP, SEXP vesselsSEXP, SEXP noiseSEXP, SEXP regionsSEXP, SEXP limitsSEXP, SEXP limits_regionsSEXP, SEXP limits_preySEXP, SEXP limits_fishingSEXP, SEXP limits_vesselsSEXP, SEXP limits_noiseSEXP, SEXP resolutionSEXP, SEXP resolution_regionsSEXP, SEXP resolution_preySEXP, SEXP resolution_fishingSEXP, SEXP resolution_vesselsSEXP, SEXP resolution_noiseSEXP, SEXP xSEXP, SEXP ySEXP, SEXP layerSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type density(densitySEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type density_seus(density_seusSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type density_gsl(density_gslSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type density_gom(density_gomSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type prey(preySEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type fishing(fishingSEXP);
     Rcpp::traits::input_parameter< Eigen::MatrixXd >::type vessels(vesselsSEXP);
@@ -874,13 +887,14 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type x(xSEXP);
     Rcpp::traits::input_parameter< double >::type y(ySEXP);
     Rcpp::traits::input_parameter< char >::type layer(layerSEXP);
-    rcpp_result_gen = Rcpp::wrap(evalEnvironment(density, density_seus, density_gsl, prey, fishing, vessels, noise, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer));
+    rcpp_result_gen = Rcpp::wrap(evalEnvironment(density, density_seus, density_gsl, density_gom, prey, fishing, vessels, noise, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_narwind_rtnorm", (DL_FUNC) &_narwind_rtnorm, 4},
+    {"_narwind_estBetaParams", (DL_FUNC) &_narwind_estBetaParams, 2},
     {"_narwind_transpose_c", (DL_FUNC) &_narwind_transpose_c, 2},
     {"_narwind_multinomial", (DL_FUNC) &_narwind_multinomial, 1},
     {"_narwind_random_int", (DL_FUNC) &_narwind_random_int, 3},
@@ -940,7 +954,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_narwind_geoD", (DL_FUNC) &_narwind_geoD, 7},
     {"_narwind_geoDist", (DL_FUNC) &_narwind_geoDist, 8},
     {"_narwind_NARW_simulator", (DL_FUNC) &_narwind_NARW_simulator, 40},
-    {"_narwind_evalEnvironment", (DL_FUNC) &_narwind_evalEnvironment, 23},
+    {"_narwind_evalEnvironment", (DL_FUNC) &_narwind_evalEnvironment, 24},
     {NULL, NULL, 0}
 };
 
