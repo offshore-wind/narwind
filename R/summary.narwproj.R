@@ -34,7 +34,7 @@ summary.narwproj <- function(obj){
   cat("-------------------------------------------------------------\n\n")
 
   # Extract projection parameters
-  current.yr <- obj$param$current.yr
+  current.yr <- obj$param$start.year
   yrs <- obj$param$yrs
   burn <- obj$param$burn
   N <- obj$param$n
@@ -88,23 +88,51 @@ summary.narwproj <- function(obj){
   cat("HEALTH & MORTALITY\n")
   cat("=============================================================\n\n")
   
+  # sampled.ind <- sample(seq_len(max(obj$dat$health$whale)), size = 500)
+  
+  # BC plots based on cohort each animal starts in
+  init.cohort <- obj$dat$health[, list(init.cohort = cohort[1]),list(prj, whale)]
+
+  bc.df <- dplyr::left_join(obj$dat$health[!is.na(bc) & bc > 0 & prj %in% sample(1:obj$param$n, size = 10)], init.cohort, by = c("whale", "prj")) |> 
+    dplyr::left_join(y = obj$param$cohorts[id>0, list(id,name)], by = c("init.cohort" = "id")) |> 
+    dplyr::mutate(name = ifelse(init.cohort > 0, name, ifelse(female == 0, "Calves (male)", "Calves (female)"))) |> 
+    dplyr::mutate(name = factor(name, levels = c(
+      "Calves (male)",
+      "Calves (female)",
+      "Juveniles (male)",
+      "Juveniles (female)",
+      "Adults (male)",
+      "Adults (female, pregnant)",
+      "Adults (female, lactating)",
+      "Adults (female, resting)"
+    )))
+  
+  bc.series <- ggplot2::ggplot(data = bc.df, aes(x = year, y = bc, group = interaction(whale, prj))) +
+    ggplot2::geom_path(alpha = 0.15) +
+    ggplot2::facet_wrap(vars(name), scales = "fixed") +
+    scale_y_continuous(limits = c(0,0.6)) +
+    theme_narw() + xlab("") + ylab("Body condition (%)")
+  
+  suppressWarnings(print(bc.series))
+  
+  # Extract health and survival data
   health.df <- obj$dat$health |> 
-    dplyr::select(-prj, -year) |> 
+    dplyr::filter(!is.na(bc)) |> 
+    dplyr::select(-prj, -year, -whale, -female) |> 
     tidyr::pivot_longer(!cohort, names_to = "param", values_to = "value") |> 
     dplyr::mutate(row = dplyr::row_number()) |> 
     data.table::as.data.table()
-  
+   
   health.df <- health.df[!row %in% health.df[param == "min_bc" & value == 0, row]]
   
+  survival.df <- obj$dat$survival |> 
+    dplyr::select(surv, cohort)
+  
+  # Calculate summary statistics
   health.tbl <- health.df[, list(min = min(value),
                                max = max(value),
                                mean = mean(value),
                                sd = sd(value)), list(cohort, param)]
-  
-  health.tbl[param == "p_surv", p := paste0(round(mean, 3), " ± ",
-                                                 round(sd, 3), " [",
-                                                 round(min, 2), "–",
-                                                 round(max, 2), "]")]
   
   health.tbl[param == "bc", p := paste0(round(mean, 3), " ± ",
                                                    round(sd, 3), " [",
@@ -120,13 +148,32 @@ summary.narwproj <- function(obj){
     dplyr::select(cohort, param, p) |> 
     tidyr::pivot_wider(names_from = "param", values_from = "p") |> 
     tidyr::replace_na(list(min_bc = "-")) |> 
-    dplyr::rename(`p(survival)` = p_surv, `body condition` = bc, `min condition (gestation)` = min_bc) |> 
+    dplyr::rename(`body condition` = bc, `min condition (gestation)` = min_bc) |> 
     dplyr::arrange(cohort) |> 
     dplyr::left_join(x = cohorts[, c("id", "abb")], by = c("id" = "cohort")) |> 
     dplyr::select(-id) |> 
     dplyr::rename(cohort = abb)
 
-  health.print <- trimws(knitr::kable(health.tbl, format = "simple"))     
+  survival.tbl <- survival.df[, list(min = min(surv),
+                                     max = max(surv),
+                                     mean = mean(surv),
+                                     sd = sd(surv)), list(cohort)]
+  
+  survival.tbl[, p := paste0(round(mean, 3), " ± ",
+                             round(sd, 3), " [",
+                             round(min, 3), "–",
+                             round(max, 3), "]")]
+  
+  survival.tbl <- survival.tbl |> 
+    dplyr::select(cohort, p) |> 
+    dplyr::rename(`survival` = p) |> 
+    dplyr::arrange(cohort) |> 
+    dplyr::left_join(x = cohorts[, c("id", "abb")], by = c("id" = "cohort")) |> 
+    dplyr::select(-id) |> 
+    dplyr::rename(cohort = abb)
+  
+  health.print <- trimws(knitr::kable(dplyr::left_join(survival.tbl, health.tbl, by = "cohort"),
+                                      format = "simple"))     
   cat(health.print, sep = "\n")
   
   cat("\n=============================================================\n")
@@ -139,15 +186,14 @@ summary.narwproj <- function(obj){
     tot.births |> dplyr::mutate(param = "No. births") |> dplyr::rename(N = birth)
   )
   
-  p <- ggplot2::ggplot(data = plot.df, aes(x = year, y = N, group = prj)) +
-    ggplot2::geom_line(col = "grey50", alpha = 0.5) +
+  p <- ggplot2::ggplot(data = plot.df) +
+    ggplot2::geom_line(aes(x = year, y = N, group = prj), col = "grey50", alpha = 0.5) +
+    ggplot2::geom_smooth(aes(x = year, y = N), 
+                         fill = "#0098A0", colour = "#0098A0", method = "loess", formula = 'y ~ x') +
     ggplot2::facet_wrap(vars(param), scales = "free_y") +
     theme_narw() +
     labs(x = "", y = "")
   
-  print(p)
-  
-  # cat("Calving events [per year]:\n")
   calving.events <- tibble::tibble(`Calving events` = c(
     paste0(
       "Per year: N = ",
@@ -230,8 +276,45 @@ summary.narwproj <- function(obj){
                        "base" = "Baseline",
                        "const" = "Construction",
                        "ops" = "Operation & maintenance"))
+  abrt.out <- abrt.out |> dplyr::rename(Abortion = phase)
   abrt.print <- trimws(knitr::kable(abrt.out, format = "simple"))
+
   cat(abrt.print, sep = "\n")
   cat("\n")
+  
+  cat("\n=============================================================\n")
+  cat("POPULATION VIABILITY \n")
+  cat("=============================================================")
+  
+  pm <- ggplot2::ggplot(data = obj$proj$minpop) +
+    ggplot2::geom_line(aes(x = year, y = minpop)) +
+    theme_narw() +
+    labs(x = "", y = "Expected minimum population size") +
+    scale_x_continuous(breaks = pretty(obj$proj$minpop$year, n = 5))
+  
+  pq <- ggplot2::ggplot(data = obj$proj$quasi) +
+    ggplot2::geom_line(aes(x = year, y = quasi)) +
+    theme_narw() +
+    labs(x = "", y = "Quasi-extinction risk") +
+    scale_x_continuous(breaks = pretty(obj$proj$quasi$year, n = 5))
+  
+
+  
+  pq.tbl <- obj$proj$quasi[year %in% c(obj$param$start.year + pretty(1:obj$param$yrs, n = 10)),] |> 
+    dplyr::rename(`p(quasi-extinct)` = quasi)
+  pq.tbl <- trimws(knitr::kable(pq.tbl, format = "simple"))
+  print(pq.tbl)
+  
+  cat("\n")
+  if(obj$param$yrs >=100){
+  p.decline <- obj$proj$iucn.p |> 
+    tibble::enframe() |> 
+    dplyr::rename(`pop decline` = name, `prob` = value)
+  p.decline <- trimws(knitr::kable(p.decline, format = "simple"))
+  cat(p.decline, sep = "\n")
+  }
+  
+  # Plots
+  print(p / pm + pq)
   
   }

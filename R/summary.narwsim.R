@@ -117,14 +117,15 @@ summary.narwsim <- function(obj,
   cat("-------------------------------------------------------------\n")
   cat("-------------------------------------------------------------\n\n")
   
-  cat("BOF: Bay of Fundy (lower, upper)\n")
-  cat("CABOT: Cabot Strait\n")
+  cat("BOF: Bay of Fundy\n")
   cat("CCB: Cape Cod Bay\n")
+  cat("CST: Cabot Strait\n")
+  cat("GMAN: Grand Manan Basin\n")
   cat("GOM: Gulf of Maine and Georges Bank\n")
   cat("GSL: Gulf of St Lawrence\n")
   cat("MIDA: Mid-Atlantic\n")
   cat("SCOS: Scotian Shelf\n")
-  cat("SEUS: South-east United States\n")
+  cat("SEUS: Southeastern United States\n")
   cat("SNE: Southern New England\n\n")
 
   # Extract model parameters
@@ -211,8 +212,8 @@ summary.narwsim <- function(obj,
       dead.df[whale %in% whaleID & cohort == 0, ] <- dead.df |> 
         dplyr::filter(cohort == 0) |> 
         dplyr::rowwise() |> 
-        dplyr::mutate(cause_death = ifelse(sum(starve, strike, died) == 0, 
-                      paste0(cause_death, " (female)"), cause_death)) |>
+        # dplyr::mutate(cause_death = ifelse(sum(starve, strike, died) == 0, 
+        #               paste0(cause_death, " (female)"), cause_death)) |>
         dplyr::ungroup()
       
     }
@@ -227,7 +228,8 @@ summary.narwsim <- function(obj,
       n.dead.region <- format_dt(n.dead.region, relative = relative, N = n.ind)
       n.dead.region <- split(n.dead.region, f = factor(n.dead.region$cause_death))
       
-      n.dead.cause <- dead.df[cohort %in% cohortID & whale %in% whaleID, list(n = .N), list(abb, cause_death)]
+      n.dead.cause <- dead.df[cohort %in% cohortID & whale %in% whaleID, list(n = .N), list(abb, cause_death)]|> 
+        dplyr::arrange(abb, -n)
       n.dead.cause <- format_dt(n.dead.cause, relative = FALSE, N = n.ind) |> 
         dplyr::rename(N = n, cohort = abb)
       
