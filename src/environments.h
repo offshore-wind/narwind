@@ -92,6 +92,9 @@ private:
   // Population density raster - weighted
   const MatrixType &m_density_gsl;
   
+  // Population density raster - weighted
+  const MatrixType &m_density_gom;
+  
   // Prey field raster (in projected coordinates)
   const MatrixType &m_prey;
   
@@ -139,6 +142,7 @@ public:
     const MatrixType & density,
     const MatrixType & density_seus,
     const MatrixType & density_gsl,
+    const MatrixType & density_gom,
     const MatrixType & prey,
     const MatrixType & fishing,
     const MatrixType & vessels,
@@ -161,6 +165,7 @@ public:
     m_density(density),
     m_density_seus(density_seus),
     m_density_gsl(density_gsl),
+    m_density_gom(density_gom),
     m_prey(prey),
     m_fishing(fishing),
     m_vessel(vessels),
@@ -197,7 +202,7 @@ public:
     std::size_t i, j;
     
     // Retrieve row and col of cell corresponding to x,y
-    if(layer == 'D' | layer == 'S' | layer == 'G'){
+    if(layer == 'D' | layer == 'S' | layer == 'G' | layer == 'O'){
       
       i = std::round((x-m_limits[0])/m_resolution[0]);
       j = std::round((m_limits[3]-y)/m_resolution[1]);
@@ -238,30 +243,47 @@ public:
 
     switch(layer){
     
+    // Density layer
     case 'D':
       d = m_density(i,j);
       break;
       
+    // Weighted density layer (SEUS)
     case 'S':
       d = m_density_seus(i,j);
       break;
       
+    // Weighted density layer (GSL)
     case 'G':
       d = m_density_gsl(i,j);
       break;
+      
+    // Weighted density layer (GOM and other regions of the north)
+    case 'O':
+      d = m_density_gom(i,j);
+      break;
+      
+    // Regions layer  
+    case 'R':
+      d = m_regions(i,j);
+      break;
 
+    // Prey layer
     case 'P':
       d = m_prey(i,j);
       break;
       
+    // Entanglement risk layer  
     case 'F':
       d = m_fishing(i,j);
       break;
       
+    // Strike risk layer    
     case 'V':
       d = m_vessel(i,j);
       break;
       
+    // Noise layer  
     case 'N':
       d = m_noise(i,j);
       break;
@@ -269,10 +291,6 @@ public:
     // case 'L':
     //   d = m_daylight(i,j);
     //   break;
-      
-    case 'R':
-      d = m_regions(i,j);
-      break;
 
     }
 
@@ -282,58 +300,6 @@ public:
 
 };
 
-// Prey environment
-
-// class PreyEnv {
-//   
-// private:
-//   
-//   using MatrixType = Eigen::MatrixXd;
-//   
-//   // Population density raster (in projected coordinates)
-//   const MatrixType &m_prey;
-//   
-// public:
-//   
-//   // Spatial extents and resolution of density raster
-//   const Eigen::VectorXd &m_limits, &m_resolution;
-//   
-//   // Numeric id for map
-//   const std::size_t id;
-//   
-//   // Initialize class members
-//   PreyEnv(
-//     const MatrixType & prey,
-//     const Eigen::VectorXd & limits,
-//     const Eigen::VectorXd & resolution, 
-//     const std::size_t & mapid
-//   ) : 
-//     m_prey(prey),
-//     m_limits(limits), 
-//     m_resolution(resolution),
-//     id(mapid) { }
-//   
-//   /**
-//    * Return the prey concentration at the specified coordinates
-//    * @param x
-//    * @param y
-//    * @return Prey concentration
-//    */
-//   double operator()(const double & x, const double & y) {
-//     
-//     // Return 0 if outside the study area boundaries
-//     if(x < m_limits[0] || x > m_limits[1] || y < m_limits[2] || y > m_limits[3]) return 0;
-//     
-//     // Retrieve row and col of cell corresponding to x,y
-//     std::size_t i = std::round((x-m_limits[0])/m_resolution[0]);
-//     std::size_t j = std::round((m_limits[3]-y)/m_resolution[1]);
-//     
-//     double p = m_prey(i,j);
-//     if(!std::isfinite(p)) return 0;
-//     return p;
-//   }
-//   
-// };
 
 /**
  * Wrap an environment object inside a container that will appear to iterate
