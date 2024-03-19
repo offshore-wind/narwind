@@ -6,10 +6,11 @@
 #include <cmath>
 #include <cstdio>
 #include <vector>
+#include <iostream>
 #include "spline.h"
 #include <algorithm>    // std::all_of
 #include <array>        // std::array
-
+using namespace std;
 // [[Rcpp::depends(RcppEigen)]]
 // [[Rcpp::plugins(cpp11)]]
 
@@ -283,6 +284,52 @@ double rtnorm(const double mean,
   //
 }
 
+// // [[Rcpp::export]]
+// Rcpp::NumericVector estBetaParams(double mu, double std) {
+//   double var, a, b;
+//   Rcpp::NumericVector out(2);
+//   out.attr("dim") = Rcpp::Dimension(1,2);
+//   std::vector<string> attrib_names = {"shape1", "shape2"};
+//   var = std * std;
+//   a = ((1 - mu) / var - 1 / mu) * std::pow(mu, 2);
+//   b = a * (1 / mu - 1);
+//   out(0) = a;
+//   out(1) = b;
+//   out.attr("dimnames") = Rcpp::List::create(R_NilValue, attrib_names);
+//   return(out);
+// }
+
+// [[Rcpp::export]]
+Rcpp::NumericVector estBetaParams(Rcpp::NumericVector mu, 
+                                  Rcpp::NumericVector std) {
+  
+  // Check that all vectors have the same size
+  int n = mu.size();
+  int n2 = std.size();
+  
+  std::array<int,2> sizes = {n, n2};
+  int allequal = std::equal(sizes.begin() + 1, sizes.end(), sizes.begin());
+  if(allequal == 0) Rcpp::stop("Arguments have different lengths");
+
+  Rcpp::NumericVector a(n);
+  Rcpp::NumericVector b(n);
+  Rcpp::NumericMatrix out(n, 2);
+  
+  out.attr("dim") = Rcpp::Dimension(n,2);
+  std::vector<string> attrib_names = {"shape1", "shape2"};
+  
+  for(int i=0; i<n; i++){
+    a(i) = ((1 - mu(i)) / (std(i) * std(i)) - 1 / mu(i)) * std::pow(mu(i), 2);
+    b(i) = a(i) * (1 / mu(i) - 1);
+    out(i,0) = a(i);
+    out(i,1) = b(i);
+  }
+
+  out.attr("dimnames") = Rcpp::List::create(R_NilValue, attrib_names);
+  return(out);
+}
+
+
 // [[Rcpp::export]]
 Rcpp::NumericMatrix transpose_c(Rcpp::NumericMatrix m, int k){
 
@@ -364,8 +411,7 @@ Rcpp::NumericVector prob_migration(int n, std::string destination, int cohortID)
     
     if(destination == "GSL"){
       
-      out(i) = R::rbinom(1, 0.4);
-        // multinomial(Rcpp::NumericVector::create(0.6, 0.4));
+        out(i) = R::rbinom(1, 0.4);
       
     } else if(destination == "SEUS"){
       
@@ -463,64 +509,105 @@ double response_threshold(Rcpp::NumericVector dose, int day, int simduration, in
 
 // [[Rcpp::export]]
 double starvation_mortality(double bc,
-                            Eigen::MatrixXd mortality,
+                            Rcpp::NumericVector coefs,
                             double starvation_death,
                             double starvation_onset)
 {
   double out;
-  int n = mortality.rows();
-  std::vector<double> p_x(n);
-  std::vector<double> p_y(n);
-  
-  for(int i = 0; i < n; i++){
-    p_x[i] = mortality(i,0);
-    p_y[i] = mortality(i,1);
-  }
-  
-  tk::spline s(p_x, p_y); // Fit cubic spline
-  
   if(bc > starvation_onset){
     out = 0.0L;
   } else if (bc < starvation_death){
     out = 1.0L;
   } else {
-    out = s(bc);
+    out = std::exp(coefs(0) + coefs(1) * bc);
   }
-
+  
   return out;
 }
-                        
+
 // [[Rcpp::export]]
 Rcpp::NumericVector starvation_mortality_vec(Rcpp::NumericVector bc,
-                      Eigen::MatrixXd mortality,
-                      double starvation_death,
-                      double starvation_onset)
+                                             Rcpp::NumericVector coefs,
+                                             double starvation_death,
+                                             double starvation_onset)
 {
-  int v = bc.size();
-  Rcpp::NumericVector out(v);
-  int n = mortality.rows();
-  std::vector<double> p_x(n);
-  std::vector<double> p_y(n);
+  int n = bc.size();
+  Rcpp::NumericVector out(n);
   
-  for(int i = 0; i < n; i++){
-    p_x[i] = mortality(i,0);
-    p_y[i] = mortality(i,1);
-  }
-  
-  tk::spline s(p_x, p_y); // Fit cubic spline  
-  
-  for(int j = 0; j < v; j++){
-    if(bc(j) > starvation_onset){
-      out(j) = 0.0L;
-    } else if (bc(j) < starvation_death){
-      out(j) = 1.0L;
+  for(int i = 0; i<n; i++){
+    
+    if(bc(i) > starvation_onset){
+      out(i) = 0.0L;
+    } else if (bc(i) < starvation_death){
+      out(i) = 1.0L;
     } else {
-      out(j) = s(bc(j));
+      out(i) = std::exp(coefs(0) + coefs(1) * bc(i));
     }
   }
 
   return out;
 }
+
+// // [[Rcpp::export]]
+// double starvation_mortality(double bc,
+//                             Eigen::MatrixXd mortality,
+//                             double starvation_death,
+//                             double starvation_onset)
+// {
+//   double out;
+//   int n = mortality.rows();
+//   std::vector<double> p_x(n);
+//   std::vector<double> p_y(n);
+//   
+//   for(int i = 0; i < n; i++){
+//     p_x[i] = mortality(i,0);
+//     p_y[i] = mortality(i,1);
+//   }
+//   
+//   tk::spline s(p_x, p_y); // Fit cubic spline
+//   
+//   if(bc > starvation_onset){
+//     out = 0.0L;
+//   } else if (bc < starvation_death){
+//     out = 1.0L;
+//   } else {
+//     out = s(bc);
+//   }
+// 
+//   return out;
+// }
+                        
+// // [[Rcpp::export]]
+// Rcpp::NumericVector starvation_mortality_vec(Rcpp::NumericVector bc,
+//                       Eigen::MatrixXd mortality,
+//                       double starvation_death,
+//                       double starvation_onset)
+// {
+//   int v = bc.size();
+//   Rcpp::NumericVector out(v);
+//   int n = mortality.rows();
+//   std::vector<double> p_x(n);
+//   std::vector<double> p_y(n);
+//   
+//   for(int i = 0; i < n; i++){
+//     p_x[i] = mortality(i,0);
+//     p_y[i] = mortality(i,1);
+//   }
+//   
+//   tk::spline s(p_x, p_y); // Fit cubic spline  
+//   
+//   for(int j = 0; j < v; j++){
+//     if(bc(j) > starvation_onset){
+//       out(j) = 0.0L;
+//     } else if (bc(j) < starvation_death){
+//       out(j) = 1.0L;
+//     } else {
+//       out(j) = s(bc(j));
+//     }
+//   }
+// 
+//   return out;
+// }
 
 // // [[Rcpp::export]]
 // double prob_response(std::vector<double> x, // Range of dose - from 80 to 200 dB
@@ -761,15 +848,25 @@ Rcpp::NumericVector start_age_vec(Rcpp::NumericVector cohort){
  //' @description Returns the ratio between the width of the animal's mouth (defined as body width measured at 10% of the body length from the snout) and its body length, as per Miller et al. (2012)
  //' @param cohort Population cohort to which the animal belongs
  //' @param age Age of the animal (years)
- //' @note Assumes that juveniles follow the ratio defined by older calves and adult males that of resting females
+ //' @note Assumes that juveniles follow the ratio defined by older calves and adult males that of resting females. Data from Miller et al. 2012 and data provided by Miller.
  //' @return Estimate mouth-to-width ratio
  // [[Rcpp::export]]
  
  double start_mouth(int cohort, double age){             
    double r = 0.0;
-   if(age < 30/365) { // calf (1st month of suckling)
-     r = R::rnorm(0.125, 0.00430);
-   } else if (age < 9){ // calf (3rd month of suckling) + Juveniles
+   if(cohort == 0){
+     
+     // Miller et al. show that the mouth width of very young calves differs
+     // from that of older calves; however, the mouth width is only used
+     // to calculate the gape size in the context of foraging behavior,
+     // which is only seen in calves that approach weaning, so this distinction is
+     // irrelevant here and hence the associated code is commented out.
+     // if(age < 30.0L/365.0L) { // calf (1st month of suckling)
+     //   r = R::rnorm(0.125, 0.00430);
+     // } else {
+       r = R::rnorm(0.144, 0.00686);
+     // }
+   } else if(cohort == 1 | cohort == 2){ // calf (3rd month of suckling) + Juveniles
      r = R::rnorm(0.144, 0.00686);
    } else {
      if(cohort == 3 | cohort == 6){
@@ -821,7 +918,9 @@ long double start_bcondition(double cohort){
     // Lactating females, which start simulation as late pregnant
   } else {
     
-    bc = rtnorm(0.40950094, 0.05721548, 0.35, upper);
+    // Christiansen values, which do not reflect our "lactating females" starting as late pregnant
+    // bc = rtnorm(0.30989147, 0.06917943, 0.35, upper); 
+    bc = rtnorm(0.4462601, 0.1026832, 0.4, upper);
     
   }
   return bc;
@@ -865,7 +964,7 @@ Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month =
       // Lactating females, which start simulation as late pregnant
     } else if(cohort[i] == 5){ 
       
-      bc[i] = rtnorm(0.40950094, 0.05721548, 0.35, upper);
+      bc[i] = rtnorm(0.4462601, 0.1026832, 0.4, upper);
       
     }
     
@@ -1493,8 +1592,8 @@ Rcpp::NumericVector milk_assimilation_vec(Rcpp::NumericVector t,
    double bc_female = R/M;
    if(bc_female <= kappa){
      out = 0;
-   } else if (bc_female >= target_condition){
-     out = 1;
+   // } else if (bc_female >= target_condition){
+   //   out = 1;
    } else {
      out = ((1-zeta)*(R - kappa * M))/(M * (target_condition - kappa) - zeta * (R - kappa * M));
    }
@@ -1517,8 +1616,8 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
   for(int i = 0; i<nm; i++){
     if(R(i)/M(i) <= kappa){
       out(i) = 0;
-    } else if (R(i)/M(i) >= target_condition){
-      out(i) = 1;
+    // } else if (R(i)/M(i) >= target_condition){
+    //   out(i) = 1;
     } else {
       out(i) = ((1-zeta)*(R(i) - kappa * M(i)))/(M(i) * (target_condition - kappa) - zeta * (R(i) - kappa * M(i)));
     }
@@ -1542,8 +1641,8 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
 //' @name milk_production
  //' @description Predicts the amount of milk produced by unit time from mammary mass
  //' @param m Mass of mammary glands (kg)
- //' @return Milk yield/production rate (kg/s)
- //' @note Equation taken from Hanwell & Peaker ()1997)
+ //' @return Milk yield/production rate (kg/day)
+ //' @note Equation taken from Hanwell & Peaker (1997)
  // [[Rcpp::export]]
  
  double milk_production(double m){ 
@@ -2240,10 +2339,10 @@ Rcpp::NumericMatrix add_calf(int n,
 // }
 
 // [[Rcpp::export]]
-double pleave(float now, 
-              float enter,
-              float cohortID,
-              float factor,
+double pleave(int now, 
+              int enter,
+              int cohortID,
+              double factor,
               Rcpp::NumericMatrix resid){
   
   int days_in_SEUS = now - enter;
