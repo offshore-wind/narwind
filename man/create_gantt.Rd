@@ -11,7 +11,7 @@ create_gantt(
   exact_date = FALSE,
   project_start_date = Sys.Date(),
   project_end_date = Sys.Date() + 365,
-  colour_palette = wesanderson::wes_palette("Darjeeling1"),
+  colour_palette,
   font_family = "sans",
   mark_quarters = FALSE,
   mark_years = FALSE,

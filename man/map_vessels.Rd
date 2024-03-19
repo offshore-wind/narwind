@@ -12,7 +12,6 @@ map_vessels(
   vessel.speed = NULL,
   speed.limit = NULL,
   baseline = TRUE,
-  gantt = FALSE,
   do.plot = FALSE,
   spgdf = FALSE
 )
@@ -31,8 +30,6 @@ map_vessels(
 \item{speed.limit}{Numeric vector of length 12, indicating the maximum speeds imposed during slow-downs for each month of the year. Months with \code{NA} values are subject to no speed restrictions.}
 
 \item{baseline}{Logical. Defaults to \code{FALSE}. If \code{TRUE}, baseline conditions (excluding wind farm development activities) are included in the output.}
-
-\item{gantt}{Logical. Defaults to \code{FALSE}. If \code{TRUE}, a Gantt chart showing the schedule of piling is produced.}
 
 \item{do.plot}{Logical. Defaults to \code{FALSE}. If \code{TRUE}, strike maps are generated.}
 

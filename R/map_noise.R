@@ -17,9 +17,6 @@ map_noise <- function(obj = NULL){
   # Function checks
   if(!inherits(obj, "narwscenario")) stop("Input object must be of class <narwscenario>.")
   
-  # Spatial support
-  support.poly <- targets::tar_read(support_poly)
-  
   # Extract objects
   turbines.df <- obj$locs
   ambient.db <- obj$ambient

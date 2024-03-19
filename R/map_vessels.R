@@ -9,7 +9,6 @@
 #' @param vessel.speed Numeric vector. Nominal transit speeds for each vessel class (Cable Lay, Construction/Crane, Crew Transfer,Heavy Cargo, Support Vessels <100 m, Survey, Tugs).
 #' @param speed.limit Numeric vector of length 12, indicating the maximum speeds imposed during slow-downs for each month of the year. Months with \code{NA} values are subject to no speed restrictions.
 #' @param baseline Logical. Defaults to \code{FALSE}. If \code{TRUE}, baseline conditions (excluding wind farm development activities) are included in the output.
-#' @param gantt Logical. Defaults to \code{FALSE}. If \code{TRUE}, a Gantt chart showing the schedule of piling is produced.
 #' @param do.plot Logical. Defaults to \code{FALSE}. If \code{TRUE}, strike maps are generated.
 #' @param spgdf Defaults to \code{FALSE}. If \code{TRUE}, output surfaces are returned as \code{SpatialGridDataFrame} objects.
 #' @export
@@ -37,7 +36,6 @@ map_vessels <- function(obj = NULL,
                         vessel.speed = NULL,
                         speed.limit = NULL,
                         baseline = TRUE,
-                        gantt = FALSE,
                         do.plot = FALSE,
                         spgdf = FALSE){
   
@@ -311,40 +309,6 @@ map_vessels <- function(obj = NULL,
   
   names(strike_r) <- month.abb[which.month]
   
-  if(gantt){
-    
-    wind.sites <- routes |> dplyr::group_by(site, windfarm) |> dplyr::summarise(n = 1, .groups = "keep")
-    
-    # Create a gantt chart
-    gantt <- data.table::data.table(
-      wp = wind.sites$site,
-      activity = paste0("Wind farm ", wind.sites$windfarm),
-      start_date = do.call(c, lapply(X = piling.dates, FUN = function(x) min(x))),
-      end_date = do.call(c, lapply(X = piling.dates, FUN = function(x) max(x)))
-    )
-    
-    gg.gantt <- create_gantt(project = gantt,
-                             project_start_date = "2024-01",
-                             font_family = "sans",
-                             by_date = TRUE,
-                             exact_date = TRUE,
-                             mark_quarters = TRUE,
-                             mark_years = F,
-                             size_wp = 3,
-                             size_activity = 2,
-                             line_end = "butt", # "butt", "square"
-                             month_breaks = 1,
-                             hide_wp = FALSE,
-                             show_vertical_lines = TRUE,
-                             alpha_wp = 1,
-                             size_text = 1.3,
-                             alpha_activity = 0.35, 
-                             colour_palette = rep("black", 5),
-                             axis_text_align = "right")
-    
-    print(gg.gantt)
-  }
-  
   if(do.plot){
     
     # Generate maps of vessel strike risk for each month of the year
@@ -366,7 +330,7 @@ map_vessels <- function(obj = NULL,
       # Breaks for colour legend
       z_brks <- raster::as.data.frame(strike_r[[month.abb[mo]]][[1]], na.rm = TRUE)[z]
       if(baseline) z_brks <- rbind(z_brks, raster::as.data.frame(strike_r[[month.abb[mo]]][[2]], na.rm = TRUE)[z])
-      z_brks <-  unique(plyr::round_any(
+      z_brks <-  unique(roundany(
         c(0, rgeoda::natural_breaks(k = 20, z_brks[z]
         ), max(z_brks[z])),
         accuracy = acc, f = ceiling
