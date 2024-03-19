@@ -12,6 +12,7 @@
   )
   options(tibble.width = Inf)
   options(pillar.sigfig = 5)
+  options(conflicts.policy = list(can.mask = c("base")))
   # Rcpp::compileAttributes()
 
 }
