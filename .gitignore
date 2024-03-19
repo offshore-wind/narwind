@@ -25,7 +25,20 @@ vignettes/*.html
 vignettes/*.pdf
 
 # Datasets
-data/*
+data/calanus/
+data/condition/
+data/densitymaps/
+data/dirichlet/
+data/elicitation/
+data/gear/
+data/gis/
+data/parameters/
+data/popviability/
+data/regions/
+data/sightings/
+data/vessels/
+data/vignettes
+data/windfarms/
 
 # OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
 .httr-oauth
