@@ -56,11 +56,13 @@ plot.narwsim <- function(obj,
     if (!is.null(whaleID)) {
       for (k in 1:length(obj$init$xy)) {
         if (!"xyinits" %in% class(obj$init$xy)) stop("Input not recognized")
-        par(mfrow = c(3, 4))
-        for (h in 1:12) {
-          sp:::plot.SpatialPolygons(world, col = "grey", axes = TRUE, main = month.name[h])
-          xpos <- sapply(obj$init$xy[[k]][h, ], FUN = function(x) raster::xFromCell(raster::raster(density_narw$Feb), x))
-          ypos <- sapply(obj$init$xy[[k]][h, ], FUN = function(x) raster::yFromCell(raster::raster(density_narw$Feb), x))
+        par(mfrow = c(4, 4))
+        for (h in 1:15) {
+          sp:::plot.SpatialPolygons(world, col = "grey", axes = TRUE, main = c(month.name, month.name[10:12])[h])
+          xpos <- sapply(obj$init$xy[[k]][h, whaleID], 
+                         FUN = function(x) raster::xFromCell(raster::raster(density_narw$Feb), x))
+          ypos <- sapply(obj$init$xy[[k]][h, whaleID], 
+                         FUN = function(x) raster::yFromCell(raster::raster(density_narw$Feb), x))
           points(cbind(xpos, ypos), pch = 16, col = "orange")
         }
       }
@@ -68,7 +70,7 @@ plot.narwsim <- function(obj,
     } else {
       coords <- sp::coordinates(density_narw[[1]])
       colnames(coords) <- c("x", "y")
-      month.colours <- c("#962938", "#be3447", "#296f96", "#348cbe", "#7db9db", "#b77700", "#ea9800", "#ffb01e", "#ffd104", "#41cbb8", "#d05566", "#db7d8a")
+      month.colours <- c("#962938", "#be3447", "#296f96", "#348cbe", "#7db9db", "#b77700", "#ea9800", "#ffb01e", "#ffd104", "#41cbb8", "#d05566", "pink", "royalblue4", "black", "purple")
       for (k in 1:length(obj$init$xy)) {
         xinit <- matrix(data = coords[obj$init$xy[[k]], "x"], nrow = nrow(obj$init$xy[[k]]))
         yinit <- matrix(data = coords[obj$init$xy[[k]], "y"], nrow = nrow(obj$init$xy[[k]]))
@@ -209,16 +211,19 @@ plot.narwsim <- function(obj,
     
     # Define legend colors and shapes
     COLORS <- c('Mortality (starve)' = 'firebrick',
+                "Mortality (natural)" = "darkorange",
                 'Mortality (strike)' = 'deepskyblue4',
-                'Birth' = "#15A471", 
-                'Mortality (age)' = 'darkorange')
+                'Birth' = "#15A471")
+    
     SHAPES <- c('Calves' = 1, 'Adults/Juveniles' = 16)
     
     locs.dead$cause_death <- sapply(locs.dead$cause_death, switch,
-                                    "none" = "None",
+                                    "strike (female)" = "Mortality (strike)",
                                     "strike" = "Mortality (strike)",
                                     "starve" = "Mortality (starve)",
-                                    "natural" = "Mortality (age)")
+                                    "starve (female)" = "Mortality (starve)",
+                                    "natural" = "Mortality (natural)",
+                                    "natural (female)" = "Mortality (natural)")
     
     locs.dead$class <- sapply(locs.dead$class, switch,
                               "Adults" = "Adults/Juveniles",
@@ -228,7 +233,12 @@ plot.narwsim <- function(obj,
     locs.birth$event <- "Birth"
     
     # Extract movement tracks
-    tracks.cohort <- tracks[cohort %in% cohortID & whale %in% whaleID & day >= 93]
+    tracks.cohort <- tracks[cohort %in% cohortID & whale %in% whaleID]
+    month.names <- c(month.abb[1:9], paste0(month.abb[10:12], " (burn in)"), month.abb[10:12])
+    tracks.cohort <- tracks.cohort |> 
+      dplyr::mutate(month = month.names[month])|> 
+      dplyr::mutate(month = factor(month, levels = c(month.names[10:12], month.names[1:9],
+                                                     month.names[13:15])))
     
     # Rename lactating cohort so that calves are plotted together with lactating females
     if(5 %in% cohortID){
