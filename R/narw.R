@@ -468,7 +468,7 @@ narw <- function(nsim = 1e3,
   
   if(length(cohort) > 1){
     
-    Ncores <- parallel::detectCores(all.tests = FALSE, logical = TRUE)
+    Ncores <- parallelly::availableCores()
     
     # Set number of cores to use
     if(is.null(n.cores)){
