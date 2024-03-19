@@ -201,9 +201,14 @@ predict.narwsim <- function(...,
   # Adjust predictions from NOAA model to reflect a more stable age/stage structure
   # This is achieved by running adjust_popvec() to a test projection (noaa = TRUE)
   if(noaa){
+    # Note that the sum of cohort abundances in N_0 differs slightly
+    # from the median population size under NOAA's most recent PVA
+    # We therefore correct N_0 here to ensure that abundance estimates match
     N_0 <- N0[["yr2019"]]
+    N_0[N_0 > 0] <- N_0[N_0 > 0] - 1
+    N_0[N_0 > 200] <- N_0[N_0 > 200] - 1
   } else {
-    N_0 <- c(9, 46, 169, 8, 40, 18, 14, 58)
+    N_0 <- c(9, 45, 168, 8, 39, 17, 13, 57)
   }
   names(N_0) <- cohorts.proj[, name]
   
