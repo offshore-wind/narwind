@@ -22,6 +22,7 @@ predict.narwsim <- function(...,
                             yrs = 35,
                             param = TRUE,
                             piling = 1,
+                            noaa = FALSE,
                             survival_prob = NULL,
                             min_gest = NULL,
                             progress = TRUE) {
@@ -79,7 +80,7 @@ predict.narwsim <- function(...,
   }
   
   # If multiple objects are supplied
-  if(length(obj) > 1 & sum(duplicated(purrr::map_dbl(.x = obj, .f = ~.x$scenario$phase))) > 0) stop("Duplicate scenarios detected.")
+  if(length(obj) > 1 & sum(duplicated(purrr::map(.x = obj, .f = ~.x$scenario$phase))) > 0) stop("Duplicate scenarios detected.")
   if(length(obj) > 1 & piling < yrs){
     if(piling > 1 & all(purrr::map_dbl(.x = obj, .f = ~.x$scenario$phase) %in% 1:2)) stop("Missing baseline scenario")
     if(all(purrr::map_dbl(.x = obj, .f = ~.x$scenario$phase) %in% c(0,2))) stop("Missing construction scenario")
@@ -150,7 +151,6 @@ predict.narwsim <- function(...,
       list(
         surv = matrix(data = coef(.y$surv), nrow = 1, ncol = length(coef(.y$surv))),
         bc = matrix(data = coef(.y$bc), nrow = 1, ncol = length(coef(.y$bc))),
-        # mbc = matrix(data = coef(gam_gest), nrow = 1, ncol = length(coef(gam_gest))),
         n = 1
       )
       
@@ -159,15 +159,20 @@ predict.narwsim <- function(...,
       list(
         surv = .x$post$samples$surv,
         bc = .x$post$samples$bc,
-        # mbc = .x$post$samples$mbc,
-        # Take only the median curve here
-        # mbc = matrix(data = coef(gam_gest), nrow = 1, ncol = length(coef(gam_gest))),
         n = .x$post$nsamples
       )
       
     }
     
   }) |> purrr::set_names(nm = phase.names)
+  
+  
+  # Theta parameter from the Beta GAM of body condition
+  theta <- purrr::map(.x = survbc.model, .f = ~.x$bc$family$getTheta()) |>
+    purrr::set_names(nm = phase.names) 
+  
+  # Theta parameter from the Beta GAM of min body condition needed for gestation
+  theta_gest <- gam_gest$family$getTheta()
   
   #'------------------------------------------------------
   # Abortion rate ----
@@ -186,14 +191,20 @@ predict.narwsim <- function(...,
   
   cat("+ Replicates: N =", formatC(n, big.mark = ","), "\n")
   cat("+ Burn-in:", burn.in, "years\n")
-  cat("+ Horizon:", yrs - burn.in, "years\n")
+  cat("+ Horizon:", yrs - burn.in, "years [from current]\n")
   cat("+ Parameter uncertainty:", ifelse(param, "Yes", "No"), "\n")
   cat("\n––– Timeline:\n\n")
   proj_timeline(schedule, burn.in)
   cat("––– Execution:\n\n")
   
-  # Define initial population vector using predictions from NOAA model
-  N_0 <- N0[["yr2019"]]
+  # Define initial population vector
+  # Adjust predictions from NOAA model to reflect a more stable age/stage structure
+  # This is achieved by running adjust_popvec() to a test projection (noaa = TRUE)
+  if(noaa){
+    N_0 <- N0[["yr2019"]]
+  } else {
+    N_0 <- c(9, 46, 169, 8, 40, 18, 14, 58)
+  }
   names(N_0) <- cohorts.proj[, name]
   
   console(msg = "Initializing")
@@ -224,16 +235,7 @@ predict.narwsim <- function(...,
   tot.pop <- matrix(0, n, yrs + 1, dimnames = list(paste0("prj", 1:n), paste0("yr ", 0:yrs)))
   tot.pop[, 1] <- sum(N_0)
   
-  # # Initialise array to store numbers of births
-  # births <- array(
-  #   data = NA, c(yrs + 1, n),
-  #   dimnames = list(
-  #     paste0("yr ", 0:yrs),
-  #     paste0("prj ", 1:n)
-  #   )
-  # )
-  
-  # Initialise array to store numbers of abortion
+  # Initialize array to store numbers of abortion
   abortions <- array(
     data = NA, c(yrs + 1, n),
     dimnames = list(
@@ -270,7 +272,7 @@ predict.narwsim <- function(...,
   for(prj in 1:n){
     
     # Update progress bar
-    if(progress) pb$tick() 
+    if(progress) pb$tick()
     
     # Initial development phase
     initial.phase <- phase.names[schedule[1] + 1]
@@ -311,11 +313,22 @@ predict.narwsim <- function(...,
     mass <- length2mass_vec(lengths)
     narw.indiv[1, "lean_mass", ] <- mass
     
-    # Initial body condition - sampled from values obtained after
-    # a 3-month burn-in within the spatial simulation
-    bc_init <- purrr::set_names(unique(obj[[schedule[1] + 1]]$gam$dat$cohort)) |> 
-      purrr::map(.f = ~obj[[schedule[1] + 1]]$gam$dat[cohort == .x, start_bc])
-    bc <- sapply(X = cohort.vec, FUN = function(x){ sample(x = bc_init[[as.character(x)]], size = 1, replace = TRUE)})
+    # Initial body condition - obtained from last year of a test projection
+    # see init_bc() function
+    # bc_init <- purrr::set_names(unique(obj[[schedule[1] + 1]]$gam$dat$cohort)) |> 
+    #   purrr::map(.f = ~obj[[schedule[1] + 1]]$gam$dat[cohort == .x, start_bc])
+    #       bc <- sapply(X = cohort.vec, FUN = function(x) {
+    # sample(x = bc_init[[as.character(x)]], size = 1, replace = TRUE)
+  # })
+    
+    bc_dist <- data.table::data.table(cohort = unique(obj[[schedule[1] + 1]]$gam$dat$cohort), 
+                          mean = c(0.3593643, 0.4125728, 0.4336672, 0.4608405, 0.4537379, 0.5369984, 0.3669689),
+                          sd = c(0.07952667, 0.05916375, 0.06419653, 0.05955169, 0.05712539, 0.06022515, 0.13665292))
+    
+    bc <- sapply(X = cohort.vec, FUN = function(x) {
+      clamp(rnorm(1, mean = bc_dist[cohort == x, mean], sd = bc_dist[cohort == x, sd]), maxbc)
+    })
+    
     narw.indiv[1, "bc", ] <- bc
     
     # Total mass
@@ -336,29 +349,15 @@ predict.narwsim <- function(...,
     narw.indiv[1, "reprod", ] <- reprod.fem
     
     # Reserves needed to leave resting state and initiate pregnancy
-    # if(param){
-    # 
-    if(!is.null(min_gest)){
+    if (!is.null(min_gest)) {
       narw.indiv[1, "min_bc", ] <- (cohort.vec == 6) * min_gest
     } else {
       Xp <- predict(gam_gest, data.frame(mass = narw.indiv[1, "tot_mass", ]), type = "lpmatrix")
-      #       
-      #       # mbc.sample <- sample(
-      #       #   x = seq_len(mcmc[[initial.phase]]$n),
-      #       #   size = nrow(Xp),
-      #       #   replace = TRUE)
-      #       
-      #       mbc.curves <- mcmc[[initial.phase]]$mbc[1,]
-      #       narw.indiv[1, "min_bc", ] <- (cohort.vec == 6) * ilink.mbc(rowSums(Xp*mbc.curves))  
-      #       
-      #     } else {
-      
-      
-      
-      narw.indiv[1, "min_bc", ] <- (cohort.vec == 6) * ilink.mbc(Xp %*% coef(gam_gest))
+      minbc_mu <- as.numeric(ilink.mbc(Xp %*% coef(gam_gest))) # Predicted mean from Beta GAM
+      minbc_var <- minbc_mu * (1 - minbc_mu) / (1 + theta_gest) # Estimated variance from Beta GAM
+      beta_pars <- estBetaParams(minbc_mu, minbc_var) # Get shape parameters from mean and variance
+      narw.indiv[1, "min_bc", ] <- (cohort.vec == 6) * rbeta(nrow(beta_pars), beta_pars[, "shape1"], beta_pars[, "shape2"])
     }
-      
-    # }
     
     # Time spent in resting state
     narw.indiv[1, "time_rest", ] <- (cohort.vec == 6)
@@ -366,33 +365,31 @@ predict.narwsim <- function(...,
     # Calving events
     narw.indiv[1, "birth", ] <- as.numeric(cohort.vec == 4)
     
-    if(param){
-    
-    # Survival probability
-    Xp <- predict(survbc.model[[initial.phase]]$surv, data.frame(start_bc = bc, cohort = cohort.vec), type = "lpmatrix")
-    surv.sample <- sample(
-      x = seq_len(mcmc[[initial.phase]]$n),
-      size = nrow(Xp),
-      replace = TRUE)
-    
-    surv.curves <- mcmc[[initial.phase]]$surv[surv.sample,]
-    if(!is.null(survival_prob)){
-      narw.indiv[1, "p_surv", ] <- survival_prob
-    } else {
-      narw.indiv[1, "p_surv", ] <- ilink.survbc[["surv"]](rowSums(Xp*surv.curves))
-    }
+    if (param) {
 
-    
-    } else {
-      
-      if(!is.null(survival_prob)){
+      # Survival probability
+      Xp <- predict(survbc.model[[initial.phase]]$surv, data.frame(start_bc = bc, cohort = cohort.vec), type = "lpmatrix")
+      surv.sample <- sample(
+        x = seq_len(mcmc[[initial.phase]]$n),
+        size = nrow(Xp),
+        replace = TRUE
+      )
+
+      surv.curves <- mcmc[[initial.phase]]$surv[surv.sample, ]
+      if (!is.null(survival_prob)) {
         narw.indiv[1, "p_surv", ] <- survival_prob
       } else {
-        narw.indiv[1, "p_surv", ] <- predict(survbc.model[[initial.phase]]$surv, 
-                                             data.frame(start_bc = bc, cohort = cohort.vec), type = "response")
+        narw.indiv[1, "p_surv", ] <- ilink.survbc[["surv"]](rowSums(Xp * surv.curves))
       }
-
-      
+    } else {
+      if (!is.null(survival_prob)) {
+        narw.indiv[1, "p_surv", ] <- survival_prob
+      } else {
+        narw.indiv[1, "p_surv", ] <- predict(survbc.model[[initial.phase]]$surv,
+          data.frame(start_bc = bc, cohort = cohort.vec),
+          type = "response"
+        )
+      }
     }
 
     #'------------------------------------------------------
@@ -415,7 +412,7 @@ predict.narwsim <- function(...,
             replace = TRUE)
           
           bc.curves <- mcmc[[current.phase]]$bc[post.sample,]
-          # mbc.curves <- mcmc[[current.phase]]$mbc[post.sample,]
+
         }
         
         #' ----------------------------
@@ -475,23 +472,27 @@ predict.narwsim <- function(...,
         
         # Predict new body condition from current body condition
         if (param) {
+          
           Xp <- predict(survbc.model[[current.phase]]$bc,
             data.frame(
               start_bc = narw.indiv[i - 1, "bc", ],
               cohort = narw.indiv[i - 1, "cohort", ]
-            ),
-            type = "lpmatrix"
-          )
+            ), type = "lpmatrix")
 
-          narw.indiv[i, "bc", ] <- alive * clamp(ilink.survbc$bc(rowSums(Xp * bc.curves)), maxbc)
+          bc_mu <- as.numeric(clamp(ilink.survbc$bc(rowSums(Xp * bc.curves)), maxbc))
+          bc_var <- bc_mu * (1 - bc_mu) / (1 + theta[[current.phase]])
+          beta_pars <- estBetaParams(bc_mu, bc_var)
+          narw.indiv[i, "bc", ] <- alive * clamp(rbeta(nrow(beta_pars), beta_pars[, "shape1"], beta_pars[, "shape2"]), maxbc)
+
         } else {
-          narw.indiv[i, "bc", ] <- alive * clamp(predict(survbc.model[[current.phase]]$bc,
+          
+          narw.indiv[i, "bc", ] <- alive * clamp(
+            predict(survbc.model[[current.phase]]$bc,
             data.frame(
               start_bc = narw.indiv[i - 1, "bc", ],
               cohort = narw.indiv[i - 1, "cohort", ]
-            ),
-            type = "response"
-          ), maxbc)
+            ), type = "response"), maxbc)
+          
         }
          
         # Increment total mass
@@ -508,24 +509,26 @@ predict.narwsim <- function(...,
         narw.indiv[i, "time_rest", ] <- alive * (narw.indiv[i, "cohort", ] == 6) * (narw.indiv[i-1, "time_rest", ] + 1)
         
         if(!is.null(min_gest)){
+
           narw.indiv[i, "min_bc", ] <- alive * (narw.indiv[i, "cohort", ] == 6) * min_gest
+          
         } else {
         
         # Minimum body condition needed to successfully bring fetus to term without starving
         # No evidence of reproductive senescence in right whales - Hamilton et al. (1998)
-        # if (param) {
           Xp <- predict(gam_gest, data.frame(mass = narw.indiv[i, "tot_mass", ]), type = "lpmatrix")
-        #   narw.indiv[i, "min_bc", ] <- alive * (narw.indiv[i, "cohort", ] == 6) * ilink.mbc(rowSums(Xp * mbc.curves))
-        # } else {
+          
+          minbc_mu <- as.numeric(ilink.mbc(Xp %*% coef(gam_gest))) # Predicted mean from Beta GAM
+          minbc_var <- minbc_mu * (1 - minbc_mu) / (1 + theta_gest) # Estimated variance from Beta GAM
+          beta_pars <- estBetaParams(minbc_mu, minbc_var) # Get shape parameters from mean and variance
           narw.indiv[i, "min_bc", ] <- alive * (narw.indiv[i, "cohort", ] == 6) * 
-            ilink.mbc(Xp %*% coef(gam_gest))
-        # }
+            rbeta(nrow(beta_pars), beta_pars[, "shape1"], beta_pars[, "shape2"])
+
         }
           
         # Birth of new calf, conditional on the mother being alive and in pregnant state
         narw.indiv[i, "birth", ] <- alive * (narw.indiv[i, "cohort", ] == 4)
         new.births <- sum(narw.indiv[i, "birth", ])
-        # births[i, prj] <- new.births
         
         # Number of non-reproductive females in the population
         Nr <- nrow(t(narw.indiv[i, ,])[t(narw.indiv[i, ,])[,"alive"] == 1 & t(narw.indiv[i, ,])[,"female"] == 1 & t(narw.indiv[i, ,])[,"reprod"] == 0, ])
@@ -569,40 +572,42 @@ predict.narwsim <- function(...,
         # SURVIVAL
         #' ----------------------------
         
-        if(param){
-        # Predict survival probability based on body condition
-        Xp <- predict(survbc.model[[current.phase]]$surv,
-         data.frame(
-           start_bc = narw.indiv[i, "bc", ],
-           cohort = narw.indiv[i, "cohort", ]
-         ), type = "lpmatrix")
+        if (param) {
+         # Predict survival probability based on body condition
+         Xp <- predict(survbc.model[[current.phase]]$surv,
+           data.frame(
+             start_bc = narw.indiv[i, "bc", ],
+             cohort = narw.indiv[i, "cohort", ]
+           ),
+           type = "lpmatrix"
+         )
 
-        post.sample <- sample(
-          x = seq_len(mcmc[[current.phase]]$n),
-          size = nrow(Xp),
-          replace = TRUE)
-        
-        surv.curves <- mcmc[[current.phase]]$surv[post.sample,]
-        
-        if(!is.null(survival_prob)){
-          narw.indiv[i, "p_surv", ] <- survival_prob
-        } else {
-          narw.indiv[i, "p_surv", ] <- narw.indiv[i, "alive", ] * ilink.survbc$surv(rowSums(Xp*surv.curves))
-        }
-        
- 
-        } else {
-          
-          if(!is.null(survival_prob)){
-            narw.indiv[i, "p_surv", ] <- survival_prob
-          } else {
-          narw.indiv[i, "p_surv", ] <- narw.indiv[i, "alive", ] * predict(survbc.model[[current.phase]]$surv,
-                                                                          data.frame(
-                                                                            start_bc = narw.indiv[i, "bc", ],
-                                                                            cohort = narw.indiv[i, "cohort", ]
-                                                                          ), type = "response")
-          }
-        }
+         post.sample <- sample(
+           x = seq_len(mcmc[[current.phase]]$n),
+           size = nrow(Xp),
+           replace = TRUE
+         )
+
+         surv.curves <- mcmc[[current.phase]]$surv[post.sample, ]
+
+         if (!is.null(survival_prob)) {
+           narw.indiv[i, "p_surv", ] <- survival_prob
+         } else {
+           narw.indiv[i, "p_surv", ] <- narw.indiv[i, "alive", ] * ilink.survbc$surv(rowSums(Xp * surv.curves))
+         }
+       } else {
+         if (!is.null(survival_prob)) {
+           narw.indiv[i, "p_surv", ] <- survival_prob
+         } else {
+           narw.indiv[i, "p_surv", ] <- narw.indiv[i, "alive", ] * predict(survbc.model[[current.phase]]$surv,
+             data.frame(
+               start_bc = narw.indiv[i, "bc", ],
+               cohort = narw.indiv[i, "cohort", ]
+             ),
+             type = "response"
+           )
+         }
+       }
         
         # Formerly using sapply which is much slower
         # sapply(seq_len(nrow(Xp)), FUN = function(r){ilink.surv(Xp[r,] %*% surv.curves[r,])}) 
@@ -664,17 +669,74 @@ predict.narwsim <- function(...,
   console(msg = "Running projections", suffix = tickmark())
   console(msg = "Summarizing outputs")
   
-  # Survival probability ----
+  survival <- purrr::map(.x = seq_len(n), .f = ~ {
+    
+    narw.tbl <- as.data.frame.table(narw.individuals[[.x]]) |>
+      dplyr::rename(year = Var1, param = Var2, whale = Var3, value = Freq) |>
+      dplyr::mutate(
+        year = as.numeric(gsub("yr ", "", year)),
+        whale = as.numeric(gsub("whale ", "", whale))
+      ) |>
+      tidyr::pivot_wider(names_from = param, values_from = value) |>
+      dplyr::mutate(prj = .x) |>
+      dplyr::select(prj, year, whale, cohort, alive, female) |>
+      dplyr::mutate(year = 2019 + year) |>
+      data.table::as.data.table()
+
+    # Calculate survival by shifting the alive column up one row
+    narw.tbl[, survival := dplyr::lead(alive), list(prj, whale)]
+    
+    # Set survival to NA when alive is NA
+    narw.tbl[is.na(alive), ]$survival <- NA
+    narw.tbl <- narw.tbl[alive == 1 & !is.na(alive) & !is.na(survival), ]
+
+    narw.tbl[
+      year < max(narw.tbl$year) & !is.na(cohort),
+      list(
+        alive = sum(survival, na.rm = TRUE),
+        total = .N,
+        surv = sum(survival, na.rm = TRUE) / .N
+      ),
+      list(prj, year, cohort)
+    ]
+  }) |> data.table::rbindlist()
+  
+
+  # Health ----
   
   prjpreds <- purrr::map(.x = seq_len(n), .f = ~ {
-    out <- apply(narw.individuals[[.x]], 3, function(x) x[x[, "alive"] == 1 & !is.na(x[, "alive"]), c("cohort", "p_surv", "bc", "min_bc"), drop = FALSE])
-    if(inherits(out, "list")) out <- do.call(rbind, out)
-     out <- cbind(out, .x, rep(0:yrs, length.out = nrow(out)))
-     colnames(out)[5:6] <- c("prj", "year")
-     out
-  }) |> do.call(what = rbind) |> 
-    data.table::as.data.table()
-  prjpreds[, year:= 2019 + year]
+    
+    # Extract data
+    out <- apply(narw.individuals[[.x]], 3, function(x) {
+      
+      x <- cbind(x, dplyr::lead(x[, "bc"]))
+      colnames(x)[ncol(x)] <- "end_bc"
+      x[x[, "alive"] == 1 & !is.na(x[, "alive"]),
+        c("cohort", "end_bc", "min_bc", "female"),
+        drop = FALSE
+      ]
+    })
+    
+    # Add whale IDs
+    whaleID <- purrr::map(.x = seq_len(dim(narw.individuals[[.x]])[3]), .f = ~
+                            rep(.x, each = nrow(out[[.x]])))
+    
+    # And corresponding years
+    yy <- purrr::map(.x = seq_len(dim(narw.individuals[[.x]])[3]), .f = ~
+                       as.numeric(gsub(pattern = "yr ", replacement = "", x = rownames(out[[.x]]))))
+    
+    out <- purrr::pmap(.l = list(.x, yy, whaleID, out), function(first, second, third, fourth) {
+      cbind(prj = first, year = second, whale = third, fourth)
+    })
+    
+    if (inherits(out, "list")) out <- do.call(rbind, out)
+    out
+  }) |> 
+    do.call(what = rbind) |>
+    data.table::as.data.table() |> 
+    dplyr::rename(bc = end_bc)
+  prjpreds[, year := 2019 + year]
+  prjpreds <- prjpreds[order(prj, whale, year)]
   
   # Total births ----
   
@@ -694,7 +756,6 @@ predict.narwsim <- function(...,
   births.df[, year:= 2019 + year]
   
   # Total deaths ----
-  
   deaths.df <- purrr::map(.x = 1:n, .f = ~{
     m <- matrix(apply(X = narw.individuals[[.x]][2:(yrs+1),"alive",],
                       MARGIN = 1,
@@ -856,7 +917,8 @@ predict.narwsim <- function(...,
     ),
     list(year, cohort)
   ] |>
-    dplyr::mutate(cohort = factor(cohort, levels = c(
+    dplyr::rename(cohortID = cohort) |> 
+    dplyr::mutate(cohort = factor(cohortID, levels = c(
       "Calves (male)",
       "Calves (female)",
       "Juveniles (male)",
@@ -874,7 +936,9 @@ predict.narwsim <- function(...,
       uppr = quantile(N, 0.975, na.rm = TRUE)
     ),
     list(year, cohort)
-  ] |>dplyr::mutate(cohort = factor(cohort, levels = c(
+  ] |> 
+    dplyr::rename(cohortID = cohort) |> 
+    dplyr::mutate(cohort = factor(cohortID, levels = c(
       "Calves (male)",
       "Calves (female)",
       "Juveniles (male)",
@@ -890,35 +954,96 @@ predict.narwsim <- function(...,
   cat("---------------------------------\n")
   cat(paste0("Done | Time elapsed: ", run_time), "\n")
   
+  # Minimum expected population size ----
+  
+  min_popsize <- function(array){
+    out <- apply(X = array, MARGIN = 1, FUN = cummin)
+    out <- apply(X = out, MARGIN = 1, FUN = mean)
+    return(out)
+  }
+  
+  minpop <- min_popsize(tot.pop)
+  minpop <- data.table::data.table(year = 0:yrs, minpop = minpop) |> 
+    dplyr::mutate(year = 2019 + year)
+  
+  # Quasi-extinction risk ----
+  
+  # This is the  probability that the number of reproductive females would fall below thresholds of 10,
+  # 50, or 100 animals by any point in time. However, a quasi-extinction threshold of 100 
+  # is not informative because the population is already below this value at the start. 
+  # Similarly, a quasi-extinction threshold of 10 mature females is also not very informative 
+  # because the probability is uniformly low for all scenarios and time points.
+  
+  qr <- 50
+  
+  quasi_ext <- function(array, threshold){
+    out <- apply(X = array, MARGIN = 1, FUN = cummin)
+    out <- apply(X = out, MARGIN = 1, FUN = function(x) sum(x <= threshold)/length(x))
+    return(out)
+  }
+  
+  quasi.females <- quasi_ext(rowSums(narw.pop[,,cohorts.proj[id >= 4, name]], dims = 2), qr)
+  quasi.females <- data.table::data.table(year = 0:yrs, quasi = quasi.females) |> 
+    dplyr::mutate(year = 2019 + year)
+  
+  # IUCN ----
+  # Calculated over 100 years
+  if(yrs - burn.in >= 100){
+    iucn.threshold <- c(0.3, 0.5, 0.8)
+    iucn.p <- purrr::map_dbl(.x = iucn.threshold, .f = ~ {
+      out <- as.numeric(((sum(N_0) - apply(X = tot.pop[, 1:100], MARGIN = 1, min)) / sum(N_0)) > .x)
+      sum(out) / length(out)
+    })
+    names(iucn.p) <- paste0(100*iucn.threshold, "%")
+  } else {
+    iucn.p <- list(NULL)
+  }
+  
   # Output list ----
   
-  outproj <- list(param = list(label = obj[[1]]$param$label,
-                               yrs = yrs - burn.in,
-                               burn = burn.in,
-                               n = n,
-                               cohorts = cohorts.proj,
-                               current.yr = current.yr,
-                               abort = abort.rate,
-                               nonrep = nonrep,
-                               phases = phase.names,
-                               schedule = schedule),
-                  init = list(N_0 = N_0,
-                              cohort = cohort.vec,
-                              reprod.fem = reprod.fem),
-                  dat = list(ind = narw.individuals,
-                             birth = list(tot = births.df, 
-                                          perfemale = births.per.female, 
-                                          inter = inter.birth),
-                             death = deaths.df,
-                             health = prjpreds,
-                             abort = abort.df,
-                             nonrepfem = nonreprod.females,
-                             pregfem = preg.fem,
-                             rest = time.resting,
-                             pop = narw.pop,
-                             tot = tot.pop),
-                  proj = list(tbl = rbind(narw.df, tot.df) |> dplyr::mutate(prj = as.numeric(prj)), 
-                              mean = rbind(narw.conf, tot.conf)))
+  outproj <- list(
+   param = list(
+     label = obj[[1]]$param$label,
+     start.year = current.yr,
+     yrs = yrs - burn.in,
+     burn = burn.in,
+     n = n,
+     cohorts = cohorts.proj,
+     abort = abort.rate,
+     nonrep = nonrep,
+     phases = phase.names,
+     schedule = schedule
+   ),
+   init = list(
+     N_0 = N_0,
+     cohort = cohort.vec,
+     reprod.fem = reprod.fem
+   ),
+   dat = list(
+     ind = narw.individuals,
+     birth = list(
+       tot = births.df,
+       perfemale = births.per.female,
+       inter = inter.birth
+     ),
+     death = deaths.df,
+     health = prjpreds,
+     survival = survival,
+     abort = abort.df,
+     nonrepfem = nonreprod.females,
+     pregfem = preg.fem,
+     rest = time.resting,
+     pop = narw.pop,
+     tot = tot.pop
+   ),
+   proj = list(
+     tbl = rbind(narw.df, tot.df) |> dplyr::mutate(prj = as.numeric(prj)),
+     mean = rbind(narw.conf, tot.conf),
+     quasi = quasi.females,
+     minpop = minpop,
+     iucn.p = iucn.p
+   )
+ )
   class(outproj) <- c("narwproj", class(outproj))
   return(outproj)
   
