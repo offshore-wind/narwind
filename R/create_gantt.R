@@ -37,7 +37,7 @@ create_gantt <- function(project,
                          exact_date = FALSE,
                          project_start_date = Sys.Date(),
                          project_end_date = Sys.Date() + 365,
-                         colour_palette = wesanderson::wes_palette("Darjeeling1"),
+                         colour_palette,
                          font_family = "sans", 
                          mark_quarters = FALSE, 
                          mark_years = FALSE,
@@ -57,7 +57,7 @@ create_gantt <- function(project,
                          show_vertical_lines = TRUE, 
                          axis_text_align = "right") {
   
-  if (length(unique(project$wp)) > length(as.character(wesanderson::wes_palette("Darjeeling1")))) {
+  if (length(unique(project$wp)) > length(as.character(colour_palette))) {
     colour_palette <- rep(colour_palette, length(unique(project$wp)))[1:length(unique(project$wp))]
   }
   if (label_wrap != FALSE) {
@@ -89,8 +89,7 @@ create_gantt <- function(project,
     if (sum(is.na(df$start_date)) == nrow(df)) {
       stop("Make sure that the input data are properly formatted and/or you have selected the right paramaters.")
     }
-    start_yearmon <- zoo::as.yearmon(project_start_date) -
-      (1 / 12)
+    start_yearmon <- zoo::as.yearmon(project_start_date) - (1 / 12)
     df_yearmon <- df  |> 
       dplyr::mutate(start_date_yearmon = start_yearmon +
                       (1 / 12) * start_date, end_date_yearmon = start_yearmon +
@@ -113,11 +112,8 @@ create_gantt <- function(project,
         ) |>
         dplyr::transmute(
           wp = as.character(wp), activity = as.character(activity),
-          start_date = zoo::as.Date(start_date_yearmon,
-                                    frac = 0
-          ), end_date = zoo::as.Date(end_date_yearmon,
-                                     frac = 1
-          )
+          start_date = zoo::as.Date(start_date_yearmon,frac = 0),
+          end_date = zoo::as.Date(end_date_yearmon, frac = 1)
         )
     }
   }
@@ -127,11 +123,8 @@ create_gantt <- function(project,
       end_date = as.Date(end_date), wp = as.character(wp),
       activity = as.character(activity)
     )
-    df_yearmon <- df |> dplyr::mutate(start_date = zoo::as.Date(zoo::as.yearmon(start_date),
-                                                                frac = 0
-    ), end_date = zoo::as.Date(zoo::as.yearmon(end_date),
-                               frac = 1
-    ))
+    df_yearmon <- df |> dplyr::mutate(start_date = zoo::as.Date(zoo::as.yearmon(start_date), frac = 0),
+                                      end_date = zoo::as.Date(zoo::as.yearmon(end_date), frac = 1))
   }
   
   # Phil == Changed
@@ -297,7 +290,8 @@ create_gantt <- function(project,
     axis_text_align_n <- 1
   }
   gg_gantt <- suppressWarnings(gg_gantt + ggplot2::scale_y_discrete("") +
-                                 ggplot2::theme_minimal() + ggplot2::scale_colour_manual(values = colour_palette) +
+                                 ggplot2::theme_minimal() + 
+                                 ggplot2::scale_colour_manual(values = colour_palette) +
                                  ggplot2::theme(
                                    text = ggplot2::element_text(family = font_family),
                                    axis.text.y.left = ggplot2::element_text(
