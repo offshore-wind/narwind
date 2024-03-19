@@ -71,7 +71,7 @@ write.narwsim <- function(obj,
     # // ATTRIBUTES
     # // ------------------------------------------------------------
     
-    attrib <- cbind(const, sim[[k]][whale %in% whaleID & day > 0, list(alive, age, p_starve, starve, died, p_surv, bc, length, length_a, length_b, length_c, mass, leanmass, fatmass, mass_a, mass_b, mouth_r, mouth_a, mouth_w, gsl, seus)])
+    attrib <- cbind(const, sim[[k]][whale %in% whaleID & day > 0, list(alive, age, p_starve, starve, died, p_surv, bc, length, length_a, length_b, length_c, mass, leanmass, fatmass, mass_a, mass_b, gape, mouth_r, mouth_a, mouth_w, gsl, seus)])
     
     # // ------------------------------------------------------------
     # // ATTRIBUTES (calves)
