@@ -93,203 +93,6 @@ get_scenarios <- function(scenario = 1){
   return(out)
 }
 
-# ++ [FUNCTION] Generate weighted density surfaces
-# ++ [PARAM] target –– Character. One of "SEUS" or "GSL",
-# for the calving grounds or Gulf of St Lawrence, respectively.
-# ++ [RETURN] List of rasters
-w_density <- function(target = "SEUS"){
-  
-  # Create raster from regions polygon
-  reg <- targets::tar_read(regions)
-  supportp <- targets::tar_read(support_poly)
-  dens <- targets::tar_read(density_narw)
-  densr <- purrr::map(.x = dens, .f = ~raster::raster(.x) |> raster::crop(dens[[1]]))
-  reg$rank <- rank(reg$region)
-  r <- raster::raster()
-  raster::extent(r) <- raster::extent(reg)
-  rp <- raster::rasterize(reg, r, 'rank')
-  rp <- raster::resample(rp, densr[[1]], method = "ngb")
-  rp <- raster::mask(rp, supportp)
-  
-  rp.SEUS <- rp.GSL <- rp
-  
-  if(target == "SEUS"){
-    
-    # Set value to 1 in SEUS
-    rp.SEUS[!rp.SEUS$layer == which(sort(reg$region) == "SEUS")] <- 0
-    rp.SEUS[rp.SEUS>0] <- 1
-    
-  } else if(target == "GSL"){
-    
-    # Set value to 1 in GSL
-    rp.GSL[!rp.GSL$layer == which(sort(reg$region) == "GSL")] <- 0
-    rp.GSL[rp.GSL>0] <- 1 
-    
-  }
-  
-  # Create latitudinal gradient
-  r_y <- sp::coordinates(rp.GSL, na.rm = TRUE)
-  r_y <- raster::rasterFromXYZ(cbind(r_y, r_y[, 2, drop = FALSE]))
-  r_y <- raster::mask(r_y, densr[[1]])
-  
-  r_north <- 1/(1+exp(-0.004*(r_y-1380)))
-  r_south <- 1/(1+exp(0.004*(r_y-12)))
-  
-  r_southbound <- 1/(1+exp(0.004*(r_y-500)))
-  r_northbound <- 1/(1+exp(-0.004*(r_y-800)))
-  
-  # Breeding season in the SEUS (Nov through to February - Krystan et al., 2018)
-  # Foraging season in the GSL (June though to Oct – Crowe et al., 2021)
-  
-  wdens <- purrr::map(.x = seq_along(densr), .f = ~{
-    
-    if(.x == 11){ # Migrating south in November
-      
-      if(target == "SEUS"){
-        
-        # OPTION 1
-        
-        if(option == 1){
-          
-          # # Determine mass outside of SEUS
-          mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.SEUS)), na.rm = TRUE)
-          # Redistribute mass across range according to north-south gradient
-          d1 <- densr[[.x]] * rp.SEUS
-          d2 <- mout * r_south/sum(raster::getValues(r_south), na.rm = TRUE) # Sums to mout
-          d.out <- d1 + d2
-          
-        } else if (option == 2) {
-          
-          # OPTION 2
-          
-          # Clip density to SEUS
-          d1 <- densr[[.x]] * rp.SEUS
-          # Re-scale gradient outside of SEUS
-          d1[d1==0] <- NA
-          dv <- na.omit(apply(X = raster::as.matrix(d1), MARGIN = 1, FUN = mean, na.rm = TRUE))
-          d2 <- rescale(x = r_south * (1-rp.SEUS), new.max = dv[1])
-          d2[d2==0] <- NA
-          d.out <- raster::merge(d1, d2)
-          
-        } else if (option == 3){
-          
-          # OPTION 3
-          pathGSL <- raster::shapefile("data/pathGSL.shp") |> sp::spTransform(CRSobj = narw_crs())
-          pts <- sp::spsample(pathGSL, n = 1000, type = "regular")
-          distances <- raster::distanceFromPoints(object = densr[[1]], xy = pts) |>
-            raster::mask(mask = densr[[1]])
-          dist.r <- (1/distances)^(1/4) # Fourth root
-          d.out <- rescale(dist.r, new.min = raster::cellStats(dist.r, "min"),
-                                  new.max = raster::cellStats(dist.r*(1-rp.CA), "max")) + r_southbound
-          
-        }  
-        
-        as(d.out, "SpatialGridDataFrame")
-        
-      } else {
-        
-        dens[[.x]]  
-        
-      }
-      
-    } else if(.x == 6) { # Migrating north in June
-      
-      if(target == "GSL"){
-        
-        # if(option == 1){
-        #   
-        #   # OPTION 1
-        #   
-          # Determine mass outside of GSL
-          mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.GSL)), na.rm = TRUE)
-          # Redistribute mass across range according to north-south gradient
-          d1 <- densr[[.x]] * rp.GSL
-          d2 <- mout * r_north/sum(raster::getValues(r_north), na.rm = TRUE) # sums to mout
-          d.out <- d1 + d2
-          
-        # } else if (option == 2){
-        #   
-        #   # OPTION 2
-        #   
-        #   # Clip density to GSL
-        #   d1 <- densr[[.x]] * rp.GSL
-        #   # Re-scale gradient outside of GSL
-        #   d1[d1==0] <- NA
-        #   dv <- na.omit(apply(X = raster::as.matrix(d1), MARGIN = 1, FUN = mean, na.rm = TRUE))
-        #   d2 <- rescale(x = r_north * (1-rp.GSL), new.max = dv[1])
-        #   d2[d2==0] <- NA
-        #   d.out <- raster::merge(d1, d2)
-        #   
-        # } else if (option == 3){
-        #   
-        #   # OPTION 3
-        #   pathGSL <- raster::shapefile("data/pathGSL.shp") |> 
-        #     sp::spTransform(CRSobj = narw_crs()) |> 
-        #     rgeos::gBuffer(width = 50)
-        #   pts <- sp::spsample(pathGSL, n = 10000, type = "regular")
-        #   distances <- raster::distanceFromPoints(object = densr[[1]], xy = pts) |> raster::mask(mask = densr[[1]])
-        #   dist.r <- (1/distances)^(1/4) # Fourth root
-        #   d.out <- rescale(dist.r, new.min = raster::cellStats(dist.r, "min"), 
-        #                           new.max = raster::cellStats(dist.r*rp.CA, "max")) + r_northbound
-        #   
-        # }
-        
-        as(d.out, "SpatialGridDataFrame")
-        
-      } else {
-        
-        dens[[.x]]  
-        
-      }
-      
-    } else if(.x %in% c(1:2, 12)) { # Breeding season in the SEUS
-      
-      if(target == "SEUS"){
-        
-        # Mass outside of SEUS
-        mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.SEUS)), na.rm = TRUE)
-        
-        # Redistribute mass
-        d <- densr[[.x]] * rp.SEUS
-        d <- d + d*mout/sum(raster::getValues(d), na.rm = TRUE) + 1e-06
-        as(d, "SpatialGridDataFrame")
-        
-      } else {
-        
-        dens[[.x]]  
-        
-      }
-      
-    } else if(.x %in% c(7:10)) { # Foraging season in the GSL
-      
-      if(target == "GSL"){
-        
-        # Mass outside of GSL
-        mout <- sum(raster::getValues(densr[[.x]]*abs(1-rp.GSL)), na.rm = TRUE)
-        
-        # Redistribute mass
-        d <- densr[[.x]] * rp.GSL
-        d <- d + d*mout/sum(raster::getValues(d), na.rm = TRUE) + 1e-06
-        as(d, "SpatialGridDataFrame")
-        
-      } else {
-        
-        dens[[.x]]  
-        
-      }
-      
-    } else { # March through to May
-      
-      dens[[.x]]
-      
-    }
-    
-  }) |> purrr::set_names(nm = month.abb)
-  
-  return(wdens)
-  
-}
-
 # ++ [FUNCTION] Re-scale density surfaces within pre-defined bounds.
 # ++ [PARAM] p –– Density surface, converted to matrix format. 
 # ++ [PARAM] coords –– Two-column matrix of raster cell coordinates.
@@ -318,33 +121,85 @@ warp <- function(p, coords, lower = 700, upper = 850, left = 500, right = 750){
 # ++ [PARAM] nsim –– Integer. Number of simulated animals.
 # ++ [RETURN] Initial coordinates for each animal
 initiate_xy <- function(maplist,
-                        coords,
-                        migrate,
-                        init.month,
-                        nsim){
+                         coords,
+                         migrate,
+                         init.month,
+                         nsim){
   
-  out <- do.call(rbind, lapply(seq_along(maplist[[1]]), function(mo) {
+  out <- do.call(rbind, lapply(seq_along(maplist[[1]]), function(mo) { # For each month of the simulation year
+    
+    ncells <- seq_along(maplist[[1]][[mo]])
     
     sampled.xy <- purrr::map(.x = maplist, .f = ~{
-      sample(x = 1:283077, size = nsim, replace = TRUE, prob = .x[[mo]])
+      sample(x = ncells, size = nsim, replace = TRUE, prob = .x[[mo]])
     })
     
-    purrr::map_int(.x = 1:nsim, .f = ~ {
-      if (mo %in% c(1:2, 11:12) & migrate[.x, 1] == 1) {
-        sampled.xy[[1]][.x]
+    purrr::map_int(.x = 1:nsim, .f = ~ { # For each individual
+      
+      # Start of simulation off Southern New England
+      if (mo == init.month) {
+        sampled.xy[["sne"]][.x]
+        
+        # Migration to the calving grounds between November and February
+      } else if (mo %in% c(1:2, 11:12) & migrate[.x, 1] == 1) {
+        sampled.xy[["seus"]][.x]
+        
+        # Migration to the Gulf of St Lawrence between June and September
       } else if (mo %in% c(6:9) & migrate[.x, 2] == 1) {
-        sampled.xy[[2]][.x]
-      } else if(mo == init.month){
-        sampled.xy[[3]][.x]
+        sampled.xy[["gsl"]][.x]
+        
+        # Last trimester of simulation for lactating females
+        # and spring season for all agents
+      } else if (mo %in% c(3:5, 13:15)) {
+        sampled.xy[["gom"]][.x]
+        
       } else {
-        sampled.xy[[4]][.x]
+        sampled.xy[["gom"]][.x]
       }
-    })
-    
+      
+    }) # End purrr
   }))
+  
   row.names(out) <- names(maplist[[1]])
   return(out)
 }
+
+# ++ [FUNCTION] Generate initial coordinates for simulated animals
+# ++ [PARAM] maplist –– List of density surfaces, weighted and unweighted.
+# ++ [PARAM] coords –– Two-column matrix of raster cell coordinates.
+# ++ [PARAM] migrate –– Two-column matrix indicating whether individuals
+# migrate to the SEUS/GSL as returned by prob_migration.
+# ++ [PARAM] init.month –– Integer. Start month for the simulation.
+# ++ [PARAM] nsim –– Integer. Number of simulated animals.
+# ++ [RETURN] Initial coordinates for each animal
+# initiate_xy <- function(maplist,
+#                         coords,
+#                         migrate,
+#                         init.month,
+#                         nsim){
+#   
+#   out <- do.call(rbind, lapply(seq_along(maplist[[1]]), function(mo) {
+#     
+#     sampled.xy <- purrr::map(.x = maplist, .f = ~{
+#       sample(x = 1:283077, size = nsim, replace = TRUE, prob = .x[[mo]])
+#     })
+#     
+#     purrr::map_int(.x = 1:nsim, .f = ~ {
+#       if (mo %in% c(1:2, 11:12) & migrate[.x, 1] == 1) {
+#         sampled.xy[[1]][.x]
+#       } else if (mo %in% c(6:9) & migrate[.x, 2] == 1) {
+#         sampled.xy[[2]][.x]
+#       } else if(mo == init.month){
+#         sampled.xy[[3]][.x]
+#       } else {
+#         sampled.xy[[4]][.x]
+#       }
+#     })
+#     
+#   }))
+#   row.names(out) <- names(maplist[[1]])
+#   return(out)
+# }
 
 # ++ [FUNCTION] Extract and format outputs returned by the simulator
 # ++ [PARAM] input –– List object as returned by <NARW_simulator>.
@@ -460,7 +315,7 @@ reshape_array <- function(a, value, ..., .id = NULL)
 }
 
 # ++ [FUNCTION] Calculate daily probability from yearly probability
-# ++ [PARAM] yearly_p –– Numeric. Annual probability 
+# ++ [PARAM] yearly_p –– Numeric. Annual mortality rate 
 # Estimate daily p(dead) to match a target annual mortality rate
 # ++ [NOTE] If the daily probability of a mortality event occurring is p, then the daily probability of
 # survival is (1-p). The probability of survival over a year is then given by (1-p)^365.
@@ -483,37 +338,56 @@ mortality_curve <- function(starvation_death = 0.005,
                             starvation_onset = 0.05,
                             exp.factor = 5,
                             do.plot = FALSE) {
+  
   x <- seq(starvation_death, starvation_onset, 0.001)
   df <- data.frame(bc = x, p_annual = exp(-exp.factor * seq(0, 1, length.out = length(x))))
-
+  mod <- lm(log(df$p_annual)~df$bc)
+  names(mod$coefficients)[2] <- "bc"
+  df$p <- exp(mod$coefficients[1] + mod$coefficients[2] * x)
+  
   # Convert from annual to daily probability
-  df$p_daily <- sapply(X = df$p_annual, FUN = yearly2daily)
+  # df$p_daily <- sapply(X = df$p_annual, FUN = yearly2daily)
 
   if (do.plot) {
-    p1 <- ggplot2::ggplot(data = df, aes(x = bc, y = p_annual)) +
-      ggplot2::geom_line() +
+   
+    # tag.xy <- c(0.93, .93)
+    
+    # Daily
+    # p1 <- ggplot2::ggplot(data = rbind(data.frame(bc = 0, p_annual = 1, p_daily = 1),df), 
+    #                       aes(x = bc, y = p_daily)) +
+    #   ggplot2::geom_line() +
+    #   theme_narw() +
+    #   labs(
+    #     y = "Daily mortality rate"
+    #   ) +
+    #   ggplot2::coord_cartesian(ylim = c(0, 0.01)) +
+    #   ggplot2::scale_x_continuous(breaks = pretty(c(0, starvation_onset), n = 5))
+    # p1 <- add_label(p1, tag.xy[1], tag.xy[2])
+    
+    # Annual
+    p2 <- ggplot2::ggplot(data = rbind(data.frame(bc = 0, p_annual = 1, p = 1), df), 
+                          aes(x = bc, y = p_annual)) +
+      ggplot2::geom_line(aes(x = bc, y = p), col = "black") +
       theme_narw() +
       labs(
-        x = "Body condition (relative reserve mass, %)",
-        y = "Annual probability of mortality"
+        y = "Annual mortality rate",
+        x = "Body condition (relative reserve mass)"
       ) +
       ggplot2::coord_cartesian(ylim = c(0, 1)) +
       ggplot2::scale_x_continuous(breaks = pretty(c(0, starvation_onset), n = 5))
+    # p2 <- add_label(p2, tag.xy[1], tag.xy[2])
 
-    p2 <- ggplot2::ggplot(data = df, aes(x = bc, y = p_daily)) +
-      ggplot2::geom_line() +
-      theme_narw() +
-      labs(
-        x = "Body condition (relative reserve mass, %)",
-        y = "Daily probability of mortality"
-      ) +
-      ggplot2::coord_cartesian(ylim = c(0, 0.01)) +
-      ggplot2::scale_x_continuous(breaks = pretty(c(0, starvation_onset), n = 5))
-
-    print(p1 + p2)
+    # p <- (p1 + p2) & xlab(NULL) & ggplot2::theme(plot.margin = margin(5.5, 5.5, 10, 5.5))
+    # p <- patchwork::wrap_elements(panel = p) +
+    #   ggplot2::labs(tag = "Body condition (relative reserve mass, %)", ) +
+    #   theme(
+    #     plot.tag = ggplot2::element_text(size = rel(1)),
+    #     plot.tag.position = "bottom"
+    #   )
+    print(p2)
   }
 
-  return(df)
+  if(do.plot) return(p2) else return(mod$coefficients)
 }
 
 # ++ [FUNCTION] Determine maximum theoretical body condition based on feeding effort curves
@@ -527,58 +401,116 @@ find_maxBC <- function(cohort = 4, threshold = 0.05) {
     }
   } else {
     myfunc <- function(par) {
-      (threshold - feeding_effort_vec(10, 0.41718, par))^2
+      (threshold - feeding_effort_vec(10, 0.3674076, par))^2
     }
   }
   optimize(myfunc, c(0, 1), tol = 0.0001)$minimum
 }
 
+# ++ [FUNCTION] Adjust population vector with a more stable age structure
+# ++ [PARAM] obj –– Population projection object as returned by <predict.narwsim>
+adjust_popvec <- function(obj){
+  
+  if(!inherits(obj, "narwproj")) stop("Object must be of class <narwproj>")
+  
+  pop <- obj$proj$tbl[!cohort == "North Atlantic right whales", ]
+  totpop <- obj$proj$tbl[cohort == "North Atlantic right whales", ] |> 
+    dplyr::rename(tot = N)
+  pop <- dplyr::left_join(pop, totpop[, c("prj", "year", "tot")], by = c("prj", "year"))
+  pop$perc <- pop$N/pop$tot
+  
+  ggplot2::ggplot(data = pop[cohort == "Adults (female, pregnant)"], aes(year, perc, group = prj)) +
+    ggplot2::geom_line() +
+    theme_narw() +
+    ylab("Percentage of pregnant females in the population") +
+    xlab("")
+  
+  propsum <- pop[year == 2059, list(mean_perc = round(mean(perc), 3)), cohort] |>
+    dplyr::mutate(N_adj = round(362 * mean_perc)) |>
+    dplyr::left_join(y = as.data.frame(N_0) |> 
+                       tibble::rownames_to_column() |> 
+                       dplyr::rename(cohort = rowname), by = "cohort")
+  
+  cat("N_0:", sum(propsum$N_0), "\n")
+  cat("N_adj:", sum(propsum$N_adj), "\n\n")
+  return(propsum)
+  
+}
+
+
 # ++ [FUNCTION] Helper function to determine the mean +/- SD of initial
 #  body condition distributions for different NARW cohorts, based on Fredrik
 #  Christiansen's published results.
+# ++ [PARAM] pop -- Logical. If FALSE (the default), returns values for the agent-based model. If TRUE, returns
+# values for the stochastic population model.
 # ++ [PARAM] calves –– Mean +/- SE body condition index of calves at birth (in %) from Christiansen et al.
 # ++ [PARAM] juveniles –– Mean +/- SE body condition index of juveniles (in %) from Christiansen et al.
 # ++ [PARAM] adults –– Mean +/- SE body condition index of adults (in %) from Christiansen et al.
 # ++ [PARAM] lactating –– Mean +/- SE body condition index of lactating females (in %) from Christiansen et al.
 # ++ [RETURN] List of mean +/- SD values
-init_bc <- function(calves = c(-0.61, 14.64272),
+init_bc <- function(pop = FALSE,
+                    obj = NULL,
+                    calves = c(-0.61, 14.64272),
                     juveniles = c(-13.1, 11.6),
                     adults = c(-16.7, 12.49),
-                    lactating = c(9.4, 11.75755)){
+                    lactating = c(-9.4, 11.75755)){
   
-  set.seed(1358961)
-  
-  # From Christiansen et al. (2022) J Physiol
-  # The birth condition value is -0.0061 (or -0.61%) with a SE of 0.0049 (or 0.49%)
-  # The sample size is: n = 893
-  # This gives an SD = sqrt(n)*0.49 = 14.64272%
-  # 
-  # From Christiansen et al. (2020) MEPS
-  # immature NARWs (mean = −13.1%, SE = 2.9, n = 16, SD = 11.6)
-  # adults (mean = −16.7%, SE = 2.0, n = 39, SD = 12.49)
-  # lactating NARW females (mean = −9.4%, SE = 4.8, n = 6, SD = 11.75755)
-  
-  # Calculate relative blubber mass from body condition indices (mean +/- 2SE)
-  # using a spline function <bc_index> fitted to data from Christiansen et al. (2022) -- Figure 7D
-  get_bc <- function(v){
-    out <- sapply(
-    X = 1:100000,
-    FUN = function(x) {
-      rtnorm(
-        mean = v[1] / 100,
-        sd = v[2] / 100, 
-        low = -0.3,
-        high = 0.6
-      )}) |> bc_index()
-    return(c(mean(out), sd(out)))
+  if(pop){
+    
+    if(is.null(obj)) stop("Missing projection object")
+    if(!inherits(obj, "narwproj")) stop("Input object must be of class <narwproj>")
+    
+    max.year <- max(obj$dat$health$year)
+    tmp <- obj$dat$health[year == max.year,]
+
+    out <- tmp[, list(mean = mean(bc), sd = sd(bc)), list(cohort)] |> 
+      dplyr::left_join(x = obj$param$cohorts, by = c("id" = "cohort")) |> 
+      dplyr::arrange(id)
+    
+  } else {
+    
+    set.seed(1358961)
+    
+    # From Christiansen et al. (2022) J Physiol
+    # The birth condition value is -0.0061 (or -0.61%) with a SE of 0.0049 (or 0.49%)
+    # The sample size is: n = 893
+    # This gives an SD = sqrt(n)*0.49 = 14.64272%
+    # 
+    # From Christiansen et al. (2020) MEPS
+    # immature NARWs (mean = −13.1%, SE = 2.9, n = 16, SD = 11.6)
+    # adults (mean = −16.7%, SE = 2.0, n = 39, SD = 12.49)
+    # lactating NARW females (mean = −9.4%, SE = 4.8, n = 6, SD = 11.75755)
+    
+    # Calculate relative blubber mass from body condition indices (mean +/- 2SE)
+    # using a spline function <bc_index> fitted to data from Christiansen et al. (2022) -- Figure 7D
+    get_bc <- function(v){
+      out <- sapply(
+        X = 1:100000,
+        FUN = function(x) {
+          rtnorm(
+            mean = v[1] / 100,
+            sd = v[2] / 100, 
+            low = -0.3,
+            high = 0.6
+          )}) |> bc_index()
+      return(c(mean(out), sd(out)))
+    }
+    
+    out <- purrr::map(.x = list(calves, juveniles, adults, lactating),
+                      .f = ~get_bc(.x)) |> 
+      purrr::set_names(nm = "Calves", "Juveniles", "Adults", "Females (lactating)")
+    
   }
-  
-  out <- purrr::map(.x = list(calves, juveniles, adults, lactating),
-                    .f = ~get_bc(.x)) |> 
-    purrr::set_names(nm = "calves", "juveniles", "adults", "lactating")
-  
   return(out)
   
+}
+
+# From <broman> package
+switchv <- function (EXPR, ...) 
+{
+  result <- EXPR
+  for (i in seq(along = result)) result[i] <- switch(EXPR[i], ...)
+  result
 }
 
 # NOISE ------------------------------------------------------
@@ -870,11 +802,13 @@ add_latlon <- function(dat, CRS.obj = narw_crs()){
 
 # ++ [FUNCTION] Custom ggplot2 theme
 # ++ [PARAM] vertical –– Logical. If TRUE, axis labels are rotated 90 degrees.
-theme_narw <- function(vertical = FALSE){
+theme_narw <- function(vertical = FALSE, grey = TRUE, bbox = FALSE){
   
   # font <- "Georgia"   # Assign font family up front
   
-  theme_grey() %+replace%    # Replace elements we want to change
+  if(grey) p <- ggplot2::theme_grey() else p <- ggplot2::theme_bw()
+  
+  p %+replace%    # Replace elements we want to change
     
     ggplot2::theme(
       
@@ -890,7 +824,8 @@ theme_narw <- function(vertical = FALSE){
       axis.title.x = ggplot2::element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
       
       # Panel elements
-      panel.border = ggplot2::element_rect(colour = "black", fill = NA, linewidth = ifelse(vertical, 0.5, 0)),
+      panel.border = ggplot2::element_rect(colour = ifelse(bbox, "black", "transparent"), 
+                                           fill = NA, linewidth = 0.75),
       
       # Facet elements
       strip.background = ggplot2::element_rect(fill = "grey20"),
