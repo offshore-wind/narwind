@@ -115,12 +115,12 @@ plot.narwsim <- function(obj,
       linewidth <- 0.65
       
       # Randomly picks 5 spline parameters and plots their trace
-      sample.of.five <- purrr::map(.x = obj$post$samples, .f = ~sample(1:ncol(.x), size = 5, replace = FALSE))
-      par(mfrow = c(5,2))
-      plot(coda::as.mcmc(obj$post$samples$surv[, sample.of.five$surv]), auto.layout = FALSE, main = "Survival")
-      plot(coda::as.mcmc(obj$post$samples$bc[, sample.of.five$bc]), auto.layout = FALSE, main = "Body condition")
-      # plot(coda::as.mcmc(obj$post$samples$mbc[, sample.of.five$mbc]), auto.layout = FALSE, main = "Gestation")
-      par(mfrow = c(1,1))
+      # sample.of.five <- purrr::map(.x = obj$post$samples, .f = ~sample(1:ncol(.x), size = 5, replace = FALSE))
+      # par(mfrow = c(5,2))
+      # plot(coda::as.mcmc(obj$post$samples$surv[, sample.of.five$surv]), auto.layout = FALSE, main = "Survival")
+      # plot(coda::as.mcmc(obj$post$samples$bc[, sample.of.five$bc]), auto.layout = FALSE, main = "Body condition")
+      # # plot(coda::as.mcmc(obj$post$samples$mbc[, sample.of.five$mbc]), auto.layout = FALSE, main = "Gestation")
+      # par(mfrow = c(1,1))
       
       # Create plots for survival and body condition
       p <- purrr::map(
