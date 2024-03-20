@@ -1654,33 +1654,13 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
 //' @name RMR
  //' @description Predicts the resting metabolic rate of an animal from its mass 
  //' using the allometric relationship proposed proposed by Williams & Maresh (2015)
- //' @param M Total body mass (kg)
- //' @param phi Scalar constant for immature animals
- //' @note The RMR is scaled up in immature animals (Fortune et al., 2013; Rechsteiner et al., 2013)
- //' in order to account for the elevated metabolic demand associated with active growth (Lavigne et al., 1986)
+ //' @param M Body mass (kg)
  // [[Rcpp::export]]
  
  double RMR(double M){ 
   
    return(581 * std::pow(M, 0.68) / 1000);
-   
-   // double out;
-   // 
-   // if(function_ID == 0) {  // Kleiber
-   // 
-   //   out = phi * 3.771 * std::pow(M, 0.75) * 86400 / 1000000; // Watts (J/s) to MJ/day
-   //   
-   // } else if(function_ID == 1){ // Williams & Maresh (2015)
-   //   
-   //   out = phi * 581 * std::pow(M, 0.68) / 1000;
-   //   
-   // } else { // George et al. (2021)
-   //   
-   //   out = phi * 3.693 * std::pow(M, 0.667) * 86400 / 1000000;
-   //   
-   // }
-   // 
-   // return out;
+
  } 
 
 //' Costs of locomotion
@@ -1704,7 +1684,7 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
    // Cost per stroke
    // 0.4 J per kg per m (Williams et al. 1999)
    // Distance traveled in m
-   // Average stroke rate during routine diving (0.11375 Hz) 
+   // Average stroke rate for E. glacialis during routine diving (0.11375 Hz) 
    double J_stroke = 0.4 * distance/(0.11375*86400);
 
    // Total cost per day (MJ)

@@ -326,9 +326,11 @@ predict.narwsim <- function(...,
     # sample(x = bc_init[[as.character(x)]], size = 1, replace = TRUE)
   # })
     
-    bc_dist <- data.table::data.table(cohort = unique(obj[[schedule[1] + 1]]$gam$dat$cohort), 
-                          mean = c(0.3593643, 0.4125728, 0.4336672, 0.4608405, 0.4537379, 0.5369984, 0.3669689),
-                          sd = c(0.07952667, 0.05916375, 0.06419653, 0.05955169, 0.05712539, 0.06022515, 0.13665292))
+    bc_dist <- data.table::data.table(
+      cohort = unique(obj[[schedule[1] + 1]]$gam$dat$cohort),
+      mean = c(0.3593643, 0.4125728, 0.4336672, 0.4608405, 0.4537379, 0.5369984, 0.3669689),
+      sd = c(0.07952667, 0.05916375, 0.06419653, 0.05955169, 0.05712539, 0.06022515, 0.13665292)
+    )
     
     bc <- sapply(X = cohort.vec, FUN = function(x) {
       clamp(rnorm(1, mean = bc_dist[cohort == x, mean], sd = bc_dist[cohort == x, sd]), maxbc)

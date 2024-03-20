@@ -40,48 +40,155 @@ knitr::opts_chunk$set(
 
 ## Required software
 
-The bioenergetic model is written in the R and C++ programming languages. To run the model, users need to install the freely available [R software](https://cloud.r-project.org/) on their machines. We also recommend the use of the open-source [RStudio software](https://posit.co/download/rstudio-desktop/), which provides a user-friendly front-end interface to R, with many convenient features and tools.
+The bioenergetic model is written in the R and C++ programming languages. To run the model, users will need to install the freely available [R software](https://cloud.r-project.org/) on their machines. R is a programming language for data science and graphics. It is especially powerful in performing advanced statistical computing and is widely used in ecology. We also recommend the open-source [RStudio software](https://posit.co/download/rstudio-desktop/), which provides a user-friendly front-end interface to R, with many convenient features and tools. including:
 
-Detailed installation instructions are available in many introductory tutorials, including:
+-   The ability to write and save reusable scripts
 
--   [Getting Started with Data in R](https://moderndive.netlify.app/1-getting-started) (Chapter 1 in the *Statistical Inference via Data Science: A ModernDive into R and the Tidyverse*! book by Chester Ismay and Albert Y. Kim, 2023).
+-   Easy access to all the imported data and created objects (like variables, functions, etc.)
 
--   [Getting started with R and RStudio](https://ourcodingclub.github.io/tutorials/intro-to-r/) from the Coding Club (article by Gergana Daskalova).
+-   Exhaustive help on any object
 
--   [RStudio tutorial](https://www.datacamp.com/tutorial/r-studio-tutorial) from the DataCamp blog (article by Elena Kosourova).
+-   Code autocompletion
 
--   [Basic Basics RYouWithMe Unit 1](https://rladiessydney.org/courses/ryouwithme/01-basicbasics-0/) from the R-Ladies Sydney group.
+-   The ability to create projects to organize and share work with collaborators
+
+-   Plot previewing
+
+-   Easy switching between terminal and console
+
+-   Operational history tracking
+
+It is important to install R first, before installing RStudio.
+
+To do so, go to the Comprehensive R Archive Network (CRAN) website <https://cran.r-project.org/>. In the upper part of the screen, find the section entitled "Download and Install R" and click the link corresponding to your operating system.
+
+-   If you are a Windows user: Click on “Download R for Windows”, then click on “base”, then click on the Download link.
+
+-   If you are macOS user: Click on “Download R for macOS”, then under “Latest release:” click on R-X.X.X.pkg, where R-X.X.X is the version number.
+
+-   If you are a Linux user: Click on “Download R for Linux” and choose your distribution for more information on installing R for your setup.
+
+-   Open the downloaded file and follow simple installation instructions leaving default options everywhere.
+
+Next, go to the RStudio website at <https://posit.co/download/rstudio-desktop/>.
+
+-   You will notice that your operating system is automatically identified.
+
+-   Click the blue button to download the latest release of RStudio for your operating system.
+
+-   Open the downloaded file and follow simple installation instructions opting for defaults everywhere.
+
+In addition to R and RStudio, macOS users need to download XQuartz (<https://www.xquartz.org/>).
+
+Opening RStudio will automatically launch the R software. The platform interface should look similar to the image below, although minor layout changes may occur with different versions of R.
+
+![](rstudio-screenshot.png)
+
+The interface can be broadly divided into four areas:
+
+-   the **Source** for your scripts and documents (top-left, in the default layout)
+
+-   the R **Console** (bottom-left)
+
+-   the **Environment/History** tabs (top-right)
+
+-   the **Files/Plots/Packages/Help/Viewer tabs** (bottom-right)
+
+This default layout can be customised to suit individual needs, as shown here.
+
+![](move-panels.gif)
+
+Unlike other point-and-click statistical software programs like Excel, SPSS, or Minitab, R is an interpreted language, which means that it works by typing and executing commands written in Rcode. There are two main ways of interacting with R: by using the **console** or by using **script files** (plain text files that contain code).
+
+The **console** pane in RStudio is the place where commands written in the R language can be typed and executed immediately by the computer. It is also where the results will be shown for commands that have been executed. You can type commands directly into the console and press `Enter` on your keyboard to execute those commands, but they will be forgotten when you close the session. If R is ready to accept commands, the R console by default shows a `>` prompt. If it receives a command (by typing, copy-pasting, or sent from the script editor using `Ctrl` + `Enter`), R will try to execute it, and when ready, will show the results and come back with a new `>` prompt to wait for new commands. If R is still waiting for user input, the console will show a `+` prompt. This usually means that the command being executed is not yet complete. This could happen for instance if a parenthesis or quotation has not been 'closed', i.e. some right-parentheses or closing quotation marks are missing. When this happens, and you thought you finished typing your command, click inside the console window and press `Esc`; this will cancel the incomplete command and return you to the `>` prompt.
+
+However, typing commands in the **script** editor and saving the script for future use is far more useful as it provides a complete record of previous analyses that ensures reproducibility. It also avoids having to re-write an entire piece of code over and over again if the same analysis is to be performed repeatedly. Importantly, R scripts can be annotated with comments that enable analysis decisions to be documented, making the code comprehensible to other users. Comments represent generic sentences that are mostly used for the purposes of documentation (e.g., to keep a record of what a piece of code does), and are ignored by the program (i.e., they are never executed). They begin with a hashtag (`#`) and appear in a different color to the rest of the code for enhanced legibility.
+
+To start a new R script, go to `File` \> `New File` \> `R script`.
+
+Type code directly into the script file. You can save this file on your computer by going to `File` \> `Save as`.
+
+To execute commands from the script editor, hit `Ctrl` + `Enter` on your keyboard (on Macs, `Cmd` + `Enter` will work as well). The command on the current line in the script (as indicated by the placement of the mouse cursor) or all of the commands in the currently selected text will be sent to the console and executed.
+
+It is good practice to keep scripts and analysis outputs related to a specific project in a single folder. Users of R and RStudio can choose which folder to assign as the **working directory** within a given R session. The working directory is the place where R will look for and save files. Whenever R/RStudio is launched, a working directory will automatically be determined based on startup parameters.
+
+To check which working directory R is using, execute the following command:
+
+```{r eval=FALSE}
+getwd()
+```
+
+To change to a different working directory in R go to the Console and type:
+
+```{r eval=FALSE}
+setwd("Path/To/Desired/Workingdirectory")
+```
+
+The working directory can also be changed by going to `Session` \> `Set Working Directory` \> `Choose Directory`.
+
+![](https://cengel.github.io/R-intro/img/setWD.png){alt="How to set a working directory with the RStudio interface"}
+
+Alternatively, you can use the shortcut `Ctrl` + `Shift` + `H` to set a working directory in RStudio.
+
+For further information on using R and RStudio, please refer to Claudia Engel's [**Introduction to R**](https://cengel.github.io/R-intro/)book, which is the source of much of the content in this section of the tutorial. If you are coming to R from a traditional point-and-click statistics package such, RStudio’s Thomas Mock has created a free video webinar titled [A Gentle Introduction to Tidy Statistics In R](https://resources.rstudio.com/webinars/a-gentle-introduction-to-tidy-statistics-in-r). This one-hour introduction covers how to get started quickly with the basics of research statistics in R, providing an emphasis on reading data into R, exploratory data analysis, statistical testing, and producing publication-ready plots. Additional RStudio webinars and videos can be found via the topic menus on the left side of that page.
 
 ## Package installation
 
-The latest development version of the package can be downloaded from the [GitHub](https://github.com/offshore-wind/narwind "narwind on Github"). This requires either the [remotes](https://cran.r-project.org/web/packages/remotes/index.html) or the [devtools](https://cran.r-project.org/web/packages/devtools/index.html) package to be pre-installed.
+R comes with a base system and some contributed core packages. However, the functionality of R can be significantly extended by using additional contributed packages. Those packages typically contain commands (functions) for more specialized tasks. They can also contain example datasets. `narwind` is an example of such third-party packages which is not included in the standard R download files, and must be manually installed.
+
+`narwind` relies not only on R code but also on compiled code written in the C++ programming language. Because of this, users must follow the steps below to install the package:
+
+-   **Step 1:** Download the development tools appropriate for your operating system.
+
+    -   Windows users – Go to <https://cran.r-project.org/bin/windows/Rtools/> and download the version of RTools that corresponds to the version of R installed on your machine. If unsure, type and execute the following command to check which version of R is running:
+
+        ```{r eval=FALSE}
+        R.version
+        ```
+
+    -   Mac users: Follow the instructions found at <https://mac.r-project.org/tools/>
+
+-   **Step 2:** In R, install the `devtools` package.
 
 ```{r install, eval=FALSE, include=TRUE}
-# To install the remotes package, run the following command:
-install.packages("remotes")
-
 # To install the devtools package, run the following command:
 install.packages("devtools")
 ```
 
-> **Note:** In R, comments are indicated by a hash `#` sign and usually appear grayed out (or in a different color to the code itself). Comments represent generic sentences that are mostly used for the purposes of documentation (e.g., to keep a record of what a piece of code does), and are ignored by the program.
+-   **Step 3:** In R, install `narwind`. If necessary, remove previous installations of the package by first calling the `remove.packages` command.
 
 ```{r download, eval=FALSE, include=TRUE}
-# Once either of the above packages is installed, 
-# narwind can be downloaded using the <install_github> command
-remotes::install_github("offshore-wind/narwind") # OR
-devtools::install_github("offshore-wind/narwind")
+remove.packages("narwind") # If a previous version of narwind is already available
+devtools::install_github("offshore-wind/narwind", dependencies = TRUE)
 ```
 
-Note that the package relies on compiled code (C++) and functionality provided by the [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) package. The `Rtools` software may be needed on Windows machines.
+-   **Step 4:** You should see some text output similar to the below in the R console. When prompted to update existing packages, type `1` then `Enter` in the console to ensure that all available updates are downloaded.
 
-Installation instructions can be found [here](https://cran.r-project.org/bin/windows/Rtools/rtools40.html).
+![](devtools_install.PNG)
+
+-   **Step 5:** The installation is complete when the following lines are printed.
+
+![](installation_complete.PNG)
+
+-   **Step 5:** Load the package.In R, packages need to be loaded into the current session for their functions to be made available to users. This is done using the `library()` command, which in the case of `narwind` prints a welcome message with basic information in the R console:
+
+```{r pkg, include = FALSE}
+devtools::load_all()
+library(narwind)
+```
+
+```{r pkg_true, eval = FALSE}
+library(narwind)
+```
+
+> **Note:** `narwind` is largely written in C++, a high-level, general-purpose programming language often used in high-performance applications. C++ is a compiled language, meaning that any source code must first be converted into machine-readable code before execution. This compilation process results in an executable file, which is then translated into R functions. No user input is necessary; this step is automatically performed in the background as part of the `library()` call above.
+
+> **Note:** In R, the `help()` function and `?` help operator provide access to documentation pages for package functions, datasets, or other objects. To access documentation for the `narw()` function, for instance, enter any of the commands: `help(narw)`, `help("narw")`, `?narw`, or `?"narw"` (i.e., the quotes are optional).
 
 ## Overview
 
 This vignette covers all the steps required to run the bioenergetic model and make predictions of right whale population trends. This includes:
 
--   Loading the package.
 -   Defining bespoke offshore wind scenarios using an interactive [Shiny](https://www.rstudio.com/products/shiny/) web app.
 -   Running simulations using the `narw()` function.
 -   Inspecting outputs using the `print()` method.
@@ -129,23 +236,6 @@ A typical workflow, as described in the [Example analysis] below, consists of fi
 :::
 
 ## Example analysis
-
-### Loading the package
-
-The first step is to load the package. This is done using the `library()` command, which prints a welcome message with basic information in the R console:
-
-```{r pkg, include = FALSE}
-devtools::load_all()
-library(narwind)
-```
-
-```{r pkg_true, eval = FALSE}
-library(narwind)
-```
-
-> **Note:** `narwind` is largely written in C++, a high-level, general-purpose programming language often used in high-performance applications. C++ is a compiled language, meaning that any source code must first be converted into machine-readable code before execution. This compilation process results in an executable file, which is then translated into R functions. No user input is necessary; this step is automatically performed in the background as part of the `library()` call above.
-
-> **Note:** In R, the `help()` function and `?` help operator provide access to documentation pages for package functions, datasets, or other objects. To access documentation for the `narw()` function, for instance, enter any of the commands: `help(narw)`, `help("narw")`, `?narw`, or `?"narw"` (i.e., the quotes are optional).
 
 ### Defining offshore wind scenarios
 
@@ -207,7 +297,7 @@ The above parameters can be defined interactively to generate entirely bespoke s
 
 ### Running the model
 
-The bioenergetic model is run by calling the `narw()` function. The number of simulated animals per cohort, `nsim`, is the only mandatory argument; all others are optional and set to default values that reflect baseline conditions when no wind farm activity is occurring. `narwscenario` objects pulled from the Shiny app can be passed to `narw()` using the `scenario` argument.
+Once the package is loaded, the bioenergetic model is run by calling the `narw()` function. The number of simulated animals per cohort, `nsim`, is the only mandatory argument; all others are optional and set to default values that reflect baseline conditions when no wind farm activity is occurring. `narwscenario` objects pulled from the Shiny app can be passed to `narw()` using the `scenario` argument.
 
 As an example, the code below can be used to simulate 100 individuals in each population cohort under baseline conditions.
 
@@ -476,15 +566,15 @@ Population trends can be visualized using the `plot()` command. When set to `TRU
 plot(narw.proj)
 ```
 
-```{r poptrends, echo=FALSE}
-plot(narw.preds)
-```
+![](vignette_poptrend.jpeg)
 
 ```{r poptrends_bycohort, eval=FALSE}
 plot(narw.proj, cohort = TRUE)
 ```
 
-```{r poptrends_cohort, echo=FALSE, fig.width=8,fig.height=10}
+![](vignette_poptrend_cohort.jpg)
+
+```{r poptrends_cohort, eval=FALSE,echo=FALSE, fig.width=8,fig.height=10}
 plot(narw.preds, cohort = TRUE, vignette = TRUE, ncol = 2)
 ```
 

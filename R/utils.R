@@ -422,8 +422,8 @@ adjust_popvec <- function(obj){
     xlab("")
   
   propsum <- pop[year == 2059, list(mean_perc = round(mean(perc), 3)), cohort] |>
-    dplyr::mutate(N_adj = round(362 * mean_perc)) |>
-    dplyr::left_join(y = as.data.frame(N_0) |> 
+    dplyr::mutate(N_adj = round(sum(obj$init$N_0) * mean_perc)) |>
+    dplyr::left_join(y = data.frame(N_0 = obj$init$N_0) |> 
                        tibble::rownames_to_column() |> 
                        dplyr::rename(cohort = rowname), by = "cohort")
   
@@ -457,9 +457,9 @@ init_bc <- function(pop = FALSE,
     if(!inherits(obj, "narwproj")) stop("Input object must be of class <narwproj>")
     
     max.year <- max(obj$dat$health$year)
-    tmp <- obj$dat$health[year == max.year,]
+    tmp <- obj$dat$health[year == max.year - 1,]
 
-    out <- tmp[, list(mean = mean(bc), sd = sd(bc)), list(cohort)] |> 
+    out <- tmp[, list(mean = mean(bc, na.rm = TRUE), sd = sd(bc, na.rm = TRUE)), list(cohort)] |> 
       dplyr::left_join(x = obj$param$cohorts, by = c("id" = "cohort")) |> 
       dplyr::arrange(id)
     
