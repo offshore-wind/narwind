@@ -6,7 +6,9 @@
 \usage{
 \method{plot}{narwproj}(
   ...,
+  diff = FALSE,
   interval = TRUE,
+  shade = TRUE,
   cohort = FALSE,
   noaa = FALSE,
   full = FALSE,
@@ -22,7 +24,11 @@
 \arguments{
 \item{...}{One or more objects of class \code{narwproj}, as returned by \link{predict.narwsim}.}
 
+\item{diff}{Logical. If \code{TRUE}, returns plots of the differences between pairs of projections. Defaults to \code{FALSE}.}
+
 \item{interval}{Logical. If \code{TRUE}, percentile confidence intervals are shown on the plots. Defaults to \code{TRUE}.}
+
+\item{shade}{Logical. If \code{TRUE}, confidence intervals are displayed as colored ribbons. Otherwise, confidence bounds are shown as dotted lines. Defaults to \code{TRUE}.}
 
 \item{cohort}{Logical. If \code{TRUE}, separate plots are returned for each cohort. If \code{FALSE}, a single plot for the whole population is shown. Defaults to \code{FALSE}.}
 
