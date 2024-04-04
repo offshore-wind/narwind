@@ -2,7 +2,7 @@
 #' @export
 augment <- function (x, ...) UseMethod("augment", x)
 #' @export
-write <- function(x, ...) UseMethod("write")
+export <- function(x, ...) UseMethod("export")
 #' @export
 animate <- function (x, ...) UseMethod("animate", x)
 
@@ -33,6 +33,9 @@ get_scenarios <- function(scenario = 1){
   if(scenario > 0){
   
   # vparams <- vessel_transits[, list(speed_knt = unique(speed_knt), Nvessels = sum(Nvessels)), list(category, windfarm, routeID, phase)]
+  vessel_transits <- targets::tar_read(vessel_transits)
+  turbines <- targets::tar_read(turbines)
+  vessel_routes <- targets::tar_read(vessel_routes)
   
   vparams <- vessel_transits[phase == ifelse(scenario < 3, "Construction", "Operation and maintenance")]
   
@@ -279,7 +282,7 @@ consolidate <- function(dtl, nsim, cnames, dates, months){
 }
 
 # ++ [FUNCTION] Reshape a 3D array into a 2D table
-# ++ [NOTE] Used in <write.narwproj>
+# ++ [NOTE] Used in <export.narwproj>
 # ++ [RETURN] 2D matrix.
 reshape_array <- function(a, value, ..., .id = NULL) 
 {
@@ -429,6 +432,7 @@ adjust_popvec <- function(obj){
   
   cat("N_0:", sum(propsum$N_0), "\n")
   cat("N_adj:", sum(propsum$N_adj), "\n\n")
+  print(propsum$N_adj)
   return(propsum)
   
 }
@@ -906,20 +910,42 @@ plot_raster <- function(r,
   
   world.sf <- sf::st_as_sf(world)
   
+  ocean.colour <- "#A9C9D2"
+  land.colour <- "#E1D4B2"
+  land.outline <- "#75684A"
+  country.colour <- "#E9E2D0"
+  state.colour <- "#43391F"
+  grid.line.colour <- "#D4EAEF"
+  country.text <- "#43391F"
+  scale.colour <- "#35484E"
+  ocean.feature <- "#6899A7"
+  
   p <- ggplot2::ggplot(data = dat) +  
     ggplot2::geom_tile(aes(x,y, fill = Ncol)) +
-    ggplot2::geom_sf(data = world.sf, fill = "lightgrey", color = "black", size = 0.25) +
+    ggplot2::geom_sf(data = world.sf, fill = country.colour, color = "black", size = 0.25) +
+    ggplot2::geom_sf(data = gis$map$states, fill = land.colour, col = land.outline, size = 0.15) +
+    # ggplot2::geom_sf(data = world.sf, fill = "lightgrey", color = "black", size = 0.25) +
     ylab("") + xlab("") +
-    theme_narw() + 
+    theme_narw(bbox = TRUE) + 
     ggplot2::theme(legend.title = ggplot2::element_blank(),
                    axis.text.y = ggplot2::element_text(angle = 90, hjust = 0.5, vjust = 0.5)) +
     ggplot2::coord_sf(xlim = x.lim, ylim = y.lim, expand = FALSE) +
-    # 
-    # all.breaks$mapcol
     ggplot2::scale_fill_manual(values = pals::viridis(length(levels(dat$Ncol))),
                                guide = guide_legend(reverse = TRUE),
                                drop = FALSE,
-                               na.value = "transparent")
+                               na.value = "transparent") +
+    ggplot2::annotate("text", x = 1200, y = 0,
+                      label = "ATLANTIC \nOCEAN",
+                      fontface = "bold.italic", 
+                      color = "white", size = 4) +
+    ggplot2::annotate("text", x = -100, y = 300,
+                      label = "UNITED \nSTATES",
+                      fontface = "bold",
+                      color = country.text, size = 4) +
+    ggplot2::annotate("text", x = 0, y = 1400,
+                      label = "CANADA",
+                      fontface = "bold",
+                      color = country.text, size = 4)
   
   if(!is.null(title)) p <- p + ggplot2::ggtitle(title)
   
@@ -932,12 +958,57 @@ plot_raster <- function(r,
 # ++ [RETURN] Vector of breaks
 colour_breaks <- function(dat){
   colour.breaks <- 25*c(0,0.016,0.025,0.04,0.063,0.1,0.16,0.25,0.4,0.63,1,1.6,2.5,4,6.3,10)/100
-  colour.breaks <- c(colour.breaks, seq(max(colour.breaks), ceiling(max(dat$Nhat, na.rm = TRUE)), length.out = 5))
+  # colour.breaks <- c(colour.breaks, seq(max(colour.breaks), ceiling(max(dat$Nhat, na.rm = TRUE)), length.out = 5))
   colour.breaks <- round(colour.breaks[!duplicated(colour.breaks)],3)
   return(colour.breaks)
 }
 
 # UTILITIES ------------------------------------------------------
+
+compareSim <- function(...){
+
+   args <- list(...)
+  
+   allcombs <- combn(seq_along(args), 2)
+
+   match.test <- lapply(X = 1:ncol(allcombs), FUN = function(x){
+     
+     purrr::map2(.x = args[[allcombs[1,x]]]$sim,
+                 .y = args[[allcombs[2,x]]]$sim,
+                 .f = ~{
+                  out <- data.table:::all.equal.data.table(target = .x[, list(easting, northing)], 
+                                                     current = .y[, list(easting, northing)], tolerance = 1e-3)
+                  if(is.character(out)) FALSE else out
+                     
+                 }) |> do.call(what = c)
+     })
+   
+   do.match <- do.call(match.test, what = c)
+   return(do.match)
+   
+    # match.test <- purrr::set_names(x = cohorts[id %in% cohort, abb]) |>
+    #   purrr::map(.f = ~{
+    #     exclude.cols <- c("alive", "bc", "mass", "fatmass", "leanmass",
+    #                       "abort", "delta_fat", "delta_m", "noise_resp", "noise_lvl", "strike_risk",
+    #                       "E_tot", "E_in", "E_out", "feed_effort", "LC", "t_feed", "t_rest_nurse")
+    #     dt1 <- outsim$sim[[.x]][, -exclude.cols, with = FALSE]
+    #     dt2 <- pair$sim[[.x]][, -exclude.cols, with = FALSE]
+    #     data.table:::all.equal.data.table(target = dt1, current = dt2, tolerance = 1e-3)
+    #   }) |> tibble::enframe() |>
+    #   dplyr::rename(cohort = name, paired = value) |>
+    #   tidyr::unnest(cols = c(paired)) |>
+    #   dplyr::mutate(paired = !is.character(paired)) |>
+    #   data.table::as.data.table()
+    # 
+    # if(all(match.test$paired)){
+    #   console(msg = "Match testing", suffix = tickmark())
+    # } else {
+    #   console(msg = "Match testing", suffix = crossmark())
+    # }
+
+}
+
+
 
 # ++ [FUNCTION] Round any number to desired accuracy
 # ++ [PARAM] x –– Numeric vector

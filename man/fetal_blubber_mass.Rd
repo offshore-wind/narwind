@@ -32,6 +32,8 @@ fetal_blubber_mass_vec(
 \arguments{
 \item{L}{Length of the fetus (m)}
 
+\item{BC}{Body condition at birth}
+
 \item{M_muscle}{Mass of muscles in the fetus (kg)}
 
 \item{M_viscera}{Mass of viscera in the fetus (kg)}

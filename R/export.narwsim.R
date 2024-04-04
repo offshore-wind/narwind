@@ -4,7 +4,7 @@
 #' @param obj An object of class \code{narwsim}, as returned by \code{\link{narw}}.
 #' @param prefix Character string. Output file name. Defaults to \code{"narwsim"}.
 #' @note This function 
-#' @inheritParams write.narwproj
+#' @inheritParams export.narwproj
 #' @return One Excel file per population cohort. It is recommended to only use this function for short simulation runs (\code{nsim = 100} or less, or to use the \code{cohort} and \code{whale} arguments to extract data for specific individuals/cohorts. Each output file contains multiple sheets capturing all simulation parameters, as follows:
 #' \itemize{
 #' \item \code{Attributes}: day, date, month, unique whale ID, cohort ID, alive (yes/no), age, starve (yes/no), mortality from other sources (yes/no), probability of death from other sources, body condition, body length, coefficients of the length-at-age function, total mass, lean mass, fat mass, coefficients of the mass-at-length function, mouth radius, mouth opening angle, mouth width, migration to SEUS (yes/no), migration to GSL (yes/no)
@@ -27,9 +27,9 @@
 #' \dontrun{
 #' library(narwind)
 #' m <- narw(1000)
-#' write(m)}
+#' export(m)}
 
-write.narwsim <- function(obj, 
+export.narwsim <- function(obj, 
                           prefix = "narwsim",
                           ...){
   

@@ -4,10 +4,12 @@
 \alias{map_noise}
 \title{Noise levels}
 \usage{
-map_noise(obj = NULL)
+map_noise(obj = NULL, centroid = TRUE)
 }
 \arguments{
 \item{obj}{An object of class \code{narwscenario}.}
+
+\item{centroid}{Logical. If \code{TRUE}, assumes that the noise source is at the centroid of the grid cell in which a turbine is located.}
 }
 \value{
 A list containing noise layers for each day, in \code{SpatialGridDataFrame} format.

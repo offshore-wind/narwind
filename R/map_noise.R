@@ -3,6 +3,7 @@
 #' Generates rasters describing the daily noise footprint of selected wind farms, as defined in a scenario object.
 #' 
 #' @param obj An object of class \code{narwscenario}.
+#' @param centroid Logical. If \code{TRUE}, assumes that the noise source is at the centroid of the grid cell in which a turbine is located.
 #' @return A list containing noise layers for each day, in \code{SpatialGridDataFrame} format.
 #' @note The function relies on a simple propagation model which assumes that transmission loss depends on both log-range and frequency-specific absorption. The model is of the form: TL = b x log10R + a x R, where b = 15 and a = 1.175 by default. The resultant sound pressure level (SPL) from multiple sources is calculated based on the logarithmic addition of sound intensities from each source.
 #' @export
@@ -12,7 +13,7 @@
 #' noisemaps <- map_noise(obj = scenario_01)
 #' }
 
-map_noise <- function(obj = NULL){
+map_noise <- function(obj = NULL, centroid = TRUE){
   
   # Function checks
   if(!inherits(obj, "narwscenario")) stop("Input object must be of class <narwscenario>.")
@@ -22,12 +23,13 @@ map_noise <- function(obj = NULL){
   ambient.db <- obj$ambient
   source.lvl <- obj$sourceLvL
   attenuation <- obj$lowerdB
-
+  phase <- obj$phase
+  
   date_seq <- get_dates()
   ambient.r <- dummy_raster(value = ambient.db)
   coords <- raster::coordinates(ambient.r)
   
-  if(nrow(turbines.df) > 0){
+  if(phase < 2){
     
     # Strip years from dates
     turbines.df$date <- format(as.Date(turbines.df$date), "%d-%m")
@@ -41,8 +43,11 @@ map_noise <- function(obj = NULL){
     
     turbines.df$soundLvL <- lapply(1:nrow(turbines.xy), FUN = function(x){
       pb$tick()
+      if(centroid){
       r <- raster::distanceFromPoints(ambient.r, coords[raster::cellFromXY(ambient.r, turbines.xy[x,]),]) # Assume that turbine is at centroid
-      # r <- raster::distanceFromPoints(ambient.r, x) # Or calculate turbine-centroid distance
+      } else {
+      r <- raster::distanceFromPoints(ambient.r, turbines.xy[x, c("x", "y")])
+      }
       r[which(is.na(ambient.r[]))] <- NA
       dB <- km2dB(r, SL = source.lvl, mitigation = attenuation)
       dB[dB < ambient.db] <- ambient.db
@@ -77,15 +82,12 @@ map_noise <- function(obj = NULL){
       }
     })
     names(sound.out) <- date_seq
+    console("Summing sound fields", tickmark())
     
   } else {
-    
     sound.out <- purrr::map(.x = date_seq, .f = ~ ambient.r)
     names(sound.out) <- date_seq
-    
   }
- 
-  console("Summing sound fields", tickmark())
   
   sound.out <- purrr::map(.x = sound.out, .f = ~as(.x, "SpatialGridDataFrame"))
   return(sound.out)

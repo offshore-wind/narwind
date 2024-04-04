@@ -67,6 +67,7 @@ map_vessels <- function(obj = NULL,
   start.month <- obj$start.month
   start.day <- obj$start.day
   piles.per.day <- obj$piles.per.day
+  phase <- obj$phase
   
   # Determine if dates have been supplied
   has.dates <- "date" %in% names(turbines)
@@ -97,70 +98,75 @@ map_vessels <- function(obj = NULL,
   # Add projected coordinates if missing
   if(nrow(turbines) > 0 & !all(c("x", "y") %in% names(turbines))) turb <- add_xy(turbines)
   
-  if(!has.dates){
-    
-    # If dates are not provided, need to compute them
-    if(!nrow(turbines)==0){
+  if(phase < 2){
+    if(!has.dates){
       
-      # Format piling dates
-      start.day <- stringr::str_pad(start.day, width = 2, pad = "0")
-      
-      # Duration of piling activities
-      piling.durations <- ceiling(n.turbines / piles.per.day)
-      
-      start.date <- paste0(lubridate::year(lubridate::now())+1,
-                           stringr::str_pad(start.month, width = 2, pad = "0"), start.day)
-      
-      piling.dates <- purrr::map2(
-        .x = start.date,
-        .y = piling.durations,
-        .f = ~ {
-          out <- seq(
-            from = lubridate::ymd(.x),
-            by = "day",
-            length.out = .y
-          )
-          if(any(grepl(pattern = "02-29", x = out))){
-            out <- out[which(!grepl(pattern = "02-29", x = out))]
-            out <- c(out, out[length(out)] + 1)
-          }
-          out
-        })
+      # If dates are not provided, need to compute them
+      if(!nrow(turbines)==0){
+        
+        # Format piling dates
+        start.day <- stringr::str_pad(start.day, width = 2, pad = "0")
+        
+        # Duration of piling activities
+        piling.durations <- ceiling(n.turbines / piles.per.day)
+        
+        start.date <- paste0(lubridate::year(lubridate::now())+1,
+                             stringr::str_pad(start.month, width = 2, pad = "0"), start.day)
+        
+        piling.dates <- purrr::map2(
+          .x = start.date,
+          .y = piling.durations,
+          .f = ~ {
+            out <- seq(
+              from = lubridate::ymd(.x),
+              by = "day",
+              length.out = .y
+            )
+            if(any(grepl(pattern = "02-29", x = out))){
+              out <- out[which(!grepl(pattern = "02-29", x = out))]
+              out <- c(out, out[length(out)] + 1)
+            }
+            out
+          })
+        
+      } else {
+        
+        piling.durations <- rep(365, nfarms)
+        piling.dates <- purrr::map(.x = seq_len(nfarms), .f = ~get_dates(gantt = TRUE))
+        
+      }
       
     } else {
       
-      piling.durations <- rep(365, nfarms)
-      piling.dates <- purrr::map(.x = seq_len(nfarms), .f = ~get_dates(gantt = TRUE))
+      piling.durations <- turbines[,list(duration = length(unique(date))),windfarm]$duration
+      piling.dates <- lapply(X = seq_len(nfarms), FUN = function(a) turbines[windfarm == a,]$date)
       
     }
     
+    # Determine the number of days during which piling occurs in each month
+    if (!nrow(turbines)==0) {
+      
+      piling.mdays <- lapply(X = piling.dates, FUN = function(x) {
+        tb <- table(lubridate::month(x))
+        out <- rep(0, 12)
+        out[as.numeric(names(tb))] <- as.numeric(tb)
+        out
+      })
+      
+      if (!all.equal(sapply(X = piling.dates, length), piling.durations)) warning("Dates do not match piling durations")
+      
+      # Calculate the proportions of piling days in each month of piling
+      piling.prop <- lapply(X = piling.mdays, FUN = function(x) x / sum(x))
+      
+    } else {
+      
+      # During the operations phase
+      piling.prop <- lapply(1:nfarms, FUN = function(x) rep(1/max(which.month),max(which.month)))
+    }
   } else {
     
-    piling.durations <- turbines[,list(duration = length(unique(date))),windfarm]$duration
-    piling.dates <- lapply(X = seq_len(nfarms), FUN = function(a) turbines[windfarm == a,]$date)
+    piling.prop <- lapply(1:nfarms, FUN = function(x) rep(1,max(which.month)))
     
-  }
-  
-  
-  # Determine the number of days during which piling occurs in each month
-  if (!nrow(turbines)==0) {
-    
-    piling.mdays <- lapply(X = piling.dates, FUN = function(x) {
-      tb <- table(lubridate::month(x))
-      out <- rep(0, 12)
-      out[as.numeric(names(tb))] <- as.numeric(tb)
-      out
-    })
-    
-    if (!all.equal(sapply(X = piling.dates, length), piling.durations)) warning("Dates do not match piling durations")
-
-    # Calculate the proportions of piling days in each month of piling
-    piling.prop <- lapply(X = piling.mdays, FUN = function(x) x / sum(x))
-    
-  } else {
-    
-    # During the operations phase
-    piling.prop <- lapply(1:nfarms, FUN = function(x) rep(1/12,12))
   }
 
   ##'...............................

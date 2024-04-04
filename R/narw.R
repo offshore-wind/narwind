@@ -31,28 +31,32 @@ narw <- function(nsim = 1e3,
                  n.cores = NULL,
                  starvation.death = 0.005,
                  starvation.onset = 0.05,
-                 prey.scalar = 35,
+                 prey.scalar = 29,
                  progress = TRUE,
                  ...){
   
+  # Match random seed if pairing scenario is provided
+  # if(!is.null(attr(pair,"seed"))){
+  #   assign(".Random.seed",  attr(pair, "seed"), .GlobalEnv)
+  # }
+  
+  if(!is.null(attr(pair,"seed"))){
+    rdseed <- attr(pair,"seed")
+  } else {
+    rdseed <- sample(1:10000, size = 1)
+  }
+  
+  set.seed(rdseed)
+  
   # Harvest the state of the random seed
-  rdseed <- get(".Random.seed", .GlobalEnv)
+  # rdseed <- get(".Random.seed", .GlobalEnv)
+  # rdseed <- rdseed[whichseed]
   
   # Function ellipsis –– optional arguments
   args <- list(...)
   
   # Start stopwatch
   start.time <- Sys.time()
-  
-  # nsim = 1
-  # scenario = NULL
-  # pair = NULL
-  # label= ""
-  # n.cores = 6
-  # piling.hrs = 4
-  # progress = TRUE
-  # cohort = 3
-  
   
   ##'...............................
   ## Function checks ----
@@ -92,11 +96,6 @@ narw <- function(nsim = 1e3,
   ##'...............................
   ## Initialization & DEFAULT VALUES ----
   ##''...............................
-  
-  # Match random seed if baseline scenario is provided
-  if(!is.null(attr(pair,"seed"))){
-    assign(".Random.seed",  attr(pair, "seed"), .GlobalEnv)
-  }
   
   # Scenario object
   if(!is.null(scenario) & is.numeric(scenario)) scenario <- get(paste0("scenario_0", scenario))
@@ -180,17 +179,28 @@ narw <- function(nsim = 1e3,
                                                                '2' = "Operation & Maintenance")), "\n")
   if(!is.null(scenario)){
     
-    cat("+ Windfarms: N =", length(unique(scenario$locs$windfarm)), "\n\n")
-    cat("––– Piling activities:\n\n")
+    cat("+ Windfarms: N =", length(unique(scenario$locs$windfarm)), "\n")
     
+    if(scenario$phase < 2){
+    cat("\n")
+    cat("––– Piling activities:\n\n")
     purrr::walk(.x = unique(scenario$locs$windfarm),
                 .f = ~{
-                  cat("+ Wind farm", .x, ":", as.character(format(as.Date(min(scenario$locs[windfarm == .x, ]$date)), "%b-%d")),
-                      "(start) ---->", 
+                  cat("+ Wind farm", .x, ": ", 
+                      paste0(as.character(format(as.Date(min(scenario$locs[windfarm == .x, ]$date)), "%b-%d")),
+                      " (start) ---->", 
                       as.character(format(as.Date(max(scenario$locs[windfarm == .x, ]$date)), "%b-%d")),
-                      "(end) @", scenario$piles.per.day, "[pile(s) / day]\n")
-                  
+                      " (end) @", scenario$piles.per.day, "[pile(s) / day]\n"), sep = "")
                 })
+    cat("\n")
+    cat("––– Piling noise:\n\n")
+    cat("+ Ambient noise level:", scenario$ambient, "[dB]\n")
+    cat("+ Source level:", scenario$sourceLvL, "[dB]\n")
+    cat("+ Noise mitigation:", scenario$lowerdB, "[dB]\n")
+    cat("+ Log range coefficient:", scenario$logrange, "\n")
+    cat("+ Sound absorption coefficient:", scenario$absorb, "[dB/km]\n")
+    cat("+ Duration of foraging cessation:", piling.hrs, "[hrs]\n")
+    }
     
     cat("\n")
     cat("––– Vessel traffic:\n\n")
@@ -216,22 +226,6 @@ narw <- function(nsim = 1e3,
     
     print(knitr::kable(vout, format = "simple"))
     cat("\n")
-    
-    cat("––– Piling noise:\n\n")
-    cat("+ Ambient noise level:", scenario$ambient, "[dB]\n")
-    cat("+ Source level:", scenario$sourceLvL, "[dB]\n")
-    cat("+ Noise mitigation:", scenario$lowerdB, "[dB]\n")
-    cat("+ Log range coefficient:", scenario$logrange, "\n")
-    cat("+ Sound absorption coefficient:", scenario$absorb, "[dB/km]\n")
-    cat("+ Duration of foraging cessation:", piling.hrs, "[hrs]\n")
-    
-    # Scenario must be an object of class <narwscenario>, i.e., a list with the following items:
-    # 
-    # ** VESSEL TRAFFIC **
-    # - Turbine locations and piling dates (data.frame) -- compulsory fields: windfarm, x, y, date
-    # - Vessel routes (shapefile) -- compulsory fields: routeID, windfarm
-    # - Vessel traffic parameters (data.frame) -- compulsory fields: category, windfarm, routeID, speed_knt, Nvessels
-    
     
   }
   cat("\n––– Execution:\n\n")
@@ -355,7 +349,7 @@ narw <- function(nsim = 1e3,
   map_resolution_vessels <- vesselmaps[[1]]@grid@cellsize
   vesselmaps <- lapply(vesselmaps[layerIDs], raster::as.matrix)
   
-  # Piling noise - daily rasters (365 days)
+  # Piling noise - daily rasters
   
   console(msg = "Starting up", suffix = tickmark())
   
@@ -365,12 +359,9 @@ narw <- function(nsim = 1e3,
     
   } else {
     
-    noisemaps <- lapply(date_seq, FUN = function(x) {
-      n <- raster::as.matrix(density_narw[[1]])
-      n[!is.na(n)] <- ambient.dB
-      n
-    })
-    
+    ambient.r <- as(dummy_raster(value = ambient.dB), "SpatialGridDataFrame")
+    noisemaps <- lapply(date_seq, FUN = function(x) ambient.r)
+    names(noisemaps) <- date_seq
   }
   
   map_limits_noise <- map_limits
@@ -484,6 +475,7 @@ narw <- function(nsim = 1e3,
     cl <- snow::makeSOCKcluster(n.cores)
     doSNOW::registerDoSNOW(cl)
     on.exit(snow::stopCluster(cl))
+    parallel::clusterSetRNGStream(cl, rdseed)
     
     # cl <- snow::makeCluster(n.cores, outfile = "")
     # dl <- file("runlog.Rout", open = "wt")
@@ -517,6 +509,11 @@ narw <- function(nsim = 1e3,
                               
                               # Set environments
                               .GlobalEnv$coords <- coords
+                              
+                              # # Match random seed if baseline scenario is provided
+                              # if(!is.null(attr(pair,"seed"))){
+                              #   assign(".Random.seed",  attr(pair, "seed"))
+                              # }
                               
                               # Only used for package development purposes
                               if(pkgdev) Rcpp::sourceCpp("src/simtools.cpp")
@@ -898,37 +895,6 @@ narw <- function(nsim = 1e3,
   console(msg = "Fitting terminal functions", suffix = tickmark())
   
   # ............................................................
-  # Check that scenarios match
-  # ............................................................
-  
-  if(!is.null(pair)){
-    
-    console(msg = "Match testing")
-    
-    match.test <- purrr::set_names(x = cohorts[id == cohort, abb]) |>
-      purrr::map(.f = ~{
-        exclude.cols <- c("alive", "bc", "mass", "fatmass", "leanmass",
-                          "abort", "delta_fat", "delta_m", "noise_resp", "noise_lvl", "strike_risk",
-                          "E_tot", "E_in", "E_out", "feed_effort", "LC", "t_feed", "t_rest_nurse")
-        dt1 <- outsim$sim[[.x]][, -exclude.cols, with = FALSE]
-        dt2 <- pair$sim[[.x]][, -exclude.cols, with = FALSE]
-        data.table:::all.equal.data.table(target = dt1, current = dt2, tolerance = 1e-3)
-      }) |> tibble::enframe() |>
-      dplyr::rename(cohort = name, pair = value) |>
-      tidyr::unnest(cols = c(pair)) |>
-      data.table::as.data.table()
-    
-    if(all(match.test$pair)){
-      console(msg = "Match testing", suffix = tickmark())
-    } else {
-      console(msg = "Match testing", suffix = crossmark())
-    }
-    
-  } else {
-    match.test <- list(NULL)
-  }
-  
-  # ............................................................
   # Add parameters to list output
   # ............................................................
   
@@ -949,7 +915,6 @@ narw <- function(nsim = 1e3,
                                          onset = starvation.onset,
                                          coefs = mortality_coefs),
                        nurse_cease = cease.nursing,
-                       pair = match.test,
                        strike.scalar = strike.scalar,
                        prey.scalar = prey.scalar,
                        # step = step.size,

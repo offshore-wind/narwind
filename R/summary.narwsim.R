@@ -345,6 +345,7 @@ summary.narwsim <- function(obj,
                             aes(x = date, y = bc_mean, group = q, colour = q)
                           } else {
                           aes(x = date, y = bc, group = whale)}) +
+            # ggplo2::geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
             ggplot2::geom_path(alpha = ifelse(quintile, 1, 0.15), linewidth = ifelse(quintile, 0.5, 0.25)) +
             {if(!.x == 5) ggplot2::facet_wrap(vars(cohort_name), scales = 'free') } +
             {if(.x == 5) ggplot2::facet_grid(vars(animal), vars(cohort_name), scales = 'free')} +

@@ -20,10 +20,10 @@
 #' m <- narw(1000)
 #' m <- augment(m)
 #' prj <- predict(m)
-#' write(m)
+#' export(m)
 #' }
 
-write.narwproj <- function(obj, 
+export.narwproj <- function(obj, 
                            prefix = "narwproj",
                            ...){
   

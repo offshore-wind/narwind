@@ -33,8 +33,14 @@ NULL
 #' @name RMR
 NULL
 
-rtnorm <- function(mean, sd, low, high) {
-    .Call('_narwind_rtnorm', PACKAGE = 'narwind', mean, sd, low, high)
+#' Random deviate from a truncated Normal distribution
+#' 
+#' @param location Location parameter
+#' @param scale Scale parameter
+#' @param L Lower bound
+#' @param U Upper bound
+rtnorm <- function(location, scale, L, U) {
+    .Call('_narwind_rtnorm', PACKAGE = 'narwind', location, scale, L, U)
 }
 
 estBetaParams <- function(mu, std) {
@@ -134,6 +140,10 @@ age2length_vec <- function(age) {
     .Call('_narwind_age2length_vec', PACKAGE = 'narwind', age)
 }
 
+a2l_vec <- function(age, gompertz) {
+    .Call('_narwind_a2l_vec', PACKAGE = 'narwind', age, gompertz)
+}
+
 mL <- function(n = 1L, sd = FALSE) {
     .Call('_narwind_mL', PACKAGE = 'narwind', n, sd)
 }
@@ -142,8 +152,12 @@ length2mass <- function(L, param, lean = 0.5554227) {
     .Call('_narwind_length2mass', PACKAGE = 'narwind', L, param, lean)
 }
 
-length2mass_vec <- function(L, lean = 0.5435686) {
+length2mass_vec <- function(L, lean = 0.5554227) {
     .Call('_narwind_length2mass_vec', PACKAGE = 'narwind', L, lean)
+}
+
+L2mass_vec <- function(L, param, lean = 0.5554227) {
+    .Call('_narwind_L2mass_vec', PACKAGE = 'narwind', L, param, lean)
 }
 
 increment_cohort <- function(alive, cohort, age, female, bc, min_bc, reprod, abort) {
@@ -285,6 +299,7 @@ fetal_tissue_mass_vec <- function(P_b, L) {
 #' Fetal blubber mass
 #' @name fetal_blubber_mass
 #' @param L Length of the fetus (m)
+#' @param BC Body condition at birth
 #' @param M_muscle Mass of muscles in the fetus (kg)
 #' @param M_viscera Mass of viscera in the fetus (kg)
 #' @param M_bones Mass of bone tissues in the fetus (kg)

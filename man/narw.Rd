@@ -13,7 +13,7 @@ narw(
   n.cores = NULL,
   starvation.death = 0.005,
   starvation.onset = 0.05,
-  prey.scalar = 35,
+  prey.scalar = 29,
   progress = TRUE,
   ...
 )
