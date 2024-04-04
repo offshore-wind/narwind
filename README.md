@@ -11,10 +11,10 @@
 <!-- badges: end -->
 
 The `narwind` R package provides methods to forecast the abundance of
-critically endangered North Atlantic right whales (*Eubalaena
+critically endangered North Atlantic right whales (NARW, *Eubalaena
 glacialis*) in the context of user-defined offshore wind development
 scenarios. `narwind` implements a spatially-explicit bioenergetic PCoMS
-model (*sensu* Pirotta et al. (2018)), whereby the movements of
+model (Pirotta et al. 2023, 2018, 2022), whereby the movements of
 different NARW cohorts (juveniles, adult males, pregnant females,
 resting females, lactating females + dependent calves) are simulated
 throughout a full calendar year, and population size projections are
@@ -49,10 +49,9 @@ devtools::install_github("offshore-wind/narwind")
 Note that the package relies on compiled code (C++) and functionality
 provided by the
 [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) package.
-The `Rtools` software may be needed on Windows machines.
-
-Installation instructions can be found at
-<https://cran.r-project.org/bin/windows/Rtools/rtools40.html>
+Because of this, development tools are required to run the code. Please
+refer to the tutorial vignette for full instructions on package
+installation for various operating systems.
 
 ## Background
 
@@ -129,17 +128,25 @@ U.S. Bureau of Ocean Energy Management (BOEM, Contract 140M0121C0008).
 
 We are grateful for the technical support received from the following
 individuals and organizations, all of whom provided data and/or
-analytical expertise: NOAA’s National Marine Fisheries Service (Eric
-Patterson, Lance Garrison, Jeff Adams, Hannah Blondin, Dan Linden, Laura
-Solinger), the North Atlantic Right Whale Consortium, the New England
-Aquarium (Heather Pettis, Amy Knowlton, Philip Hamilton), WHOI (Carolyn
-Miller), IFAW (Sarah Sharp), the MERIDIAN Initiative at Dalhousie
-University (Romina Gehrmann, Matthew Smith), Fisheries and Oceans Canada
-(Caroline Lehoux, Stéphane Plourde), the North Atlantic Fisheries
-Organization, and the ONR-SERDP funded PCOMS project. We also thank
-Susanna Blackwell, Susan Parks, Elizabeth Henderson, Brandon Southall,
-Paul Wensveen, and Aimee Darias O’Hara for their contributions to the
-expert elicitation on right whale sensitivity to piling noise.
+analytical expertise: BOEM (Kyle Baker, James Price, Gregory Fulling,
+Mary Boatman, Ian Slayton, Sam Denes, Stanley Labak, Alex Conrad, Brian
+Hooker), CSA Ocean Sciences (Tara Stevens, Mary Jo Barkaszi, Kim Olsen),
+NOAA’s National Marine Fisheries Service (Eric Patterson, Lance
+Garrison, Jeff Adams, Hannah Blondin, Dan Linden, Laura Solinger),
+NOAA’s Decision Support Tool team (Burton Shank, Marisa Trego, Michael
+Asaro, Laura Solinger), the North Atlantic Right Whale Consortium, the
+New England Aquarium (Heather Pettis, Amy Knowlton, Philip Hamilton,
+Jessica Redfern), Woods Hole Oceanographic Institution (Carolyn Miller),
+the International Fund for Animal Welfare (Sarah Sharp), the Bigelow
+Laboratory for Ocean Sciences (Nick Record, Camille Ross), the MERIDIAN
+Initiative at Dalhousie University (Romina Gehrmann, Matthew Smith),
+Fisheries and Oceans Canada (Caroline Lehoux, Stéphane Plourde), the
+North Atlantic Fisheries Organization, and the ONR-SERDP funded PCOMS
+project. We also thank Fredrik Christiansen for guidance on the
+parameterization of the bioenergetic sub-model, and Susanna Blackwell,
+Susan Parks, Elizabeth Henderson, Brandon Southall, Paul Wensveen, and
+Aimee Darias O’Hara for their contributions to the expert elicitation on
+right whale sensitivity to piling noise.
 
 ## Relevant literature
 
@@ -240,6 +247,17 @@ Harwood, Vincent Hin, Ladd M. Irvine, et al. 2019.
 environment: modelling lifetime reproductive success to predict the
 consequences of multiple stressors on a migratory population</span>.”
 *Oikos* 128 (9): 1340–57. <https://doi.org/10.1111/oik.06146>.
+
+</div>
+
+<div id="ref-Pirotta2023" class="csl-entry">
+
+Pirotta, Enrico, Robert S. Schick, Philip K. Hamilton, Catriona M.
+Harris, Joshua Hewitt, Amy R. Knowlton, Scott D. Kraus, et al. 2023.
+“<span class="nocase">Estimating the effects of stressors on the health,
+survival and reproduction of a critically endangered, long-lived
+species</span>.” *Oikos* 2023 (5): e09801.
+<https://doi.org/10.1111/oik.09801>.
 
 </div>
 
