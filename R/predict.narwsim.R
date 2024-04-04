@@ -70,21 +70,25 @@ predict.narwsim <- function(...,
   if(yrs <= 0) stop("<yrs> must be a positive integer")
   if(piling <= 0) stop("<piling> must be a positive integer")
   
-  # If only one object is supplied, must either baseline conditions or O&M
+  # If only one object is supplied, must be baseline conditions
   if(length(obj) == 1){
     # Change <piling> if only baseline has been provided
     if(obj[[1]]$scenario$phase == 0 & piling < yrs) piling <- yrs + 1 
     if(obj[[1]]$scenario$phase == 1) stop("Missing O&M scenario")
+    if(obj[[1]]$scenario$phase == 2) stop("Missing baseline scenario")
     # Change <piling> if only O&M has been provided
-    if(obj[[1]]$scenario$phase == 2 & piling < yrs) piling <- yrs + 1 
+    # if(obj[[1]]$scenario$phase == 2 & piling < yrs) piling <- yrs + 1 
   }
   
+  phases <- sapply(X = obj, FUN = function(o) o$scenario$phase)
+  
   # If multiple objects are supplied
-  if(length(obj) > 1 & sum(duplicated(purrr::map(.x = obj, .f = ~.x$scenario$phase))) > 0) stop("Duplicate scenarios detected.")
+  if(length(obj) > 1 & sum(duplicated(phases)) > 0) stop("Duplicate scenarios detected.")
+  
   if(length(obj) > 1 & piling < yrs){
-    if(piling > 1 & all(purrr::map_dbl(.x = obj, .f = ~.x$scenario$phase) %in% 1:2)) stop("Missing baseline scenario")
-    if(all(purrr::map_dbl(.x = obj, .f = ~.x$scenario$phase) %in% c(0,2))) stop("Missing construction scenario")
-    if(all(purrr::map_dbl(.x = obj, .f = ~.x$scenario$phase) %in% 0:1)) stop("Missing O&M scenario")
+    if(piling > 1 & all(phases %in% 1:2)) stop("Missing baseline scenario")
+    if(all(phases %in% c(0,2))) piling <- yrs + 1
+    if(all(phases %in% 0:1)) stop("Missing O&M scenario")
   }
   
   # Current year
@@ -116,12 +120,15 @@ predict.narwsim <- function(...,
   #'------------------------------------------------------
   
   # Define schedule of wind farm development
-  phases <- sapply(X = obj, FUN = function(o) o$scenario$phase)
   phase.names <- c("base", "const", "ops")[phases+1]
   schedule <- rep(0, yrs+1)
   if(piling < yrs){
     schedule[piling + 1] <- 1
     schedule[(piling + 2): (yrs+1)] <- 2
+  } else if (piling > yrs){
+    if(sum(phases) > 0){
+      schedule[(burn.in + 1): (yrs+1)] <- 2
+    }
   }
   names(schedule) <- paste0("yr ", 0:yrs)
   
@@ -209,6 +216,7 @@ predict.narwsim <- function(...,
     N_0[N_0 > 200] <- N_0[N_0 > 200] - 1
   } else {
     N_0 <- c(9, 45, 168, 8, 39, 17, 13, 57)
+    # N_0 <- c(4, 24, 197, 4, 20, 8, 10, 89)
   }
   names(N_0) <- cohorts.proj[, name]
   
@@ -274,13 +282,16 @@ predict.narwsim <- function(...,
   
   narw.individuals <- vector(mode = "list", length = n)
   
+  schedule.phases <- schedule + 1
+  if(sum(phases) == 2) schedule.phases[schedule.phases == 3] <- 2
+  
   for(prj in 1:n){
     
     # Update progress bar
     if(progress) pb$tick()
     
     # Initial development phase
-    initial.phase <- phase.names[schedule[1] + 1]
+    initial.phase <- phase.names[schedule.phases[1]]
     
     # Create matrices and initialize them
     # rows: years <yrs>
@@ -327,7 +338,7 @@ predict.narwsim <- function(...,
   # })
     
     bc_dist <- data.table::data.table(
-      cohort = unique(obj[[schedule[1] + 1]]$gam$dat$cohort),
+      cohort = unique(obj[[schedule.phases[1]]]$gam$dat$cohort),
       mean = c(0.3593643, 0.4125728, 0.4336672, 0.4608405, 0.4537379, 0.5369984, 0.3669689),
       sd = c(0.07952667, 0.05916375, 0.06419653, 0.05955169, 0.05712539, 0.06022515, 0.13665292)
     )
@@ -402,13 +413,13 @@ predict.narwsim <- function(...,
     #'------------------------------------------------------
     # Loop over years
     #'------------------------------------------------------
-    
+
     for(i in 2:(yrs+1)){
       
       if(tot.pop[prj, i-1] > 0) {
         
         # Current phase of development
-        current.phase <- phase.names[schedule[i]+1]
+        current.phase <- phase.names[schedule.phases[i]]
         
         if(param){
           
