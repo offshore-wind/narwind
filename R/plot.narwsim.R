@@ -34,11 +34,13 @@ plot.narwsim <- function(obj,
   # Default values
   if("nL" %in% names(args)) nL <- args[["nL"]] else nL <- 100
   if("lwd" %in% names(args)) lwd <- args[["lwd"]] else lwd <- 0.2
+  if("alpha" %in% names(args)) alpha <- args[["alpha"]] else alpha <- 0.7
   if("bymonth" %in% names(args)) bymonth <- args[["bymonth"]] else bymonth <- FALSE
   if("bywhale" %in% names(args)) bywhale <- args[["bywhale"]] else bywhale <- FALSE
   if("cohort" %in% names(args)) cohortID <- args[["cohort"]] else cohortID <- obj$param$cohort
   if("whale" %in% names(args)) whaleID <- args[["whale"]] else whaleID <- 1:obj$param$nsim
   if("vid" %in% names(args)) vid <- args[["vid"]] else vid <- "gif"
+  if("bbox" %in% names(args)) bbox <- args[["bbox"]] else bbox <- TRUE
   
   if(bymonth & bywhale) stop("<bymonth> and <bywhale> cannot both be set to TRUE")
   
@@ -150,17 +152,18 @@ plot.narwsim <- function(obj,
           
           ggplot2::ggplot(data = sample.df, aes(x = start_bc, y = pred)) +
             ggplot2::geom_line(aes(group = mcmc), colour = "grey", alpha = 0.2) +
+            {if(.x == "bc") ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dotted") } +
             ggplot2::geom_line(data = mean_pred, linewidth = linewidth) +
             ggplot2::geom_rug(data = data.pts, sides = "b") +
             ggplot2::facet_wrap(vars(cohort), scales = "free_y", 
                                 labeller = ggplot2::labeller(cohort = facet.names)) +
             {if(.x == "surv") ggplot2::scale_y_continuous(limits = c(0,1))} +
             {if(.x == "bc") ggplot2::scale_y_continuous(limits = c(0, find_maxBC()))} +
-            theme_narw() +
-            xlab("Starting body condition (%)") +
+            theme_narw(bbox = bbox) +
+            xlab("Starting body condition (relative reserve mass)") +
             ylab(dplyr::case_when(
               .x == "surv" ~ "p(survival)",
-              .x == "bc" ~ "Final body condition (%)",
+              .x == "bc" ~ "Final body condition (relative reserve mass)",
               .default = ""
             ))
         }
@@ -201,7 +204,7 @@ plot.narwsim <- function(obj,
     # ....................................
     
     gg.opts <- ggplot2::ggplot() + 
-      ggplot2::geom_sf(data = support_grd, fill = "orange", linewidth = 0, na.rm = TRUE, alpha = 0.5) +
+      ggplot2::geom_sf(data = support_grd, fill = "orange", linewidth = 0, na.rm = TRUE, alpha = 0.6) +
       ggplot2::xlab("") +
       ggplot2::ylab("")
     
@@ -254,7 +257,7 @@ plot.narwsim <- function(obj,
     # Basemap (land)
     base_p <- gg.opts + 
       ggplot2::geom_sf(data = sf::st_as_sf(world), fill = "lightgrey", color = "black", linewidth = 0.25) +
-      theme_narw(vertical = TRUE)
+      theme_narw(vertical = TRUE, bbox = bbox)
     
     create_map <- function(input.tracks){
       
@@ -279,7 +282,7 @@ plot.narwsim <- function(obj,
               data = input.tracks,
               mapping = ggplot2::aes(
                 x = easting, y = northing, group = whale,
-                col = factor(whale)), alpha = 0.7, linewidth = lwd) +
+                col = factor(whale)), alpha = alpha, linewidth = lwd) +
             {if (length(whaleID) <= 10) ggplot2::scale_color_manual(values = whale)} +
             {if (length(whaleID) <= 10) ggnewscale::new_scale_colour()}
           
@@ -311,7 +314,7 @@ plot.narwsim <- function(obj,
                 mapping = ggplot2::aes(x = easting, 
                                        y = northing, 
                                        group = whale), 
-                alpha = 0.7, 
+                alpha = alpha, 
                 linewidth = lwd) +
               
               # Mortality - adults
