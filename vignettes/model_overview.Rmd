@@ -28,6 +28,17 @@ knitr::opts_chunk$set(
   comment = "#>")
 ```
 
+```{r, echo = FALSE}
+downloadthis::download_link(
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/99df759f85ce0f5d495a864a5d35bc854b5951d9/vignettes/pdf/getting_started.pdf",
+  button_label = "Download PDF",
+  button_type = "primary",
+  has_icon = TRUE,
+  icon = "fa fa-file-pdf",
+  self_contained = FALSE
+)
+```
+
 ## Preamble
 
 This tutorial provides a brief description of the bioenergetic model. For full technical details, please refer to the accompanying project report.

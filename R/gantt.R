@@ -6,7 +6,7 @@
 #' @export
 #' @author Phil J. Bouchet
 #' @return A ggplot2 object
-gantt_chart <- function(obj){
+gantt <- function(obj){
   
   routes <- obj$routes |> do.call(what = rbind)
   turbines <- obj$locs

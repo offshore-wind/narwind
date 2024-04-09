@@ -1,6 +1,6 @@
 navbar:
   structure:
-    left:  [intro, reference, articles, tutorials, news]
+    left:  [intro, articles, tutorials, news]
     right: [search, github]
   components:
     articles:

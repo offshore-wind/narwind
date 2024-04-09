@@ -28,6 +28,17 @@ knitr::opts_chunk$set(
   comment = "#>")
 ```
 
+```{r, echo = FALSE}
+downloadthis::download_link(
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/99df759f85ce0f5d495a864a5d35bc854b5951d9/vignettes/pdf/getting_started.pdf",
+  button_label = "Download PDF",
+  button_type = "primary",
+  has_icon = TRUE,
+  icon = "fa fa-file-pdf",
+  self_contained = FALSE
+)
+```
+
 ## Preamble
 
 This tutorial describes how to define custom offshore wind scenarios for use in the bioenergetic model. Preset scenarios co-developed with BOEM (for demonstration purposes) are also available.
@@ -120,8 +131,66 @@ The agent-based model uses scenario objects to define disturbance conditions in 
 
 ## Custom scenarios
 
-Users can modify the above parameters to generate bespoke scenarios for other wind farm sites of interest. This is achieved through an interactive, point-and-click Shiny app, which can be launched using the `scenario()` command.
+Users can modify the above parameters to generate bespoke scenarios for other wind farm sites of interest. This is achieved through an interactive, point-and-click Shiny app, which can be launched using the `scenario()` command. Using the assignment operator `<-`, we can save custom scenarios right from within the current R session by assigning them to R objects (e.g., `my_custom_scenario` in the example below) that can be passed to the agent-based model.
 
 ```{r app_launch, eval = FALSE}
 my_custom_scenario <- scenario()
+```
+
+### App interface
+
+The app consists of three main structural elements (Figure 2.5), namely:
+
+-   A sidebar (left) – which is used for navigation, visualization, and scenario set up.
+
+-   A text area (middle) – which displays information about the app, model parameters, and required user inputs.
+
+-   An interactive map (right) – where scenario parameters and input layers can be visualized on the fly.
+
+![**Figure 2.5.** Layout and structure of the Shiny app within narwind](shiny_main.png)
+
+The map and sidebar always stay in place, however the contents of the main text area change dynamically in response to user selections.
+
+The sidebar is split into a series of tabs (top) and tick boxes (bottom). Tabs give access to the app's features and with the exception of the Whale Density tab (which is only used for visualization purposes), allow users to modify scenario parameters. By contrast, tick boxes can only be used to toggle map layers on and off, i.e., they have no role in scenario building.
+
+The map is interactive and can be zoomed (using either the +/- buttons in the top left or a scroll of the mouse), panned (by clicking and dragging). Distance measurements can also be taken by clicking on the ruler icon in the top right and following the on-screen instructions.
+
+Designing a custom offshore wind scenario can be done in one of two ways:
+
+-   By modifying one of the three preset scenarios available in the package
+
+-   By crafting a scenario from scratch
+
+We explain how to do this in the sections below.
+
+### Scenario set up
+
+First, start by clicking on the Scenario Set Up tab. The central text area will change to reveal several drop-down menus (Figure 2.6).
+
+To adapt one of the pre-defined scenarios, choose either Scenario 1, Scenario 2, or Scenario 3 as appropriate. The parameters associated with the selected scenario will be populated throughout the rest of the app.
+
+To define a custom scenario, choose Custom Scenario. Two new fields will appear, allowing turbine locations and vessel routes to be uploaded as separate files. An additional drop-down menu will also be available to indicate whether the custom scenario relates to construction or O&M activities. This is important, as it ensures that the scenario object is correctly labeled.
+
+![**Figure 2.6.** Scenario set up tab](shiny_setup.png)
+
+Turbine locations must be provided as a `.csv` file containing a minimum of three columns (Figure 2.7): a `windfarm` column with a unique integer ID number for each wind farm site, a `longitude` column, and a `latitude` column. Optionally (strongly recommended), a `date` column can be supplied to indicate when each pile is due to be installed. If the `date` column is not provided, the day and month of operation start for each site must be given.
+
+![Figure 2.7. List of turbine locations](shiny_csv.jpg){width="500"}
+
+Similarly, vessel routes to each wind farm site must be provided as a `.shp` file of spatial line features, each with the following attributes: a `windfarm` ID (same as above) and a sequential `routeID` number (`1`, `2`, etc.) for each route associated with a particular farm.
+
+### Piling noise
+
+### Vessel traffic
+
+### Whale density
+
+### Download
+
+Once all changes to scenario parameters have been made, the scenario object can be downloaded using the green Download Scenario button located on the left.
+
+The `gantt()` function in R can be used to check that the timing of piling activities has been set up correctly in scenarios involving construction. For example:
+
+```{r}
+gantt(scenario_02)
 ```

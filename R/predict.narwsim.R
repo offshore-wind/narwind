@@ -1024,6 +1024,9 @@ predict.narwsim <- function(...,
     iucn.p <- list(NULL)
   }
   
+  # Label projections
+  
+  
   # Output list ----
   
   outproj <- list(

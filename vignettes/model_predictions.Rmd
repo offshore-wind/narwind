@@ -36,6 +36,17 @@ load("data/scenarios/boem_scenario02.rda")
 load("data/scenarios/boem_scenario03.rda")
 ```
 
+```{r, echo = FALSE}
+downloadthis::download_link(
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/99df759f85ce0f5d495a864a5d35bc854b5951d9/vignettes/pdf/getting_started.pdf",
+  button_label = "Download PDF",
+  button_type = "primary",
+  has_icon = TRUE,
+  icon = "fa fa-file-pdf",
+  self_contained = FALSE
+)
+```
+
 ## Preamble
 
 This tutorial demonstrates how to generate predictions of right whale abundance using the stochastic population model available in `narwind`.
@@ -179,6 +190,12 @@ If needed, the schedule(s) of development can be displayed as well by setting `t
 
 ```{r}
 plot(proj_base, proj_01, proj_02, proj_03, timeline = TRUE)
+```
+
+If labels are incorrect (or an error related to labeling occurs), projections can be relabeled using the `label()` function, which takes the projection object as the first argument, and the new label (between quotation marks) as the second argument. Do not forget to assign the output back to the original projection object to overwrite the previous label. For example:
+
+```{r, eval = FALSE}
+proj_01 <- label(proj_01, "Scenario 01")
 ```
 
 If predicted trends are similar, the resulting plot can be difficult to interpret. An alternative way of comparing trends is to compute the difference in predicted abundance between each pair of replicate projections. This can be done by setting the `diff` argument to `TRUE`. There is no evidence for a difference between projections if the resulting confidence interval overlaps zero.
