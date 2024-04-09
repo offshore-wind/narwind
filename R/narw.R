@@ -29,9 +29,6 @@ narw <- function(nsim = 1e3,
                  label = "",
                  piling.hrs = 4,
                  n.cores = NULL,
-                 starvation.death = 0.005,
-                 starvation.onset = 0.05,
-                 prey.scalar = 29,
                  progress = TRUE,
                  ...){
   
@@ -110,9 +107,11 @@ narw <- function(nsim = 1e3,
   # Starvation threshold expressed as relative blubber mass
   # As per Pirotta et al. (2018) - to test extreme conditions of leanness
   if("cohort" %in% names(args)) cohort <- args[["cohort"]] else cohort <- 1:6
+  if("cease.nursing" %in% names(args)) cease.nursing <- args[["cease.nursing"]] else cease.nursing <- c(FALSE, piling.hrs)
+  
+  # For package development purposes
   if("stressors" %in% names(args)) stressors <- args[["stressors"]] else stressors <- TRUE
   if("growth" %in% names(args)) growth <- args[["growth"]] else growth <- TRUE
-  if("cease.nursing" %in% names(args)) cease.nursing <- args[["cease.nursing"]] else cease.nursing <- c(FALSE, piling.hrs)
   if("pkgdev" %in% names(args)) pkgdev <- args[["pkgdev"]] else pkgdev <- FALSE
   
   # Vessel strike risk scalar.
@@ -120,7 +119,11 @@ narw <- function(nsim = 1e3,
   strike.scalar <- 1e-07
   
   # Scalar for prey surfaces
-  # prey.scalar <- 100
+  prey.scalar <- 29
+  
+  # Mortality parameters
+  starvation.death <- 0.005
+  starvation.onset <- 0.05
   
   # Step size for availability radius movement model
   # Need to divide by 2 as there are two half steps (Michelot, 2020)

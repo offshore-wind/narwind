@@ -21,9 +21,9 @@
 #' }
 
 augment.narwsim <- function(obj,
-                           n = 100000,
-                           bc.range = c(0.05, find_maxBC()),
-                           ...){
+                            n = 100000,
+                            bc.range = c(0.05, find_maxBC()),
+                            ...){
   
   # Function ellipsis
   args <- list(...)
