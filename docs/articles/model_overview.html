@@ -43,9 +43,6 @@
 <li>
   <a href="../articles/narwind.html">Get started</a>
 </li>
-<li>
-  <a href="../reference/index.html">Reference</a>
-</li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Articles
@@ -57,7 +54,7 @@
       <a href="../articles/model_overview.html">1. Overview and workflow</a>
     </li>
     <li>
-      <a href="../articles/model_predictions.html">5. Model predictions</a>
+      <a href="../articles/scenarios.html">2. Defining scenarios</a>
     </li>
     <li>
       <a href="../articles/model_run.html">3. Running the model</a>
@@ -66,7 +63,10 @@
       <a href="../articles/model_summary.html">4. Summary and diagnostics</a>
     </li>
     <li>
-      <a href="../articles/scenarios.html">2. Defining scenarios</a>
+      <a href="../articles/model_predictions.html">5. Model predictions</a>
+    </li>
+    <li>
+      <a href="../articles/model_export.html">6. Exporting data</a>
     </li>
   </ul>
 </li>
@@ -81,15 +81,15 @@
 
       
 
-      </header><div class="row">
+      </header><script src="model_overview_files/font-awesome-5.13.0/js/script.js"></script><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>1. Overview and workflow</h1>
                         <h4 data-toc-skip class="author">Phil Bouchet,
-Enrico Pirotta, Len Thomas, Catriona Harris</h4>
+Enrico Pirotta, Catriona Harris, Len Thomas</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2024-04-08</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2024-04-09</h4>
       
       
       <div class="hidden name"><code>model_overview.Rmd</code></div>
@@ -99,6 +99,9 @@ University of St Andrews<br><h4 data-toc-skip class="date">2024-04-08</h4>
 
     
     
+<a href="https://raw.githubusercontent.com/offshore-wind/narwind/99df759f85ce0f5d495a864a5d35bc854b5951d9/vignettes/pdf/getting_started.pdf" class="external-link">
+<button class="btn btn-primary"><i class="fa fa-file-pdf"></i> Download PDF</button>
+</a>
 <div class="section level2">
 <h2 id="preamble">Preamble<a class="anchor" aria-label="anchor" href="#preamble"></a>
 </h2>
@@ -299,7 +302,7 @@ steps (Figure 1.4), all of which are covered in detail in subsequent
 tutorials. These include:</p>
 <ol style="list-style-type: decimal">
 <li><p>Defining the parameters of one or more target offshore wind
-scenario(s) using the <code>scenario()</code> function.</p></li>
+scenario(s) using the <code><a href="../reference/scenario.html">scenario()</a></code> function.</p></li>
 <li><p>Running agent-based simulations using the <code><a href="../reference/narw.html">narw()</a></code>
 function, including in the absence of wind farm development activities
 (i.e., baseline conditions).</p></li>

@@ -43,9 +43,6 @@
 <li>
   <a href="../articles/narwind.html">Get started</a>
 </li>
-<li>
-  <a href="../reference/index.html">Reference</a>
-</li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Articles
@@ -57,7 +54,7 @@
       <a href="../articles/model_overview.html">1. Overview and workflow</a>
     </li>
     <li>
-      <a href="../articles/model_predictions.html">5. Model predictions</a>
+      <a href="../articles/scenarios.html">2. Defining scenarios</a>
     </li>
     <li>
       <a href="../articles/model_run.html">3. Running the model</a>
@@ -66,7 +63,10 @@
       <a href="../articles/model_summary.html">4. Summary and diagnostics</a>
     </li>
     <li>
-      <a href="../articles/scenarios.html">2. Defining scenarios</a>
+      <a href="../articles/model_predictions.html">5. Model predictions</a>
+    </li>
+    <li>
+      <a href="../articles/model_export.html">6. Exporting data</a>
     </li>
   </ul>
 </li>
@@ -81,15 +81,15 @@
 
       
 
-      </header><div class="row">
+      </header><script src="model_run_files/font-awesome-5.13.0/js/script.js"></script><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>3. Running the model</h1>
                         <h4 data-toc-skip class="author">Phil Bouchet,
-Enrico Pirotta, Len Thomas, Catriona Harris</h4>
+Enrico Pirotta, Catriona Harris, Len Thomas</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2024-04-08</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2024-04-09</h4>
       
       
       <div class="hidden name"><code>model_run.Rmd</code></div>
@@ -99,14 +99,18 @@ University of St Andrews<br><h4 data-toc-skip class="date">2024-04-08</h4>
 
     
     
+<a href="https://raw.githubusercontent.com/offshore-wind/narwind/99df759f85ce0f5d495a864a5d35bc854b5951d9/vignettes/pdf/getting_started.pdf" class="external-link">
+<button class="btn btn-primary"><i class="fa fa-file-pdf"></i> Download PDF</button>
+</a>
 <div class="section level2">
 <h2 id="preamble">Preamble<a class="anchor" aria-label="anchor" href="#preamble"></a>
 </h2>
 <p>This tutorial demonstrates how to run the agent-based model within
 the <code>narwind</code> R package.</p>
-<div class="section level3">
-<h3 id="running-the-model">Running the model<a class="anchor" aria-label="anchor" href="#running-the-model"></a>
-</h3>
+</div>
+<div class="section level2">
+<h2 id="running-the-model">Running the model<a class="anchor" aria-label="anchor" href="#running-the-model"></a>
+</h2>
 <p>Once the package is loaded (see Tutorial 1), the agent-based model is
 run by calling the <code><a href="../reference/narw.html">narw()</a></code> function. By default, the model
 will simulate n = 1,000 individuals for each of the six population
@@ -114,7 +118,7 @@ cohorts considered, under baseline conditions reflecting the absence of
 any wind farm development activity. This default model can be run by
 typing:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">baseline_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">model_base</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>Several arguments can be passed to <code><a href="../reference/narw.html">narw()</a></code>, as listed
 below. We detail each of them in subsequent sections.</p>
 <table class="table">
@@ -138,7 +142,7 @@ below. We detail each of them in subsequent sections.</p>
 <td><code>scenario</code></td>
 <td><code>NULL</code></td>
 <td>An optional scenario object, as returned by the
-<code>scenario()</code> function.</td>
+<code><a href="../reference/scenario.html">scenario()</a></code> function.</td>
 </tr>
 <tr class="odd">
 <td><code>pair</code></td>
@@ -180,9 +184,9 @@ indicates how long the nursing cessation period lasts.</td>
 </tr>
 </tbody>
 </table>
-<div class="section level4">
-<h4 id="number-of-agents">Number of agents<a class="anchor" aria-label="anchor" href="#number-of-agents"></a>
-</h4>
+<div class="section level3">
+<h3 id="number-of-agents">Number of agents<a class="anchor" aria-label="anchor" href="#number-of-agents"></a>
+</h3>
 <p>The <code>nsim</code> argument controls the number of simulated
 animals and is set to <code>1,000</code> by default. Users can override
 this setting, however we recommend against using values of
@@ -190,14 +194,14 @@ this setting, however we recommend against using values of
 agents required for reliable inference. Below is an example of a smaller
 simulation for 10 individuals only.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">baseline_model_10</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">model_base_10</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
 </div>
-<div class="section level4">
-<h4 id="offshore-wind-scenario">Offshore wind scenario<a class="anchor" aria-label="anchor" href="#offshore-wind-scenario"></a>
-</h4>
+<div class="section level3">
+<h3 id="offshore-wind-scenario">Offshore wind scenario<a class="anchor" aria-label="anchor" href="#offshore-wind-scenario"></a>
+</h3>
 <p>The <code>scenario</code> argument is used to run models that entail
 wind farm construction activities. Scenario objects must be created
-using the <code>scenario()</code> function described in the previous
+using the <code><a href="../reference/scenario.html">scenario()</a></code> function described in the previous
 tutorial. The code snippet below shows how to run the agent-based model
 for the first of the three preset scenarios that come with the
 package:</p>
@@ -207,7 +211,6 @@ package:</p>
 must be assigned to an R object using the assignment <code>&lt;-</code>
 operator. In the examples above, we stored model outputs in custom
 objects arbitrarily named <code>model_scenario_01</code>.</p>
-</div>
 </div>
 <div class="section level3">
 <h3 id="pairing-simulations">Pairing simulations<a class="anchor" aria-label="anchor" href="#pairing-simulations"></a>
@@ -244,18 +247,19 @@ parameters, all simulated conditions are therefore identical between
 simulated movement trajectories for paired and unpaired runs.</div>
 </div>
 </div>
-<div class="section level4">
-<h4 id="label">Label<a class="anchor" aria-label="anchor" href="#label"></a>
-</h4>
+</div>
+<div class="section level3">
+<h3 id="labeling">Labeling<a class="anchor" aria-label="anchor" href="#labeling"></a>
+</h3>
 <p>Simulation outputs can be labelled using the <code>label</code>
 argument. This is useful for plotting purposes, for example when
 comparing population trends obtained from different wind scenarios.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_example</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">1000</span>, label <span class="op">=</span> <span class="st">"Example"</span><span class="op">)</span></span></code></pre></div>
 </div>
-<div class="section level4">
-<h4 id="duration-of-piling">Duration of piling<a class="anchor" aria-label="anchor" href="#duration-of-piling"></a>
-</h4>
+<div class="section level3">
+<h3 id="duration-of-piling">Duration of piling<a class="anchor" aria-label="anchor" href="#duration-of-piling"></a>
+</h3>
 <p>We assume that a single pile in installed per day, and that the
 maximum duration of piling operations is 4 hours. Importantly, this
 defines the duration length of time during which whales will cease
@@ -265,9 +269,9 @@ argument to a different value. For instance:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_example</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">1000</span>, piling.hrs <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
 </div>
-<div class="section level4">
-<h4 id="parallel-computing">Parallel computing<a class="anchor" aria-label="anchor" href="#parallel-computing"></a>
-</h4>
+<div class="section level3">
+<h3 id="parallel-computing">Parallel computing<a class="anchor" aria-label="anchor" href="#parallel-computing"></a>
+</h3>
 <p>The agent-based model is set up to run simulations in parallel on
 multiple cores. To maximize efficiency, the package will maximize the
 number of cores used relative to availability (i.e., 6 cores will be
@@ -288,9 +292,9 @@ running Mac OS or Linux. We recommend the use of these operating systems
 wherever possible.</p>
 </blockquote>
 </div>
-<div class="section level4">
-<h4 id="nursing-cessation-not-recommended">Nursing cessation (not recommended)<a class="anchor" aria-label="anchor" href="#nursing-cessation-not-recommended"></a>
-</h4>
+<div class="section level3">
+<h3 id="nursing-cessation-not-recommended">Nursing cessation (not recommended)<a class="anchor" aria-label="anchor" href="#nursing-cessation-not-recommended"></a>
+</h3>
 <p>Although there is mounting evidence that disturbance from
 noise-generating activities may heighten the risk of mother–calf pair
 separation and limit the time available for suckling in other baleen
@@ -317,6 +321,17 @@ function (which stands for ‘concatenate’).</p>
 <code class="sourceCode R"><span><span class="va">model_example</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">1000</span>, cease.nursing <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">TRUE</span>, <span class="fl">5</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
+<div class="section level2">
+<h2 id="disturbance-scenarios">Disturbance scenarios<a class="anchor" aria-label="anchor" href="#disturbance-scenarios"></a>
+</h2>
+<p>The code below runs models for each of the three preset offshore wind
+scenarios, as well a baseline scenario. Each run is labelled
+appropriately.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">model_base</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="fl">1000</span>, label  <span class="op">=</span> <span class="st">"Baseline"</span><span class="op">)</span></span>
+<span><span class="va">model_01</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="fl">1000</span>, scenario <span class="op">=</span> <span class="va">scenario_01</span>, pair <span class="op">=</span> <span class="va">model_base</span>, label <span class="op">=</span> <span class="st">"Scenario 01"</span><span class="op">)</span></span>
+<span><span class="va">model_02</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="fl">1000</span>, scenario <span class="op">=</span> <span class="va">scenario_02</span>, pair <span class="op">=</span> <span class="va">model_base</span>, label <span class="op">=</span> <span class="st">"Scenario 02"</span><span class="op">)</span></span>
+<span><span class="va">model_03</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="fl">1000</span>, scenario <span class="op">=</span> <span class="va">scenario_03</span>, pair <span class="op">=</span> <span class="va">model_base</span>, label <span class="op">=</span> <span class="st">"Scenario 03"</span><span class="op">)</span></span></code></pre></div>
 </div>
   </div>
 

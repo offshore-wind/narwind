@@ -14,7 +14,7 @@ rmarkdown::html_vignette:
 bibliography: narwind.bib
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Getting started}
+  %\VignetteIndexEntry{2. Defining scenarios}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
@@ -26,6 +26,10 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>")
+```
+
+```{r load_model, include=FALSE}
+devtools::load_all()
 ```
 
 ```{r, echo = FALSE}
@@ -194,3 +198,5 @@ The `gantt()` function in R can be used to check that the timing of piling activ
 ```{r}
 gantt(scenario_02)
 ```
+
+## References

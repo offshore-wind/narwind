@@ -43,9 +43,6 @@
 <li>
   <a href="../articles/narwind.html">Get started</a>
 </li>
-<li>
-  <a href="../reference/index.html">Reference</a>
-</li>
 <li class="dropdown">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
     Articles
@@ -54,13 +51,10 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
-      <a href="../articles/model_export.html">6. Exporting data</a>
-    </li>
-    <li>
       <a href="../articles/model_overview.html">1. Overview and workflow</a>
     </li>
     <li>
-      <a href="../articles/model_predictions.html">5. Model predictions</a>
+      <a href="../articles/scenarios.html">2. Defining scenarios</a>
     </li>
     <li>
       <a href="../articles/model_run.html">3. Running the model</a>
@@ -69,7 +63,10 @@
       <a href="../articles/model_summary.html">4. Summary and diagnostics</a>
     </li>
     <li>
-      <a href="../articles/scenarios.html">2. Defining scenarios</a>
+      <a href="../articles/model_predictions.html">5. Model predictions</a>
+    </li>
+    <li>
+      <a href="../articles/model_export.html">6. Exporting data</a>
     </li>
   </ul>
 </li>
@@ -84,15 +81,15 @@
 
       
 
-      </header><div class="row">
+      </header><script src="model_predictions_files/font-awesome-5.13.0/js/script.js"></script><div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>5. Model predictions</h1>
                         <h4 data-toc-skip class="author">Phil Bouchet,
-Enrico Pirotta, Len Thomas, Catriona Harris</h4>
+Enrico Pirotta, Catriona Harris, Len Thomas</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2024-04-08</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2024-04-09</h4>
       
       
       <div class="hidden name"><code>model_predictions.Rmd</code></div>
@@ -102,15 +99,19 @@ University of St Andrews<br><h4 data-toc-skip class="date">2024-04-08</h4>
 
     
     
+<a href="https://raw.githubusercontent.com/offshore-wind/narwind/99df759f85ce0f5d495a864a5d35bc854b5951d9/vignettes/pdf/getting_started.pdf" class="external-link">
+<button class="btn btn-primary"><i class="fa fa-file-pdf"></i> Download PDF</button>
+</a>
 <div class="section level2">
 <h2 id="preamble">Preamble<a class="anchor" aria-label="anchor" href="#preamble"></a>
 </h2>
 <p>This tutorial demonstrates how to generate predictions of right whale
 abundance using the stochastic population model available in
 <code>narwind</code>.</p>
-<div class="section level3" data-link="Exporting data">
-<h3 id="quantifying-uncertainty">Quantifying uncertainty<a class="anchor" aria-label="anchor" href="#quantifying-uncertainty"></a>
-</h3>
+</div>
+<div class="section level2" data-link="Exporting data">
+<h2 id="quantifying-uncertainty">Quantifying uncertainty<a class="anchor" aria-label="anchor" href="#quantifying-uncertainty"></a>
+</h2>
 <p>When a run of the agent-based model completes, generalized additive
 models (GAMs) are fitted to simulation outputs to assess how the initial
 health of individuals within each population cohort affected their body
@@ -147,26 +148,30 @@ posterior draws of the model coefficients.</p>
 <span><span class="co">#&gt; List of 10</span></span>
 <span><span class="co">#&gt;  $ sim     :List of 6</span></span>
 <span><span class="co">#&gt;  $ gam     :List of 2</span></span>
-<span><span class="co">#&gt;  $ dead    :Classes 'data.table' and 'data.frame':   443 obs. of  25 variables:</span></span>
+<span><span class="co">#&gt;  $ dead    :Classes 'data.table' and 'data.frame':   610 obs. of  25 variables:</span></span>
 <span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
+<span><span class="co">#&gt;   ..- attr(*, "index")= int(0) </span></span>
+<span><span class="co">#&gt;   .. ..- attr(*, "__whale")= int [1:610] 146 319 441 118 39 442 1 320 194 195 ...</span></span>
 <span><span class="co">#&gt;  $ birth   :Classes 'data.table' and 'data.frame':   1000 obs. of  25 variables:</span></span>
 <span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
 <span><span class="co">#&gt;   ..- attr(*, "sorted")= chr "cohort"</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "index")= int(0) </span></span>
+<span><span class="co">#&gt;   .. ..- attr(*, "__cohort__whale")= int(0) </span></span>
 <span><span class="co">#&gt;  $ abort   :Classes 'data.table' and 'data.frame':   1000 obs. of  2 variables:</span></span>
 <span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
 <span><span class="co">#&gt;  $ param   :List of 11</span></span>
 <span><span class="co">#&gt;  $ init    :List of 3</span></span>
-<span><span class="co">#&gt;  $ run     : 'hms' num 01:42:06</span></span>
+<span><span class="co">#&gt;  $ run     : 'hms' num 01:33:14</span></span>
 <span><span class="co">#&gt;   ..- attr(*, "units")= chr "secs"</span></span>
 <span><span class="co">#&gt;  $ scenario:List of 12</span></span>
 <span><span class="co">#&gt;   ..- attr(*, "class")= chr [1:2] "narwscenario" "list"</span></span>
 <span><span class="co">#&gt;  $ post    :List of 7</span></span>
 <span><span class="co">#&gt;  - attr(*, "class")= chr [1:2] "narwsim" "list"</span></span>
-<span><span class="co">#&gt;  - attr(*, "seed")= int 5722</span></span></code></pre></div>
+<span><span class="co">#&gt;  - attr(*, "seed")= int 9443</span></span></code></pre></div>
 </div>
-<div class="section level3" data-link="Exporting data">
-<h3 id="predicting-abundance">Predicting abundance<a class="anchor" aria-label="anchor" href="#predicting-abundance"></a>
-</h3>
+<div class="section level2" data-link="Exporting data">
+<h2 id="predicting-abundance">Predicting abundance<a class="anchor" aria-label="anchor" href="#predicting-abundance"></a>
+</h2>
 <p>The <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> method implements a stochastic population
 model which allows users to generate projections of right whale
 abundance over a time horizon of interest.</p>
@@ -299,47 +304,12 @@ runs of the agent-based model are needed in this instance, for baseline
 conditions, a construction scenario (e.g., <code>model_01</code>), and
 an O&amp;M scenario (e.g., <code>model_03</code>) respectively. For
 example</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>proj_construction <span class="ot">&lt;-</span> <span class="fu">predict</span>(model_base, model_01, model_03)</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; --------------------------------------------------------------------------------</span></span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt; --------------------------------------------------------------------------------</span></span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt;                  NORTH ATLANTIC RIGHT WHALE (Eubalaena glacialis)</span></span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt;                             *** POPULATION MODEL ***</span></span>
-<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt; --------------------------------------------------------------------------------</span></span>
-<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt; --------------------------------------------------------------------------------</span></span>
-<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt; Date: 2024-04-08 </span></span>
-<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt; Time: 19:27:50 (UTC)</span></span>
-<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="co">#&gt; ––– Projections:</span></span>
-<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a><span class="co">#&gt; + Replicates: N = 100 </span></span>
-<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a><span class="co">#&gt; + Burn-in: 5 years</span></span>
-<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a><span class="co">#&gt; + Horizon: 35 years [from current]</span></span>
-<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a><span class="co">#&gt; + Parameter uncertainty: Yes </span></span>
-<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a><span class="co">#&gt; ––– Timeline:</span></span>
-<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a><span class="co">#&gt; Construction (yr 1) -----&gt; Operation &amp; maintenance (yr 2 to 35)</span></span>
-<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a><span class="co">#&gt; ––– Execution:</span></span>
-<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a>Initializing ...</span>
-<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a>Initializing [ok]  </span>
-<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-32"><a href="#cb7-32" tabindex="-1"></a>Running projections [ok]  </span>
-<span id="cb7-33"><a href="#cb7-33" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb7-34"><a href="#cb7-34" tabindex="-1"></a>Summarizing outputs ...</span>
-<span id="cb7-35"><a href="#cb7-35" tabindex="-1"></a>Summarizing outputs [ok]  </span>
-<span id="cb7-36"><a href="#cb7-36" tabindex="-1"></a><span class="co">#&gt; ---------------------------------</span></span>
-<span id="cb7-37"><a href="#cb7-37" tabindex="-1"></a><span class="co">#&gt; Done | Time elapsed: 00:07:22</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">proj_construction</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">model_base</span>, <span class="va">model_01</span>, <span class="va">model_03</span><span class="op">)</span></span></code></pre></div>
 </li>
 </ul>
 <blockquote>
-<p><strong>Note 5.1:</strong> <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> cannot process more
+<p><strong>Note 5.2:</strong> <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> cannot process more
 than one scenario <strong>bundle</strong> at a time. Therefore, separate
 calls to <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> must be made to compare population
 projections for multiple, alternative scenarios such as those involving
@@ -347,9 +317,9 @@ different schedules of piling, different wind farm sites etc.</p>
 </blockquote>
 </div>
 </div>
-<div class="section level3">
-<h3 id="plotting-projections">Plotting projections<a class="anchor" aria-label="anchor" href="#plotting-projections"></a>
-</h3>
+<div class="section level2">
+<h2 id="plotting-projections">Plotting projections<a class="anchor" aria-label="anchor" href="#plotting-projections"></a>
+</h2>
 <p>Population trends can be visualized using the <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>
 command, which takes the following arguments:</p>
 <table class="table">
@@ -445,47 +415,57 @@ rounded down.</td>
 overall population trend.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">proj_base</span><span class="op">)</span></span></code></pre></div>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-5-1.png" width="700"></p>
+<p><img src="model_predictions_files/figure-html/unnamed-chunk-6-1.png" width="700"></p>
 <p>When set to <code>TRUE</code>, the <code>cohort</code> argument shows
 time series of abundance for each population cohort, rather than for the
 whole population.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">proj_base</span>, cohort <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p><img src="model_predictions_files/figure-html/poptrends_cohort-1.png" width="768"></p>
 <p>The <code>interval</code> argument can be set to <code>FALSE</code>
 to hide confidence intervals around the trend.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">proj_base</span>, interval <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-7-1.png" width="700"></p>
+<p><img src="model_predictions_files/figure-html/unnamed-chunk-8-1.png" width="700"></p>
 <p>Setting the <code>noaa</code> argument to <code>TRUE</code> will
 overlay the population trend estimated by <span class="citation">Runge
 <em>et al.</em> (<a href="#ref-Runge2023">2023</a>)</span>.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">proj_base</span>, noaa <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-8-1.png" width="700"></p>
+<p><img src="model_predictions_files/figure-html/unnamed-chunk-9-1.png" width="700"></p>
 <p>Multiple projections can be plotted together for comparison:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">proj_base</span>, <span class="va">proj_01</span>, <span class="va">proj_02</span>, <span class="va">proj_03</span><span class="op">)</span></span></code></pre></div>
 <p><img src="model_predictions_files/figure-html/poptrends_all-1.png" width="700"></p>
 <p>If needed, the schedule(s) of development can be displayed as well by
-setting <code>timeline</code> to <code>TRUE</code>.</p>
+setting <code>timeline</code> to <code>TRUE</code>. Here, B = Baseline,
+C = Construction, and O = Operation &amp; Maintenance.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">proj_base</span>, <span class="va">proj_01</span>, <span class="va">proj_02</span>, <span class="va">proj_03</span>, timeline <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-9-1.png" width="700"></p>
+<p><img src="model_predictions_files/figure-html/unnamed-chunk-10-1.png" width="700"></p>
+<p>If labels are incorrect (or an error related to labeling occurs),
+projections can be relabeled using the <code>label()</code> function,
+which takes the projection object as the first argument, and the new
+label (between quotation marks) as the second argument. Do not forget to
+assign the output back to the original projection object to overwrite
+the previous label. For example:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">proj_01</span> <span class="op">&lt;-</span> <span class="fu">label</span><span class="op">(</span><span class="va">proj_01</span>, <span class="st">"Scenario 01"</span><span class="op">)</span></span></code></pre></div>
 <p>If predicted trends are similar, the resulting plot can be difficult
 to interpret. An alternative way of comparing trends is to compute the
 difference in predicted abundance between each pair of replicate
 projections. This can be done by setting the <code>diff</code> argument
 to <code>TRUE</code>. There is no evidence for a difference between
 projections if the resulting confidence interval overlaps zero.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">proj_base</span>, <span class="va">proj_01</span>, <span class="va">proj_02</span>, <span class="va">proj_03</span>, diff <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Scale for <span style="color: #00BB00;">y</span> is already present.</span></span>
 <span><span class="co">#&gt; Adding another scale for <span style="color: #00BB00;">y</span>, which will replace the existing scale.</span></span></code></pre></div>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-10-1.png" width="700"></p>
+<p><img src="model_predictions_files/figure-html/unnamed-chunk-12-1.png" width="768"></p>
 </div>
-<div class="section level3">
-<h3 id="summarizing-projections">Summarizing projections<a class="anchor" aria-label="anchor" href="#summarizing-projections"></a>
-</h3>
+<div class="section level2">
+<h2 id="summarizing-projections">Summarizing projections<a class="anchor" aria-label="anchor" href="#summarizing-projections"></a>
+</h2>
 <p>The <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> method also works on projections and
 returns useful information on:</p>
 <ul>
@@ -498,7 +478,7 @@ i.e., the probability that the number of reproductive females falls
 below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
 <em>et al.</em> 2023</a>)</span>.</p></li>
 </ul>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">proj_base</span><span class="op">)</span></span>
 <span><span class="co">#&gt; -------------------------------------------------------------</span></span>
 <span><span class="co">#&gt; -------------------------------------------------------------</span></span>
@@ -536,32 +516,32 @@ below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
 <span><span class="co">#&gt; Total                         356</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Final population size:</span></span>
-<span><span class="co">#&gt; N = 160 (95% CI: 135 – 196)</span></span>
+<span><span class="co">#&gt; N = 153 (95% CI: 118 – 181)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; cohort                       N                     </span></span>
 <span><span class="co">#&gt; ---------------------------  ----------------------</span></span>
 <span><span class="co">#&gt; Calves (male)                2 (95% CI: 0 – 5)     </span></span>
-<span><span class="co">#&gt; Juveniles (male)             11 (95% CI: 5 – 18)   </span></span>
-<span><span class="co">#&gt; Adults (male)                88 (95% CI: 73 – 103) </span></span>
-<span><span class="co">#&gt; Calves (female)              2 (95% CI: 0 – 4)     </span></span>
-<span><span class="co">#&gt; Juveniles (female)           8 (95% CI: 4 – 16)    </span></span>
-<span><span class="co">#&gt; Adults (female, pregnant)    3 (95% CI: 1 – 8)     </span></span>
-<span><span class="co">#&gt; Adults (female, lactating)   4 (95% CI: 0 – 8)     </span></span>
-<span><span class="co">#&gt; Adults (female, resting)     39 (95% CI: 30 – 56)  </span></span>
+<span><span class="co">#&gt; Juveniles (male)             10 (95% CI: 4 – 17)   </span></span>
+<span><span class="co">#&gt; Adults (male)                85 (95% CI: 68 – 103) </span></span>
+<span><span class="co">#&gt; Calves (female)              1 (95% CI: 0 – 4)     </span></span>
+<span><span class="co">#&gt; Juveniles (female)           10 (95% CI: 4 – 16)   </span></span>
+<span><span class="co">#&gt; Adults (female, pregnant)    3 (95% CI: 1 – 7)     </span></span>
+<span><span class="co">#&gt; Adults (female, lactating)   3 (95% CI: 0 – 7)     </span></span>
+<span><span class="co">#&gt; Adults (female, resting)     37 (95% CI: 23 – 48)  </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; HEALTH &amp; MORTALITY</span></span>
 <span><span class="co">#&gt; =============================================================</span></span></code></pre></div>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-11-1.png" width="700"></p>
+<p><img src="model_predictions_files/figure-html/unnamed-chunk-13-1.png" width="700"></p>
 <pre><code><span><span class="co">#&gt; cohort    survival                  body condition            min condition (gestation)</span></span>
-<span><span class="co">#&gt; --------  ------------------------  ------------------------  ----------------------------</span></span>
-<span><span class="co">#&gt; c(m,f)    0.65 ± 0.223 [0–1]        0.227 ± 0.171 [0–0.565]   -</span></span>
-<span><span class="co">#&gt; jv(ml)    0.954 ± 0.052 [0.667–1]   0.283 ± 0.084 [0–0.557]   -</span></span>
-<span><span class="co">#&gt; jv(fml)   0.952 ± 0.061 [0.5–1]     0.279 ± 0.091 [0–0.61]    -</span></span>
-<span><span class="co">#&gt; ad(ml)    0.969 ± 0.016 [0.879–1]   0.365 ± 0.085 [0–0.665]   -</span></span>
-<span><span class="co">#&gt; ad(f,p)   0.96 ± 0.092 [0–1]        0.41 ± 0.109 [0–0.665]    -</span></span>
-<span><span class="co">#&gt; ad(f,l)   0.927 ± 0.125 [0–1]       0.108 ± 0.05 [0–0.487]    -</span></span>
-<span><span class="co">#&gt; ad(f,r)   0.964 ± 0.024 [0.841–1]   0.352 ± 0.089 [0–0.665]   0.493 ± 0.062 [0.122–0.723]</span></span>
+<span><span class="co">#&gt; --------  ------------------------  ------------------------  ---------------------------</span></span>
+<span><span class="co">#&gt; c(m,f)    0.722 ± 0.233 [0–1]       0.29 ± 0.186 [0–0.613]    -</span></span>
+<span><span class="co">#&gt; jv(ml)    0.976 ± 0.04 [0.714–1]    0.287 ± 0.073 [0–0.581]   -</span></span>
+<span><span class="co">#&gt; jv(fml)   0.979 ± 0.038 [0.714–1]   0.293 ± 0.07 [0–0.637]    -</span></span>
+<span><span class="co">#&gt; ad(ml)    0.966 ± 0.017 [0.893–1]   0.36 ± 0.087 [0–0.665]    -</span></span>
+<span><span class="co">#&gt; ad(f,p)   0.972 ± 0.082 [0–1]       0.398 ± 0.104 [0–0.665]   -</span></span>
+<span><span class="co">#&gt; ad(f,l)   0.907 ± 0.155 [0–1]       0.097 ± 0.047 [0–0.36]    -</span></span>
+<span><span class="co">#&gt; ad(f,r)   0.955 ± 0.029 [0.8–1]     0.348 ± 0.095 [0–0.665]   0.496 ± 0.06 [0.161–0.713]</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; FECUNDITY</span></span>
@@ -569,20 +549,20 @@ below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Calving events</span></span>
 <span><span class="co">#&gt; ----------------------------------</span></span>
-<span><span class="co">#&gt; Per year: N = 5.92 ± 3.09 [0–24]</span></span>
-<span><span class="co">#&gt; Per female: N = 0.43 ± 1.01 [0–7]</span></span>
+<span><span class="co">#&gt; Per year: N = 4.8 ± 2.46 [0–17]</span></span>
+<span><span class="co">#&gt; Per female: N = 0.38 ± 0.91 [0–8]</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Resting phase</span></span>
 <span><span class="co">#&gt; -----------------------------</span></span>
 <span><span class="co">#&gt; t(rest): 5 ± 5 [1–39]</span></span>
-<span><span class="co">#&gt; t(inter-birth): 8 ± 4 [2–38]</span></span>
+<span><span class="co">#&gt; t(inter-birth): 8 ± 4 [2–40]</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Non-reproductive females:</span></span>
-<span><span class="co">#&gt; 4.35 (±0.78) [0–7.5] %</span></span>
+<span><span class="co">#&gt; 4.28 (±1.02) [0–8] %</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Abortion    Simulation (%)  Projection (%)</span></span>
-<span><span class="co">#&gt; ---------  ---------------  -----------------------</span></span>
-<span><span class="co">#&gt; Baseline               0.1  0.11 (±1.62) [0–33.33]</span></span>
+<span><span class="co">#&gt; ---------  ---------------  ---------------------</span></span>
+<span><span class="co">#&gt; Baseline               2.3  2.8 (±10.28) [0–100]</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
@@ -594,19 +574,22 @@ below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
 <span><span class="co">#&gt; 2024               0.00</span></span>
 <span><span class="co">#&gt; 2029               0.00</span></span>
 <span><span class="co">#&gt; 2034               0.00</span></span>
-<span><span class="co">#&gt; 2039               0.00</span></span>
-<span><span class="co">#&gt; 2044               0.02</span></span>
-<span><span class="co">#&gt; 2049               0.15</span></span>
-<span><span class="co">#&gt; 2054               0.39</span></span>
-<span><span class="co">#&gt; 2059               0.72</span></span></code></pre>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-11-2.png" width="700"></p>
+<span><span class="co">#&gt; 2039               0.01</span></span>
+<span><span class="co">#&gt; 2044               0.18</span></span>
+<span><span class="co">#&gt; 2049               0.47</span></span>
+<span><span class="co">#&gt; 2054               0.73</span></span>
+<span><span class="co">#&gt; 2059               0.87</span></span></code></pre>
+<p><img src="model_predictions_files/figure-html/unnamed-chunk-13-2.png" width="700"></p>
+</div>
+<div class="section level2 unnumbered">
+<h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h2>
 <div id="refs" class="references csl-bib-body hanging-indent">
 <div id="ref-Runge2023" class="csl-entry">
 Runge MC, Linden DW, Hostetler JA, Borggaard DL, Garrison LP, Knowlton
 AR, Lesage V, Williams R, Pace III RM (2023). A management-focused
 population viability analysis for north atlantic right whales. Report.
 DOI: <a href="https://doi.org/n/a" class="external-link">n/a</a>
-</div>
 </div>
 </div>
 </div>
