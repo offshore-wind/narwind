@@ -2,7 +2,7 @@
 title: "Getting started with narwind"
 author:
   affiliation: Centre for Research into Ecological & Environmental Modelling, University of St Andrews
-  name: Phil Bouchet, Enrico Pirotta, Len Thomas, Catriona Harris
+  name: Phil Bouchet, Enrico Pirotta, Catriona Harris, Len Thomas
 date: "`r Sys.Date()`"
 css: pkgdown/extra.css
 csl: narwind.csl
@@ -21,9 +21,9 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r}
+```{r, echo = FALSE}
 downloadthis::download_link(
-  link = "https://github.com/fmmattioni/downloadthis/raw/master/inst/example/file_1.pdf",
+  link = "https://github.com/offshore-wind/narwind/tree/main/vignettes/pdf/getting_started.pdf",
   button_label = "Download PDF",
   button_type = "primary",
   has_icon = TRUE,

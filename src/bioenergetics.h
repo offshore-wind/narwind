@@ -919,7 +919,7 @@ long double start_bcondition(double cohort){
   // Calves
   if(cohort == 0){
     
-    bc = R::runif(lower, 0.45);
+    bc = R::runif(lower, upper);
     // bc = rtnorm(0.35884621, 0.07788818, lower, upper);
     
     // Juveniles (males and females)

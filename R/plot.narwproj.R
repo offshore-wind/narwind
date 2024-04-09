@@ -39,7 +39,7 @@ plot.narwproj <- function(...,
                           timeline.y = 0,
                           scales = "free",
                           nudge.y = 20,
-                          ncol = 3,
+                          ncol = 2,
                           nx = 5,
                           ny = 5){
   
