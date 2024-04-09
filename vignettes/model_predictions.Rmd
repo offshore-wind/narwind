@@ -1,0 +1,204 @@
+---
+title: "5. Model predictions"
+author:
+  affiliation: Centre for Research into Ecological & Environmental Modelling, University of St Andrews
+  name: Phil Bouchet, Enrico Pirotta, Catriona Harris, Len Thomas
+date: "`r Sys.Date()`"
+css: pkgdown/extra.css
+csl: narwind.csl
+link-citations: yes
+rmarkdown::html_vignette:
+  fig_caption: yes
+  toc: yes
+  toc_depth: 4
+bibliography: narwind.bib
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{5. Model predictions}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>")
+```
+
+```{r load_model, include=FALSE}
+devtools::load_all()
+load("data/scenarios/boem_baseline.rda")
+load("data/scenarios/boem_scenario01.rda")
+load("data/scenarios/boem_scenario02.rda")
+load("data/scenarios/boem_scenario03.rda")
+```
+
+## Preamble
+
+This tutorial demonstrates how to generate predictions of right whale abundance using the stochastic population model available in `narwind`.
+
+## Quantifying uncertainty {data-link="Exporting data"}
+
+When a run of the agent-based model completes, generalized additive models (GAMs) are fitted to simulation outputs to assess how the initial health of individuals within each population cohort affected their body condition and survival trajectories across the year. The fitted GAMs are critical as they inform the stochastic population model used to yield projections of future right whale population size.
+
+Forward propagation of the uncertainty associated with GAM coefficients is important for decision-making, and can be achieved using the `augment()` function. `augment()` performs random draws from the posterior distributions of GAM coefficients using a Bayesian Metropolis-Hastings algorithm and returns replicate realizations of the fitted smooths. See the accompanying project report and the R help pages for technical details.
+
+The code below shows how to use `augment()` in practice. Note that the assignment operator `<-` must once again be used to save the outputs of the function. To keep everything tidy and avoid using unnecessary memory, we assign those outputs back to the `model_base` object, effectively "augmenting" the object with new data.
+
+```{r augment, eval = FALSE}
+model_base <- augment(model_base)
+```
+
+> **Note 5.1:** The use of `augment()` is not compulsory but is highly recommended. Population projections obtained without running `augment()` first will only account for process variance (i.e., the uncertainty resulting from replicate projections) and will return a warning.
+
+The object `model_base` now contains an additional component (called `post`, as shown below), which stores the posterior draws of the model coefficients.
+
+```{r augment_str}
+str(model_base, 1)
+```
+
+## Predicting abundance {data-link="Exporting data"}
+
+The `predict()` method implements a stochastic population model which allows users to generate projections of right whale abundance over a time horizon of interest.
+
+The table below details the arguments that `predict()` accepts.
+
+| Argument   | Default value | Description                                                                                                                                                                                                              |
+|-----------------|-----------------|--------------------------------------|
+| `obj`      | `-`           | One or more objects of class `narwsim`, as returned by `narw()`.                                                                                                                                                         |
+| `n`        | `100`         | Integer. Number of replicates projections.                                                                                                                                                                               |
+| `yrs`      | `35`          | Integer. Time horizon, specified either as the desired number of years (from current) or the desired target end year. Defaults to `35`, which is commensurate with the expected average lifespan of a typical wind farm. |
+| `param`    | `TRUE`        | If `TRUE`, prediction variance includes parameter uncertainty.                                                                                                                                                           |
+| `piling`   | `1`           | Integer. Year of construction. By default, piling occurs on the first year of the projection, followed by O&M for the remainder.                                                                                         |
+| `progress` | `TRUE`        | Logical. If `TRUE`, a progress bar is printed to the R console during execution.                                                                                                                                         |
+
+#### Projection horizon
+
+By default, projections are set to 35 years (from current), as this aligns with the average expected lifespan of a typical wind farm. Longer/shorter projections can be obtained by modifying the `yrs` argument, which can either be specified as a desired number of years or as a target year for the end of the projection.
+
+For instance, the two lines of code below are equivalent and yield predictions of population size over the next 50 years (given that the current year at the time of writing is 2024).
+
+```{r proj50, eval = FALSE}
+preds_50years <- predict(model_base, yrs = 50)
+preds_50years <- predict(model_base, yrs = 2074)
+```
+
+#### Replicate projections
+
+In `narwind`, prediction uncertainty is estimated from both process variance (i.e., repeat projections) and parameter uncertainty (i.e., statistical uncertainty in the relationships between individual body condition and health/survival, respectively). The latter is considered only if replicate coefficients have been sampled from the posteriors of the fitted survival and body condition GAMs using the `augment()` function (see previous section).
+
+The `n` argument controls the number of replicate projections and is set to `100` by default. Generating a single projection instead is straightforward, as shown here:
+
+```{r, eval = FALSE}
+preds_n1 <- predict(model_base, n = 1)
+```
+
+#### Schedule of development
+
+Population projections involve three successive phases: a baseline phase without wind farm activity between 2019 and the current year (e.g., 2024), followed by an optional, one-year construction phase, and an operational phase that lasts for the remainder of the projection. The timing of construction and O&M activities within the time horizon of a projection is defined by the scenario **bundle** (i.e., one or more R objects containing the outputs of one or more runs of the agent-based model) which is passed to `predict()`.
+
+There are several possible options:
+
+-   **Baseline conditions only** – no wind farm development activities occur during the projection. This only requires a single run of the agent-based model (and therefore a single R object). For example, using the `model_baseline` object created in previous tutorials:
+
+    ```{r, eval = FALSE}
+    proj_baseline <- predict(model_base)
+    ```
+
+-   **Operation and maintenance only** – no construction activities are considered, however maintenance and servicing operations apply throughout the projection. This requires two runs of the agent-based model (and therefore, two R objects), corresponding to baseline conditions and an O&M scenario (e.g., the third preset scenario within the package), respectively. Multiple R objects can be given in sequence, separated by commas:
+
+    ```{r, eval = FALSE}
+    proj_OM <- predict(model_base, model_03)
+    ```
+
+-   **Construction, followed by 0&M.** Here, piling activities take place during a single year, and are followed by maintenance operations for the remainder. By default, `predict()` assumes that piling occurs at the onset of the projection (i.e., in year 1, the current year), such that the `piling` argument is set to `1`. Three separate runs of the agent-based model are needed in this instance, for baseline conditions, a construction scenario (e.g., `model_01`), and an O&M scenario (e.g., `model_03`) respectively. For example
+
+    ```{r, eval = FALSE}
+    proj_construction <- predict(model_base, model_01, model_03)
+    ```
+
+> **Note 5.2:** `predict()` cannot process more than one scenario **bundle** at a time. Therefore, separate calls to `predict()` must be made to compare population projections for multiple, alternative scenarios such as those involving different schedules of piling, different wind farm sites etc.
+
+## Plotting projections
+
+Population trends can be visualized using the `plot()` command, which takes the following arguments:
+
+| Argument     | Default value | Description                                                                                                                                                       |
+|-----------------|-----------------|--------------------------------------|
+| `diff`       | `FALSE`       | Logical. If `TRUE`, returns plots of the differences between pairs of projections. Defaults to `FALSE`.                                                           |
+| `interval`   | `TRUE`        | Logical. If `TRUE`, percentile confidence intervals are shown on the plots.                                                                                       |
+| `shade`      | `TRUE`        | Logical. If `TRUE`, confidence intervals are displayed as colored ribbons. Otherwise, confidence bounds are shown as dotted lines.                                |
+| `cohort`     | `FALSE`       | Logical. If `TRUE`, separate plots are returned for each population cohort. If `FALSE`, a single plot of the overall population trend is shown.                   |
+| `noaa`       | `FALSE`       | Logical. If `TRUE` the population trajectory predicted as part of NOAA's population viability analysis (Runge et al., 2023) is also plotted. Defaults to `FALSE`. |
+| `full`       | `FALSE`       | Logical. If `TRUE`, the trend plot includes historical population size estimates (dating back to 2000).                                                           |
+| `timeline`   | `FALSE`       | Logical. If `TRUE`, the plot includes timeline(s) of offshore wind development.                                                                                   |
+| `timeline.y` | `0`           | Numeric. Position of the timeline on the y-axis.                                                                                                                  |
+| `scales`     | `"free"`      | Character. Defines whether axis scales should be constant or vary across plots. Can be one of `"fixed"` or `"free"` (the default).                                |
+| `ncol`       | `3`           | Integer. Number of columns for the plot layout when `cohort = TRUE`.                                                                                              |
+| `nx`         | `5`           | Integer. Desired number of x-axis intervals. Non-integer values are rounded down.                                                                                 |
+| `ny`         | `5`           | Integer. Desired number of y-axis intervals. Non-integer values are rounded down.                                                                                 |
+
+By default, a simple call to `plot()` will return the overall population trend.
+
+```{r}
+plot(proj_base)
+```
+
+When set to `TRUE`, the `cohort` argument shows time series of abundance for each population cohort, rather than for the whole population.
+
+```{r, eval = FALSE}
+plot(proj_base, cohort = TRUE)
+```
+
+```{r poptrends_cohort, eval=TRUE,echo=FALSE, fig.width=8,fig.height=10}
+plot(proj_base, cohort = TRUE, vignette = TRUE, ncol = 2)
+```
+
+The `interval` argument can be set to `FALSE` to hide confidence intervals around the trend.
+
+```{r}
+plot(proj_base, interval = FALSE)
+```
+
+Setting the `noaa` argument to `TRUE` will overlay the population trend estimated by @Runge2023.
+
+```{r}
+plot(proj_base, noaa = TRUE)
+```
+
+Multiple projections can be plotted together for comparison:
+
+```{r poptrends_all}
+plot(proj_base, proj_01, proj_02, proj_03)
+```
+
+If needed, the schedule(s) of development can be displayed as well by setting `timeline` to `TRUE`. Here, B = Baseline, C = Construction, and O = Operation & Maintenance.
+
+```{r}
+plot(proj_base, proj_01, proj_02, proj_03, timeline = TRUE)
+```
+
+If predicted trends are similar, the resulting plot can be difficult to interpret. An alternative way of comparing trends is to compute the difference in predicted abundance between each pair of replicate projections. This can be done by setting the `diff` argument to `TRUE`. There is no evidence for a difference between projections if the resulting confidence interval overlaps zero.
+
+```{r, fig.width=8}
+plot(proj_base, proj_01, proj_02, proj_03, diff = TRUE)
+```
+
+## Summarizing projections
+
+The `summary()` method also works on projections and returns useful information on:
+
+-   Abundance estimates at the end of the projection, both for the population as a whole and for each cohort.
+
+-   Estimates of model parameters, including mortality, individual health, and fecundity.
+
+-   Estimates of the population's probability of quasi-extinction, i.e., the probability that the number of reproductive females falls below N = 50 [@Runge2023].
+
+```{r}
+summary(proj_base)
+```
+
+## References

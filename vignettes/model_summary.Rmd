@@ -1,0 +1,159 @@
+---
+title: "4. Summary and diagnostics"
+author:
+  affiliation: Centre for Research into Ecological & Environmental Modelling, University of St Andrews
+  name: Phil Bouchet, Enrico Pirotta, Catriona Harris, Len Thomas
+date: "`r Sys.Date()`"
+css: pkgdown/extra.css
+csl: narwind.csl
+link-citations: yes
+rmarkdown::html_vignette:
+  fig_caption: yes
+  toc: yes
+  toc_depth: 4
+bibliography: narwind.bib
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{4. Summary and diagnostics}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>")
+```
+
+```{r load_model, include=FALSE}
+devtools::load_all()
+load("data/scenarios/boem_baseline.rda")
+```
+
+## Preamble
+
+This tutorial demonstrates how to inspect and summarize outputs from the agent-based model within the `narwind` R package.
+
+## Viewing data
+
+Outputs from the `narw()` simulator can be viewed in the R console using the `print()` method. `print()` is part of a group of generic R functions that can be applied to various R objects and will behave differently depending on the type of object that is passed to them. Other generic functions include `plot()`, `summary()`, or `write()` (among others) -- these are covered in later sections.
+
+`print()` can also be called 'implicitly', that is, by simply typing the name of the relevant object in the R console and pressing `[Enter]` on the keyboard. The default behavior for objects returned by `narw()` is to give a tabular overview of the data from the first 5 days of the simulation, and for the first animal in each population cohort. For instance, to get a quick overview of the outputs from the `baseline_model` created in the previous tutorial, we can type:
+
+```{r print_all, eval = FALSE}
+model_base
+```
+
+Optional arguments allow users to override these default settings and display data for specific days, animals, and/or cohorts, as needed. The `print()` method has the following arguments:
+
+| Argument | Default value | Description                                                                                                                                                                                                                                                 |
+|---------------|---------------|------------------------------------------|
+| `obj`    | `-`           | Input model object returned by `narw()`.                                                                                                                                                                                                                    |
+| `rowID`  | `1:5`         | Positive integer or vector of positive integers indicating which days of the simulation should be displayed. Defaults to the first first days.                                                                                                              |
+| `whale`  | `1`           | Positive integer indicating the individual for which data should be extracted. Only the first individual is included by default.                                                                                                                            |
+| `cohort` | `1:6`         | Positive integer or vector of positive integers indicating which cohorts should be considered. Defaults to all cohorts. Cohort identifiers are listed in an object called `cohorts`. Note that calves are included with their mothers (i.e., `cohort = 5`). |
+
+Given the above, the code below displays the first 5 days of the simulation for the fourth adult male.
+
+```{r model_print}
+print(model_base, rowID = 1:5, whale = 4, cohort = 3)
+```
+
+> **Note 4.1:** The `print()` method is only used for viewing data inside the R console. To export / save data on disk, use the `export()` method (see relevant tutorial).
+
+## Model summary and diagnostics
+
+The `summary()` method provides a range of diagnostics that are helpful for assessing whether simulated whale behavior aligns with biological expectations. These relate to individual (1) health, (2) movements, (3) habitat use, (4) behavior (i.e., activity budgets), (5) stressor exposure, and (6) energy intake vs. expenditure (see Table 1 below).
+
+The function takes the following arguments:
+
+| Argument   | Default value | Description                                                                                                                                                                                                                                                                                 |
+|---------------|---------------|------------------------------------------|
+| `obj`      | `-`           | Model object of class `narwsim`, as returned by `narw()`.                                                                                                                                                                                                                                   |
+| `what`     | `"all"`       | Character string indicating which component(s) of the summary to display. Can be one of: `"health"`, `"movements"`, `"habitat"`, `"behavior"`, `"stressors"`, `"strike"`, `"gear"`, `"noise"`, `"other"`, or `"energy"`. See below for details. Defaults to `"all"` for a complete summary. |
+| `relative` | `FALSE`       | Logical. If `TRUE`, percentages are calculated relative to class totals. Defaults to `FALSE`.                                                                                                                                                                                               |
+| `quintile` | `TRUE`        | Logical. If `TRUE`, body condition plots (under the "health" section) are based on quintiles of the data.                                                                                                                                                                                   |
+| `plot`     | `FALSE`       | Logical. If `TRUE`, plots are produced in addition to a text-based summary.                                                                                                                                                                                                                 |
+| `whale`    | `1:nsim`      | Positive integer indicating the individual for which data should be extracted. By default, considers all `nsim` individuals.                                                                                                                                                                |
+| `cohort`   | `1:6`         | Positive integer or vector of positive integers indicating which cohorts should be considered. Defaults to all cohorts. Cohort identifiers are listed in an object called `cohorts`.                                                                                                        |
+
+As summaries tend to be long and dense, the `what` argument can be used to select subsets of data to show in the R console. The table below lists the information returned for each possible value of `what`.
+
+| Category    | Component                            | Plots | Details                                                                                                                                                                                                                                       |
+|--------------|--------------|--------------|-------------------------------|
+| `health`    | Mortality                            | No    | Whale mortality by region, cohort, and cause of death (i.e., starvation vs. vessel strike) .                                                                                                                                                  |
+|             | Pregnancy                            | No    | Observed abortion rate in females that started the simulation in a pregnant state.                                                                                                                                                            |
+|             | Births                               | No    | Mean (range) date of calving events.                                                                                                                                                                                                          |
+|             | Body condition                       | Yes   | Time series of individual body condition (expressed as relative fat mass), by cohort.                                                                                                                                                         |
+|             | Growth                               | Yes   | Growth curves, by cohort.                                                                                                                                                                                                                     |
+| `movements` | Locations                            | No    | Breakdown of (daily) locations by cohort, region, and country (U.S. vs. Canada).                                                                                                                                                              |
+|             | Destinations                         | No    | Comparison of assigned vs. realized migratory destinations both within and across cohorts. Migratory endpoints include the Southeastern United States calving grounds (SEUS) and Canadian feeding grounds in the Gulf of St Lawrence (GSL).   |
+|             | Step lengths                         | Yes   | Summary of daily movements, reported as mean (± SD, range) distances traveled per day, by cohort. Distributions of daily step lengths are also visualized by region and as a whole.                                                           |
+|             | Migration                            | No    | Summary of yearly movements, reported as mean (± SD, range) total distance covered over the time span of the simulation, by cohort.                                                                                                           |
+| `habitat`   | Occupancy                            | No    | Cohort-specific summary of the numbers of animals visiting each region, and the number of regions visited by animals.                                                                                                                         |
+|             | Residency                            | No    | Breakdown of days spent in each.                                                                                                                                                                                                              |
+| `behavior`  | Activity budgets                     | Yes   | Mean (± SD) hours spent engaging in each of the four categories of behavior considered in the model (i.e., traveling, resting, nursing, and feeding), by region. A visual breakdown by region is also produced for each category of behavior. |
+| `stressors` | Entanglements (`gear`)               | Yes   | Various summaries by cohort, including: entanglement rates, durations, severities, probabilities, and attachment sites along the body.                                                                                                        |
+|             | Vessel strikes (`strike`)            | No    | Strike rates by cohort.                                                                                                                                                                                                                       |
+|             | Noise (`noise`)                      | No    | Summary of mean (± SD, range) noise levels encountered, behavioral response thresholds, and numbers of days during which a response to pile-driving was observed.                                                                             |
+|             | Other sources of mortality (`other`) | No    | Summary of mortality from other sources, by cohort.                                                                                                                                                                                           |
+| Energy      | Energy budget                        | No    | Mean (± SD, range) daily energy intake and expenditure (expressed in MJ/day), by cohort. Also reported are the mean (± SD, range) % time individuals are in energetic deficit (energy balance \< 0) or surplus (energy balance \> 0).         |
+
+Similarly, the `cohort` argument can be used to only display data for specific population cohorts. This works based on a unique cohort ID number, which is an integer between 1 and 6. A list of cohort IDs is stored in the left-most column of an object called `cohorts`, as shown below:
+
+```{r cohorts}
+cohorts
+```
+
+Based on this, the code below prints a complete summary (all categories of data listed in the above table) for the cohorts of lactating (ID = 5) females
+
+```{r model_summary}
+# Summary for adult females only
+summary(model_base, cohort = 5)
+```
+
+## Plotting model outputs
+
+Several plots can be obtained from the outputs of the agent-based model -- all are produced using the `plot()` method, which takes the following arguments:
+
+| Argument | Default value | Description                                                                                                                                                                                                                                                                                                          |
+|----------------|----------------|---------------------------------------|
+| `obj`    | `-`           | Model object of class `narwsim`, as returned by `narw()`.                                                                                                                                                                                                                                                            |
+| `what`   | `"map"`       | Character string indicating which plots to return.                                                                                                                                                                                                                                                                   |
+| `whale`  | `1:nsim`      | Positive integer or vector of integers indicating the individual(s) for which data should be extracted. By default, the function plots tracks for all `nsim` simulated animals.                                                                                                                                      |
+| `cohort` | `1:6`         | Positive integer or vector of positive integers indicating which cohorts should be considered. Defaults to all cohorts. Cohort identifiers are listed in an object called `cohorts`.                                                                                                                                 |
+| `web`    | `FALSE`       | Logical. Whether to produce static maps (`FALSE`) or interactive, web-based maps (`TRUE`).                                                                                                                                                                                                                           |
+| `nL`     | `100`         | Positive integer. Number of tracks to plot (when `what = "map"`) or number of draws to plot from the Bayesian posterior distribution of survival, health, and gestation models (when `what = "pred"`). In the former case, this argument should be kept \< 100 to minimize memory usage and avoid lengthy run times. |
+| `lwd`    | `0.2`         | Numeric value. Thickness of the lines used to illustrate movement tracks.                                                                                                                                                                                                                                            |
+| `alpha`  | `0.7`         | Numeric value between 0 and 1. Level of transparency of the tracks.                                                                                                                                                                                                                                                  |
+
+### Plot type
+
+By default, a call to `plot()` will automatically generate maps of simulated whale tracks, with labels indicating the locations of births (in green, if relevant) and deaths (color-coded by cause of mortality). This behavior is controlled by the `what` argument, which is preset to `"map"`. `what` may also be set to `"pred"` to visualize how survival and body condition are predicted to vary as a function of individual health (see next Tutorial 5).
+
+### Number of tracks
+
+The number of tracks shown is limited to a maximum of `nL = 100` to improve legibility and ensure that the code runs smoothly. We recommend against modifying this default setting, unless absolutely necessary (i.e., fewer/more tracks can be displayed by decreasing or increasing value passed to the `nL` argument).
+
+### Subsets of data
+
+Similarly to the other methods described in preceding sections, the `cohort` and `whale` arguments can be used to display data for particular cohorts and/or individuals of interest.
+
+```{r model_plot, fig.width=8, fig.height=10}
+plot(model_base, cohort = 5)
+```
+
+### Plot aesthetics
+
+The thickness and transparency of track lines can be changed via the `lwd` and `alpha` arguments, respectively. Lower values of `lwd` produce thinner lines, and lower values of `alpha` increase transparency.
+
+```{r model_plot02,fig.width=8,fig.height=10}
+plot(model_base, cohort = 5, whale = 1:10, alpha = 0.2, lwd = 1)
+```
+
+### Interactive maps
+
+Lastly, when `web` is set to `TRUE`, interactive web-based maps are produced using the [`ggplotly`](https://plotly.com/ggplot2/) R package. These can be zoomed and panned using the mouse cursor to get a closer look at specific areas of interest. The location (easting, northing) and ID of each animal are displayed upon mouse hover.

@@ -1,0 +1,64 @@
+---
+title: "6. Exporting data"
+author:
+  affiliation: Centre for Research into Ecological & Environmental Modelling, University of St Andrews
+  name: Phil Bouchet, Enrico Pirotta, Len Thomas, Catriona Harris
+date: "`r Sys.Date()`"
+css: pkgdown/extra.css
+csl: narwind.csl
+link-citations: yes
+rmarkdown::html_vignette:
+  fig_caption: yes
+  toc: yes
+  toc_depth: 4
+bibliography: narwind.bib
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{6. Exporting data}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>")
+```
+
+### Exporting data {data-link="Exporting data"}
+
+There are two ways to save the results of an analysis conducted in `narwind`.
+
+The first is to save the R objects returned by the model as an `.rda` (or 'R data') file using the `save()` command. **This is essential** as running the agent-based model can be time-consuming and repeat analyses should therefore be avoided. To do this, execute the following line of code, making sure to replace the path and fine name with appropriate values:
+
+```{r, eval = FALSE}
+save(model_base, file = "path/to/a/folder/of/choice/filename.rda")
+```
+
+During package testing, a typical `.rda` file containing outputs from a run of the agent-based model with `nsim = 1000` was between 500 Mb and 1 Gb in size.
+
+In addition to the above, the `export()` function can be used to save model outputs as a Microsoft Excel spreadsheet (.xlsx), stored in the user's current working directory. `export()` can be used with both outputs from the agent-based model and the population model. In the former case, a separate file will be produced for each cohort in `cohort`, so we recommend using this option only for short simulation runs (`nsim = 100`), or using the `cohort` and `whale` arguments to extract data for specific individuals/cohorts.
+
+Note that if the simulation run was given a label when using `narw()`, then this label is appended to the output file name.
+
+In the below example, the first line of code exports data from the agent-based model for the first 10 females in the lactating cohort (ID = 5). The second line of code exports population projection data.
+
+```{r save, eval=FALSE}
+export(model_base, whale = 1:10, cohort = 5)
+export(proj_base, prefix = "NARW_abundance")
+```
+
+All arguments to `export()` are listed below.
+
+| Object class | Argument | Default value | Description                                                                                                                 |
+|---------------|---------------|---------------|----------------------------|
+| `narwsim`    | `obj`    | `-`           | Input model object, as returned by `narw()`.                                                                                |
+|              | `prefix` | `"narwsim"`   | Character string. Prefix appended to the output file name.                                                                  |
+|              | `whale`  | `1:nsim`      | Positive integer indicating the individual(s) for which data should be extracted. By default, all individuals are included. |
+|              | `cohort` | `1:6`         | Positive integer or vector of positive integers indicating which cohort(s) should be considered. Defaults to all cohorts.   |
+| `narwproj`   | `obj`    | `-`           | Input projection object, as returned by `predict()`.                                                                        |
+|              | `prefix` | `"narwproj"`  | Character string. Prefix appended to the output file name.                                                                  |
+|              | `...`    |               | Additional arguments passed to `write.xlsx`                                                                                 |
