@@ -22,31 +22,23 @@ knitr::opts_chunk$set(
 
 <!-- badges: end -->
 
-The `narwind` R package provides methods to forecast the abundance of critically endangered North Atlantic right whales (NARW, *Eubalaena glacialis*) in the context of user-defined offshore wind development scenarios. `narwind` implements a spatially-explicit bioenergetic PCoMS model [@Pirotta2023; @Pirotta2018; @Pirotta2022], whereby the movements of different NARW cohorts (juveniles, adult males, pregnant females, resting females, lactating females + dependent calves) are simulated throughout a full calendar year, and population size projections are made over a time horizon relevant to management (25--50 years). The model operates on a daily scale and accounts for the effects of multiple anthropogenic stressors known/presumed to affect right whale health, reproduction, and survival, including: (1) direct mortality from vessel strikes, (2) behavioral responses to noise exposure leading to short-term cessation of foraging activities, and (3) increased energy expenditure resulting from entanglement in fishing gear.
-
-## Getting started
-
-If you are just getting started with `narwind`, we recommend reading the [tutorial vignette](https://offshore-wind.github.io/narwind/articles/narwind.html), which provides a detailed introduction to the package.
-
-## Installation
-
-Install the GitHub development version to access the latest features and patches.
-
-```{r, eval = FALSE}
-# install.packages("remotes")
-remotes::install_github("offshore-wind/narwind") # OR
-
-# install.packages("devtools")
-devtools::install_github("offshore-wind/narwind")
-```
-
-Note that the package relies on compiled code (C++) and functionality provided by the [Rcpp](https://cran.r-project.org/web/packages/Rcpp/index.html) package. Because of this, development tools are required to run the code. Please refer to the tutorial vignette for full instructions on package installation for various operating systems.
+The `narwind` R package provides methods to forecast the population size of critically endangered North Atlantic right whales (NARW, *Eubalaena glacialis*) under user-defined offshore wind development scenarios. `narwind` offers an implementation of the Population Consequences of Multiple Stressors (PCoMS) framework for NARWs. it is built around a spatially-explicit bioenergetic (agent-based) model, in which the movements of different population cohorts (i.e., juveniles, adult males, pregnant females, resting females, lactating females and their dependent calves) are simulated throughout a full calendar year, and the energy budgets of individual animals are monitored in the context of potential disturbance from anthropogenic activities. The insights gained from this model, in terms of individual health and survival, are then used to predict NARW abundance over a time horizon relevant to management (e.g., 25–50 years, consistent with the expected lifespan of a typical wind farm) using a stochastic population model. The agent-based model operates in daily time steps and accounts for the effects of multiple stressors known or presumed to affect NARW health, reproduction, and survival, namely: (1) direct mortality from vessel strikes, (2) short-term cessation of foraging activity following exposure to pile-driving noise during wind farm construction, and (3) mortality and increased energy expenditure resulting from entanglement in fishing gear. The population model works in yearly increments and allows different schedules of future disturbance to be explored.
 
 ## Background
 
 Marine renewable energy sources are poised to make a vital contribution in the fight against climate warming and global anthropogenic change. While offshore wind power remains a nascent market in the United States [@DeCastro2019], strong and persistent oceanic wind regimes in the North Atlantic offer vast potential for the expansion of the industry along the U.S. eastern seaboard. However, concerns have been raised that the deployment of thousands of turbines may adversely affect iconic marine wildlife such as seabirds and cetaceans [@Verfuss2016; @Goodale2019]. Much of what is known about the impacts of offshore wind developments on cetaceans comes from studies conducted in Europe, where efforts to monitor animal behavior during both construction and operation activities have been made for a limited number of species common to that area, primarily harbor porpoises [@Bailey2014; @Thompson2010]. Little information exists on the responses of baleen whales to offshore wind activities, and in contrast to European case studies on resident cetacean populations, many marine mammals occurring within U.S. waters are migratory. This makes it difficult to directly apply lessons learnt and determine with certainty what potential offshore wind effects may be emergent in the North Atlantic in the future [@Petruny2014]. It is also critical to recognize that every new development represents an incremental addition to the pre-existing and rapidly expanding footprint of human activities on offshore marine ecosystems. There is therefore a need to consider the cumulative impacts of offshore wind in the context of additional concurrent human uses of ocean areas. This is particularly important for sensitive wildlife species, such as those in low abundance and/or in decline, and those occurring within narrow habitat ranges.
 
 One such species is the Critically Endangered North Atlantic right whale (NARW, *Eubalaena glacialis*), which numbers only 340 individuals and continues to experience a downward trajectory towards extinction [@Linden2023; @Pace2017]. Assessing the full scope of potential offshore wind impacts on NARWs across the U.S. Atlantic calls for a quantitative framework capable of integrating the state of individuals (e.g., energy reserves, reproductive status) with the state of the surrounding biophysical and anthropogenic environment (e.g., resource density, wind farm characteristics) to project changes in NARW vital rates and translate short-term patterns of disturbance into long-term demographic outcomes. Bioenergetic models represent such an approach and have been used as a major implementation of the Population Consequences of Disturbance (PCoD) paradigm [@Costa2012]. PCoD is a conceptual model of the pathways through which the effects of sub-lethal stressors may scale up to population-level impacts [@Pirotta2018]; it has been implemented in various ways and has become a major component of several regulatory frameworks (e.g., U.S. Marine Mammal Protection Act,16 U.S. Code § 1361 et seq.; Endangered Species Act,16 U.S. Code § 1531 et seq.). PCoD models have been developed for several cetacean species such as gray whales, humpback whales, bottlenose dolphins, beaked whales, as well as pinnipeds like the northern elephant seal. Significant attention has also been given to NARW in the last decade [@Rolland2016; @Schick2013], but without explicit consideration of offshore wind energy areas, or of the interactions that may arise between the myriad of pressures which NARW are currently facing. An expanded framework known as the Population Consequences of Multiple Stressors (PCoMS) [@Pirotta2022] now exists to accommodate scenarios where individuals within a population are exposed to multiple stressors that may combine in unexpected ways to generate cumulative impacts greater than the individual sum of their parts [@Crain2008; @Pirotta2019]. PCoMS models encompassing each key NARW habitat have been identified as a high priority target for management in a recent review of NARW health and monitoring needs [@Moore2021].
+
+## Getting started
+
+The [package installation tutorial](https://offshore-wind.github.io/narwind/articles/narwind.html) provides full instructions on how to download and install the package for various operating systems. If you are just getting started with `narwind`, we strongly recommend reading the accompanying tutorials, which cover all steps required to run the bioenergetic model and make predictions of right whale population trends. This includes:
+
+-   Defining bespoke offshore wind scenarios using an interactive [Shiny](https://www.rstudio.com/products/shiny/) web app [Read more].
+-   Running simulations [Read more].
+-   Inspecting model outputs, generating summary statistics, simulation diagnostics, and maps [Read more].
+-   Forecasting population trends while accounting for uncertainty and [Read more].
+-   Exporting/saving model results [Read more].
 
 ## Funding
 
