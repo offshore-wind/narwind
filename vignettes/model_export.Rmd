@@ -28,6 +28,17 @@ knitr::opts_chunk$set(
   comment = "#>")
 ```
 
+```{r, echo = FALSE}
+downloadthis::download_link(
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/99df759f85ce0f5d495a864a5d35bc854b5951d9/vignettes/pdf/getting_started.pdf",
+  button_label = "Download PDF",
+  button_type = "primary",
+  has_icon = TRUE,
+  icon = "fa fa-file-pdf",
+  self_contained = FALSE
+)
+```
+
 ### Exporting data {data-link="Exporting data"}
 
 There are two ways to save the results of an analysis conducted in `narwind`.
@@ -54,7 +65,7 @@ export(proj_base, prefix = "NARW_abundance")
 All arguments to `export()` are listed below.
 
 | Object class | Argument | Default value | Description                                                                                                                 |
-|---------------|---------------|---------------|----------------------------|
+|----------------|----------------|----------------|-------------------------|
 | `narwsim`    | `obj`    | `-`           | Input model object, as returned by `narw()`.                                                                                |
 |              | `prefix` | `"narwsim"`   | Character string. Prefix appended to the output file name.                                                                  |
 |              | `whale`  | `1:nsim`      | Positive integer indicating the individual(s) for which data should be extracted. By default, all individuals are included. |

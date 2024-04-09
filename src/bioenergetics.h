@@ -920,31 +920,21 @@ long double start_bcondition(double cohort){
   if(cohort == 0){
     
     bc = R::runif(lower, upper);
-    // bc = rtnorm(0.35884621, 0.07788818, lower, upper);
     
     // Juveniles (males and females)
   } else if(cohort == 1 | cohort == 2){
     
-    // bc = rtnorm(0.28574784, 0.02027885, 0.05, 0.665289);
-    // bc = rtnorm(0.2904040, 0.0681619, lower, upper);
     bc = R::runif(lower, upper);
-    // bc = rtnorm(0.4, 0.1, lower, upper);
     
     // Adult males, resting females, pregnant females
   } else if(cohort == 3 | cohort == 4 | cohort == 6) {
     
-    // bc = rtnorm(0.25940715, 0.01519702, 0.05, 0.665289);
-    // bc = rtnorm(0.27617455, 0.06969136, lower, upper);
     bc = R::runif(lower, upper);
-    // bc = rtnorm(0.4, 0.1, lower, upper);
     
     // Lactating females, which start simulation as late pregnant
   } else {
     
-    // Christiansen values, which do not reflect our "lactating females" starting as late pregnant
-    // bc = rtnorm(0.30989147, 0.06917943, 0.35, upper); 
     bc = R::runif(0.4, upper);
-    // bc = rtnorm(0.4462601, 0.1026832, 0.4, upper);
     
   }
   PutRNGstate();
