@@ -46,6 +46,33 @@
 <li>
   <a href="../reference/index.html">Reference</a>
 </li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Articles
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+<li>
+      <a href="../articles/model_export.html">6. Exporting data</a>
+    </li>
+    <li>
+      <a href="../articles/model_overview.html">1. Overview and workflow</a>
+    </li>
+    <li>
+      <a href="../articles/model_predictions.html">5. Model predictions</a>
+    </li>
+    <li>
+      <a href="../articles/model_run.html">3. Running the model</a>
+    </li>
+    <li>
+      <a href="../articles/model_summary.html">4. Summary and diagnostics</a>
+    </li>
+    <li>
+      <a href="../articles/scenarios.html">2. Defining scenarios</a>
+    </li>
+  </ul>
+</li>
       </ul>
 <ul class="nav navbar-nav navbar-right"></ul>
 </div>
@@ -57,7 +84,8 @@
 
       
 
-      </header><div class="row">
+      </header><script src="narwind_files/font-awesome-5.13.0/js/script.js"></script><link href="narwind_files/vembedr-0.1.5/css/vembedr.css" rel="stylesheet">
+<div class="row">
   <div class="col-md-9 contents">
     <div class="page-header toc-ignore">
       <h1 data-toc-skip>Getting started with narwind</h1>
@@ -65,7 +93,7 @@
 Enrico Pirotta, Len Thomas, Catriona Harris</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2024-03-20</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2024-04-09</h4>
       
       
       <div class="hidden name"><code>narwind.Rmd</code></div>
@@ -75,65 +103,52 @@ University of St Andrews<br><h4 data-toc-skip class="date">2024-03-20</h4>
 
     
     
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">downloadthis</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/downloadthis/man/download_link.html" class="external-link">download_link</a></span><span class="op">(</span></span>
+<span>  link <span class="op">=</span> <span class="st">"https://github.com/fmmattioni/downloadthis/raw/master/inst/example/file_1.pdf"</span>,</span>
+<span>  button_label <span class="op">=</span> <span class="st">"Download PDF"</span>,</span>
+<span>  button_type <span class="op">=</span> <span class="st">"primary"</span>,</span>
+<span>  has_icon <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  icon <span class="op">=</span> <span class="st">"fa fa-file-pdf"</span>,</span>
+<span>  self_contained <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<a href="https://github.com/fmmattioni/downloadthis/raw/master/inst/example/file_1.pdf" class="external-link">
+<button class="btn btn-primary"><i class="fa fa-file-pdf"></i> Download PDF</button>
+</a>
 <div class="section level2">
 <h2 id="preamble">Preamble<a class="anchor" aria-label="anchor" href="#preamble"></a>
 </h2>
-<p>The <code>narwind</code> R package provides methods to forecast the
-population size of critically endangered North Atlantic right whales
-(NARW, <em>Eubalaena glacialis</em>) under user-defined offshore wind
-development scenarios. <code>narwind</code> offers an implementation
-PCoMS<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>
-framework; it is built around a spatially-explicit bioenergetic model,
-in which the movements of different population cohorts (i.e., juveniles,
-adult males, pregnant females, resting females, lactating females and
-their dependent calves) are simulated throughout a full calendar year,
-and the energy budgets of individual animals are monitored in the
-context of potential disturbance from anthropogenic activities. Insights
-gained from the simulator are then used to predict NARW abundance over a
-time horizon relevant to management (e.g., 25–50 years, consistent with
-the expected lifespan of a typical wind farm) using a stochastic
-population model. The spatial simulation operates in daily time steps
-and accounts for the effects of multiple stressors known or presumed to
-affect NARW health, reproduction, and survival, namely: (1) direct
-mortality from vessel strikes, (2) short-term cessation of foraging
-activity following exposure to pile-driving noise during wind farm
-construction, and (3) mortality and increased energy expenditure
-resulting from entanglement in fishing gear.</p>
-<p>This vignette is a step-by-step tutorial designed to showcase the
-main features of <code>narwind</code>.</p>
-<blockquote>
-<p><strong>Note:</strong> Model calibration is still ongoing as of
-January 31, 2024. The model outputs presented below are therefore
-provisional and only shown for instructional purposes; results should
-not presently be used to make inferences about wind farm effects on
-right whale population size.</p>
-</blockquote>
+<p>This tutorial explains how to download and install the
+<code>narwind</code> package. A primer on the use of R is also given for
+novice users.</p>
 </div>
 <div class="section level2">
 <h2 id="required-software">Required software<a class="anchor" aria-label="anchor" href="#required-software"></a>
 </h2>
-<p>The bioenergetic model is written in the R and C++ programming
-languages. To run the model, users will need to install the freely
-available <a href="https://cloud.r-project.org/" class="external-link">R software</a> on their
-machines. R is a programming language for data science and graphics. It
-is especially powerful in performing advanced statistical computing and
-is widely used in ecology. We also recommend the open-source <a href="https://posit.co/download/rstudio-desktop/" class="external-link">RStudio software</a>,
+<p>The bioenergetic model implemented in <code>narwind</code> is written
+in the R and C++ programming languages. To run the model, users will
+need to install the freely available <a href="https://cloud.r-project.org/" class="external-link">R software</a> on their machines. R
+is a programming language for data science and graphics, which is
+especially powerful in performing advanced statistical computing and is
+widely used in ecology. We also recommend the open-source <a href="https://posit.co/download/rstudio-desktop/" class="external-link">RStudio software</a>,
 which provides a user-friendly front-end interface to R, with many
-convenient features and tools. including:</p>
+convenient features and tools, including:</p>
 <ul>
-<li><p>The ability to write and save reusable scripts</p></li>
+<li><p>The ability to write and save reusable scripts (i.e., text files
+containing R commands)</p></li>
 <li><p>Easy access to all the imported data and created objects (like
 variables, functions, etc.)</p></li>
 <li><p>Exhaustive help on any object</p></li>
-<li><p>Code autocompletion</p></li>
+<li><p>Code auto-completion</p></li>
 <li><p>The ability to create projects to organize and share work with
 collaborators</p></li>
 <li><p>Plot previewing</p></li>
-<li><p>Easy switching between terminal and console</p></li>
 <li><p>Operational history tracking</p></li>
 </ul>
-<p>It is important to install R first, before installing RStudio.</p>
-<p>To do so, go to the Comprehensive R Archive Network (CRAN) website <a href="https://cran.r-project.org/" class="external-link uri">https://cran.r-project.org/</a>. In the upper part of the
+<p><strong>It is important to install R first, before installing
+RStudio.</strong></p>
+<p>To do so, go to the Comprehensive R Archive Network (CRAN) website:
+<a href="https://cran.r-project.org/" class="external-link uri">https://cran.r-project.org/</a>. In the upper part of the
 screen, find the section entitled “Download and Install R” and click the
 link corresponding to your operating system.</p>
 <ul>
@@ -166,19 +181,20 @@ minor layout changes may occur with different versions of R.</p>
 <p>The interface can be broadly divided into four areas:</p>
 <ul>
 <li><p>the <strong>Source</strong> for your scripts and documents
-(top-left, in the default layout)</p></li>
-<li><p>the R <strong>Console</strong> (bottom-left)</p></li>
-<li><p>the <strong>Environment/History</strong> tabs
-(top-right)</p></li>
+(top-left in the above image, in the default layout)</p></li>
+<li><p>the R <strong>Console</strong> (bottom-left in the above
+image)</p></li>
+<li><p>the <strong>Environment/History</strong> tabs (top-right in the
+above image)</p></li>
 <li><p>the <strong>Files/Plots/Packages/Help/Viewer tabs</strong>
-(bottom-right)</p></li>
+(bottom-right in the above image)</p></li>
 </ul>
 <p>This default layout can be customised to suit individual needs, as
 shown here.</p>
 <p><img src="move-panels.gif"></p>
 <p>Unlike other point-and-click statistical software programs like
 Excel, SPSS, or Minitab, R is an interpreted language, which means that
-it works by typing and executing commands written in Rcode. There are
+it works by typing and executing commands written in R code. There are
 two main ways of interacting with R: by using the
 <strong>console</strong> or by using <strong>script files</strong>
 (plain text files that contain code).</p>
@@ -232,11 +248,11 @@ for and save files. Whenever R/RStudio is launched, a working directory
 will automatically be determined based on startup parameters.</p>
 <p>To check which working directory R is using, execute the following
 command:</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">getwd</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>To change to a different working directory in R go to the Console and
 type:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">setwd</a></span><span class="op">(</span><span class="st">"Path/To/Desired/Workingdirectory"</span><span class="op">)</span></span></code></pre></div>
 <p>The working directory can also be changed by going to
 <code>Session</code> &gt; <code>Set Working Directory</code> &gt;
@@ -270,7 +286,9 @@ packages which is not included in the standard R download files, and
 must be manually installed.</p>
 <p><code>narwind</code> relies not only on R code but also on compiled
 code written in the C++ programming language. Because of this, users
-must follow the steps below to install the package:</p>
+must follow the steps below to install the package. Note that additional
+permissions from network administrators may be required to internet
+access during installation.</p>
 <ul>
 <li>
 <p><strong>Step 1:</strong> Download the development tools
@@ -281,7 +299,7 @@ appropriate for your operating system.</p>
 download the version of RTools that corresponds to the version of R
 installed on your machine. If unsure, type and execute the following
 command to check which version of R is running:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">R.version</span></span></code></pre></div>
 </li>
 <li><p>Mac users: Follow the instructions found at <a href="https://mac.r-project.org/tools/" class="external-link uri">https://mac.r-project.org/tools/</a></p></li>
@@ -290,7 +308,7 @@ command to check which version of R is running:</p>
 <li><p><strong>Step 2:</strong> In R, install the <code>devtools</code>
 package.</p></li>
 </ul>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># To install the devtools package, run the following command:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"devtools"</span><span class="op">)</span></span></code></pre></div>
 <ul>
@@ -299,7 +317,7 @@ package.</p></li>
 necessary, remove previous installations of the package by first calling
 the <code>remove.packages</code> command.</li>
 </ul>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/remove.packages.html" class="external-link">remove.packages</a></span><span class="op">(</span><span class="st">"narwind"</span><span class="op">)</span> <span class="co"># If a previous version of narwind is already available</span></span>
 <span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"offshore-wind/narwind"</span>, dependencies <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <ul>
@@ -313,7 +331,10 @@ that all available updates are downloaded.</li>
 <ul>
 <li>
 <strong>Step 5:</strong> The installation is complete when the
-following lines are printed.</li>
+following lines are printed. Note that some warning messages (sometimes
+shown in red color) may also appear in the R console during this
+process. These are ‘normal’ and not indicative of errors that would
+prevent normal use of the package.</li>
 </ul>
 <p><img src="installation_complete.PNG"></p>
 <ul>
@@ -324,10 +345,10 @@ to users. This is done using the <code><a href="https://rdrr.io/r/base/library.h
 in the case of <code>narwind</code> prints a welcome message with basic
 information in the R console:</li>
 </ul>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">narwind</span><span class="op">)</span></span></code></pre></div>
 <blockquote>
-<p><strong>Note:</strong> <code>narwind</code> is largely written in
+<p><strong>Note 1.1:</strong> <code>narwind</code> is largely written in
 C++, a high-level, general-purpose programming language often used in
 high-performance applications. C++ is a compiled language, meaning that
 any source code must first be converted into machine-readable code
@@ -337,7 +358,7 @@ necessary; this step is automatically performed in the background as
 part of the <code><a href="https://rdrr.io/r/base/library.html" class="external-link">library()</a></code> call above.</p>
 </blockquote>
 <blockquote>
-<p><strong>Note:</strong> In R, the <code><a href="https://rdrr.io/r/utils/help.html" class="external-link">help()</a></code> function and
+<p><strong>Note 1.2:</strong> In R, the <code><a href="https://rdrr.io/r/utils/help.html" class="external-link">help()</a></code> function and
 <code>?</code> help operator provide access to documentation pages for
 package functions, datasets, or other objects. To access documentation
 for the <code><a href="../reference/narw.html">narw()</a></code> function, for instance, enter any of the
@@ -347,1633 +368,155 @@ optional).</p>
 </blockquote>
 </div>
 <div class="section level2">
-<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+<h2 id="r-basics">R basics<a class="anchor" aria-label="anchor" href="#r-basics"></a>
 </h2>
-<p>This vignette covers all the steps required to run the bioenergetic
-model and make predictions of right whale population trends. This
-includes:</p>
-<ul>
-<li>Defining bespoke offshore wind scenarios using an interactive <a href="https://www.rstudio.com/products/shiny/" class="external-link">Shiny</a> web app.</li>
-<li>Running simulations using the <code><a href="../reference/narw.html">narw()</a></code> function.</li>
-<li>Inspecting outputs using the <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method.</li>
-<li>Generating summary statistics, simulation diagnostics, and maps
-using the <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> and <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> methods.</li>
-<li>Propagating uncertainty from survival and health models using the
-<code>augment()</code> function.</li>
-<li>Forecasting population size using the <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>
-method.</li>
-<li>Visualizing population trends using the <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>
-method.</li>
-<li>Saving model outputs to disk using the <code><a href="https://rdrr.io/r/base/write.html" class="external-link">write()</a></code>
-method.</li>
-</ul>
-</div>
-<div class="section level2">
-<h2 id="spatial-data">Spatial data<a class="anchor" aria-label="anchor" href="#spatial-data"></a>
-</h2>
-<p><code>narwind</code> implements a spatially-explicit bioenergetic
-model which is informed by several raster surfaces relating to key model
-parameters, namely:</p>
-<table style="width:99%;" class="table">
-<colgroup>
-<col width="7%">
-<col width="7%">
-<col width="53%">
-<col width="31%">
-</colgroup>
-<thead><tr class="header">
-<th>Raster</th>
-<th>Resolution</th>
-<th>Derived from</th>
-<th>Source(s) / Data providers</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td>Strike risk</td>
-<td>Monthly (10x10 km)</td>
-<td>Records of sea-going vessel movements as captured by Automatic
-Identification Systems (AIS)</td>
-<td>NOAA Fisheries (U.S. waters), MERIDIAN (Canadian waters)</td>
-</tr>
-<tr class="even">
-<td>Entanglement risk</td>
-<td>Monthly (5x5 km)</td>
-<td>Risk estimates from NOAA’s Decision Support Tool, complemented by a
-comparative analysis of fishing effort within northern U.S. vs. Canadian
-waters</td>
-<td>NOAA Fisheries (U.S. waters), North Atlantic Fisheries Organization
-(Canadian waters)</td>
-</tr>
-<tr class="odd">
-<td>Pile-driving noise</td>
-<td>Daily (5x5 km)</td>
-<td>Simple acoustic propagation model, which assumes that transmission
-loss is dependent on log-range and frequency-specific absorption</td>
-<td>-</td>
-</tr>
-<tr class="even">
-<td>Prey concentration</td>
-<td>Monthly (10x10 km)</td>
-<td>Predictions from a depth-integrated species distribution model for
-<em>Calanus finmarchicus</em>, <em>Calanus hyperboreus</em>, and
-<em>Calanus glacialis</em>
-</td>
-<td>Fisheries and Oceans Canada</td>
-</tr>
-<tr class="odd">
-<td>Right whale density</td>
-<td>Monthly (5x5 km)</td>
-<td>Predictions from density surface models developed from shipboard and
-aerial survey data</td>
-<td>Duke University (MGEL)</td>
-</tr>
-</tbody>
-</table>
-<p>Further information on each of these inputs can be found under the <a href="https://offshore-wind.github.io/narwind/articles/" class="external-link">Articles</a>
-menu.</p>
-<p>The package contains all the surfaces required to undertake an
-assessment of NARW abundance under three hypothetical offshore wind
-development scenarios (see below), as well as under baseline conditions
-in the absence of wind farm construction activities.</p>
-</div>
-<div class="section level2">
-<h2 id="package-workflow">Package workflow<a class="anchor" aria-label="anchor" href="#package-workflow"></a>
-</h2>
-<p>A typical workflow, as described in the <a href="#example-analysis">Example analysis</a> below, consists of five
-steps (Figure 1):</p>
-<ol style="list-style-type: decimal">
-<li>Defining the parameters of one or more target offshore wind
-scenario(s) using the <code>scenario()</code> function.</li>
-<li>Running simulations using the <code><a href="../reference/narw.html">narw()</a></code> function,
-including in the absence of wind farm development activities (i.e.,
-baseline conditions, if relevant).</li>
-<li>Inspecting, visualizing, and summarizing model outputs using the
-<code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>, and <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code>
-methods.</li>
-<li>Estimating uncertainty associated with health and survival
-functions, to be propagated into population projections [optional] using
-the <code>augment()</code> function.</li>
-<li>Forecasting right whale abundance using the <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>
-method.</li>
-<li>Optionally, using the <code><a href="https://rdrr.io/r/base/write.html" class="external-link">write()</a></code> method to export data for
-further analysis/reporting.</li>
-</ol>
-<div style="width:550px">
-<div class="float">
-<img src="narwind_workflow.jpg" alt="Figure 1. Schematic representation of a typical narwind workflow. Package functions and object classes are indicated in coloured font."><div class="figcaption">
-<strong>Figure 1.</strong> Schematic
-representation of a typical <code>narwind</code> workflow. Package
-functions and object classes are indicated in coloured font.</div>
-</div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="example-analysis">Example analysis<a class="anchor" aria-label="anchor" href="#example-analysis"></a>
-</h2>
-<div class="section level3">
-<h3 id="defining-offshore-wind-scenarios">Defining offshore wind scenarios<a class="anchor" aria-label="anchor" href="#defining-offshore-wind-scenarios"></a>
-</h3>
-<p>The package ships with three preset offshore wind scenario objects,
-which summarize different phases of development at two sites off the
-Southern New England coast and a third off the Virginia coast (Figure
-2). These are provided as objects of class <code>narwscenario</code>
-(<code>scenario_01</code>, <code>scenario_02</code>, and
-<code>scenario_03).</code></p>
-<div style="width:850px">
-<div class="float">
-<img src="windfarm_sites.jpg" alt="Figure 2. Locations of wind farm sites included in the default narwind scenarios."><div class="figcaption">
-<strong>Figure 2.</strong> Locations of wind
-farm sites included in the default <code>narwind</code> scenarios.</div>
-</div>
-</div>
 <blockquote>
-<p><strong>Note:</strong> Throughout this document, we refer to the R
-objects describing construction or operation activities as
-<strong>scenarios</strong>. Multiple scenarios (e.g., relating to
-successive phases of development) together form a <strong>scenario
-bundle</strong>.</p>
+<p><strong>Note 1.3:</strong> The below is taken (and adapted) from
+<em>An Introduction to R</em> by Alex Douglas, Deon Roos, Francesca
+Mancini, Ana Couto, and David Lusseau (<a href="https://intro2r.com/" class="external-link uri">https://intro2r.com/</a>)</p>
 </blockquote>
-<p><strong>Scenario 1 (Construction phase – “unmitigated”
-case)</strong></p>
-<p>This scenario entails the synchronous construction of all three wind
-farms at times coinciding with expected peaks in right whale abundance
-within each respective area (Jan–April in SNE, Jan–March in VA; Figure
-3). The objective of this scenario is to explore the potential for
-cumulative effects of multiple installation activities under unmitigated
-conditions.</p>
-<p><strong>Scenario 2 (Construction phase – “mitigated”
-case)</strong></p>
-<p>This scenario involves shutdowns of installation operations during
-the main right whale foraging/calving seasons (Nov–Apr). Construction
-resumes in May at the southward site (Farm 3) and during the late summer
-to early fall at sites 1 and 2 off New England (Figure 3). In addition,
-activities at each of the two SNE farms are asynchronous, with noise
-abatement systems in place to limit noise impacts. Note that a subset of
-only 60 monopiles are driven at Farm 1 in order to align with Southall
-et al. (2021).</p>
-<p><strong>Scenario 3 (Operation &amp; maintenance)</strong></p>
-<p>In this scenario, we assume that all three wind farms are in
-simultaneous and continuous operation (Figure 3). The primary footprint
-for operations is taken to be vessel traffic to and from wind farm
-sites; we do not consider vessel movements within farm areas.</p>
-<div style="width:650px">
-<div class="float">
-<img src="piling_schedule.jpg" alt="Figure 3. Schedule of piling activities under three pre-defined offshore wind scenarios."><div class="figcaption">
-<strong>Figure 3.</strong> Schedule of piling
-activities under three pre-defined offshore wind scenarios.</div>
-</div>
-</div>
-<p>As can be seen below, <code>narwscenario</code> objects consist of
-several elements:</p>
-<ul>
-<li><p><code>phase</code>: A numeric variable parameter indicating the
-phase of development (<code>0</code> for baseline, <code>1</code> for
-construction, <code>2</code> for operations &amp; maintenance).</p></li>
-<li><p><code>locs</code>: A table listing the coordinates of individual
-wind turbines for each wind farm site. Optionally, <code>locs</code> may
-also contain piling dates for each foundation.</p></li>
-<li><p><code>routes</code>: Spatial lines shapefile representing vessel
-routes to each wind farm site.</p></li>
-<li><p><code>vessels</code>: A table summarizing the nominal travel
-speed (in knots), fleet size, and numbers of round trips per foundation
-for wind farm site, vessel route, and vessel class.</p></li>
-<li><p><code>start.month</code>: A integer vector indicating the month
-of construction start (1 = January, 12 = December) for each wind farm
-site. Only relevant if piling dates are not provided in the
-<code>locs</code> table.</p></li>
-<li><p><code>start.day</code>: A integer vector indicating the day of
-construction start (1 = 1st, 15 = 15th) for each wind farm site. Only
-relevant if piling dates are not provided in the <code>locs</code>
-table.</p></li>
-<li><p><code>piles.per.day</code>: An integer indicating the number of
-turbines being installed each day.</p></li>
-<li><p><code>ambient</code>: An integer defining the ambient noise level
-(in dB).</p></li>
-<li><p><code>sourceLvL</code>: An integer defining the source level (dB)
-of the hammer strikes; this is assumed to correspond to the exact
-locations of the turbines, as listed in <code>locs</code>.</p></li>
-<li><p><code>lowerdB</code>: An numeric value defining the magnitude of
-noise attenuation achieved when noise abatement systems are in place
-(e.g., bubble curtains).</p></li>
-<li><p><code>logrange</code>: Log-range coefficient used in the
-transmission loss model.</p></li>
-<li><p><code>absorb</code>: Absorption coefficient used in the
-transmission loss model.</p></li>
-</ul>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">scenario_01</span>,<span class="fl">1</span><span class="op">)</span></span>
-<span><span class="co">#&gt; List of 12</span></span>
-<span><span class="co">#&gt;  $ phase        : num 1</span></span>
-<span><span class="co">#&gt;  $ locs         :Classes 'data.table' and 'data.frame':  250 obs. of  6 variables:</span></span>
-<span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
-<span><span class="co">#&gt;  $ routes       :List of 3</span></span>
-<span><span class="co">#&gt;  $ vessels      :Classes 'data.table' and 'data.frame':  35 obs. of  9 variables:</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "spec")=List of 3</span></span>
-<span><span class="co">#&gt;   .. ..- attr(*, "class")= chr "col_spec"</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "problems")=&lt;externalptr&gt; </span></span>
-<span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
-<span><span class="co">#&gt;  $ start.month  : num [1:3] 1 2 1</span></span>
-<span><span class="co">#&gt;  $ start.day    : num [1:3] 15 1 1</span></span>
-<span><span class="co">#&gt;  $ piles.per.day: num 1</span></span>
-<span><span class="co">#&gt;  $ ambient      : num 80</span></span>
-<span><span class="co">#&gt;  $ sourceLvL    : num 220</span></span>
-<span><span class="co">#&gt;  $ lowerdB      : num 0</span></span>
-<span><span class="co">#&gt;  $ logrange     : num 15</span></span>
-<span><span class="co">#&gt;  $ absorb       : num 1.18</span></span>
-<span><span class="co">#&gt;  - attr(*, "class")= chr [1:2] "narwscenario" "list"</span></span></code></pre></div>
-<p>The above parameters can be defined interactively to generate
-entirely bespoke scenarios using the Shiny app available though the
-<code>scenario()</code> function. A full tutorial detailing the use of
-the app can be found in a sister vignette (soon to be released).</p>
-</div>
-<div class="section level3">
-<h3 id="running-the-model">Running the model<a class="anchor" aria-label="anchor" href="#running-the-model"></a>
-</h3>
-<p>Once the package is loaded, the bioenergetic model is run by calling
-the <code><a href="../reference/narw.html">narw()</a></code> function. The number of simulated animals per
-cohort, <code>nsim</code>, is the only mandatory argument; all others
-are optional and set to default values that reflect baseline conditions
-when no wind farm activity is occurring. <code>narwscenario</code>
-objects pulled from the Shiny app can be passed to <code><a href="../reference/narw.html">narw()</a></code>
-using the <code>scenario</code> argument.</p>
-<p>As an example, the code below can be used to simulate 100 individuals
-in each population cohort under baseline conditions.</p>
+<p>R is an object-oriented programming language, which means that it
+uses entities called <strong>objects</strong> to store and interact with
+data. These objects can be virtually anything, from a single number or
+character string (like a word) to highly complex data structures like
+the output of a plot, the summary of a statistical analysis, or a set of
+R commands that perform a specific task. Understanding how to create
+objects and assign values to them is key to understanding R.</p>
+<p>To create an object, we simply give the object a name. We can then
+assign a value to this object using the <em>assignment operator</em>
+<code>&lt;-</code> (sometimes called the <em>gets operator</em>). The
+assignment operator is a composite symbol comprised of a ‘less than’
+symbol <code>&lt;</code> and a hyphen <code>-</code> . For example:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span></code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> This took 11 min 47 sec to run on a 2021 iMac
-(M1) running Mac OS Sonoma 14.1.2. However, run times may vary between
-operating systems.</p>
-</blockquote>
-<p>The arguments that can be passed to <code><a href="../reference/narw.html">narw()</a></code> are listed
-below.</p>
-<table style="width:100%;" class="table">
-<colgroup>
-<col width="4%">
-<col width="4%">
-<col width="90%">
-</colgroup>
-<thead><tr class="header">
-<th>Argument</th>
-<th>Default value</th>
-<th>Description</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>nsim</code></td>
-<td><code>1000</code></td>
-<td>Positive integer. Number of simulated animals.</td>
-</tr>
-<tr class="even">
-<td><code>scenario</code></td>
-<td><code>NULL</code></td>
-<td>An optional object of class <code>narwscenario</code>, as returned
-by the <code>scenario()</code> function.</td>
-</tr>
-<tr class="odd">
-<td><code>pair</code></td>
-<td><code>NULL</code></td>
-<td>An object of class <code>narwsim</code>, to which the current
-simulation must be matched. With the exception of wind farm parameters,
-simulation conditions between paired runs are identical; pairing is
-therefore useful to enable comparative assessments of population
-projections under competing offshore wind scenarios.</td>
-</tr>
-<tr class="even">
-<td><code>label</code></td>
-<td><code>""</code></td>
-<td>Character. Text label assigned to the simulation object; used for
-plotting.</td>
-</tr>
-<tr class="odd">
-<td><code>piling.hrs</code></td>
-<td><code>4</code></td>
-<td>Numeric. Length of time (hours) during which whales cease foraging
-following a response to pile-driving noise exposure.</td>
-</tr>
-<tr class="even">
-<td><code>n.cores</code></td>
-<td><code>NULL</code></td>
-<td>Positive integer. Number of CPU cores to use for parallel
-processing. The default value of <code>NULL</code> detects the processor
-configuration and runs computations on the maximum allowable number of
-available cores.</td>
-</tr>
-</tbody>
-</table>
-<p>The resulting object is of class <code>narwsim</code>:</p>
+<code class="sourceCode R"><span><span class="va">my_obj</span> <span class="op">&lt;-</span> <span class="fl">48</span></span></code></pre></div>
+<p>In the code above, we created an object arbitrarily called
+<code>my_obj</code> and assigned it the value of <code>48</code> using
+the assignment operator (we can read this as ‘<em>my_obj gets 48</em>’).
+One can also use <code>=</code> instead of <code>&lt;-</code> to assign
+values, but this is considered bad coding practice and we would
+discourage you from using this notation.</p>
+<p>To view the value of an object, we simply type the name of the object
+in the R console and hit <code>Enter</code> on the keyboard:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
-<span><span class="co">#&gt; [1] "narwsim"</span></span></code></pre></div>
-</div>
-<div class="section level3">
-<h3 id="pairing-simulations">Pairing simulations<a class="anchor" aria-label="anchor" href="#pairing-simulations"></a>
-</h3>
-<p>It is important to note that the bioenergetic model is stochastic,
-such that successive runs of the model will return different results
-(e.g., different simulated movement tracks for each animal). However,
-meaningful comparisons of population projections between contrasting
-offshore wind scenario bundles are only possible if simulated conditions
-are maintained between model runs. The <code>pair</code> argument was
-designed to enable this using random seed matching, and allows users to
-supply an existing <code>narwsim</code> object that can act as a
-“template” for the current simulation (Figure 4).</p>
-<p>For instance, the code below performs another run of the model with
-piling taking place at three sites as defined in the
-<code>scenario_01</code> object (Figure 2). The run is paired with the
-baseline scenario stored in <code>m</code>. With the exception of wind
-farm-related parameters, all simulated conditions are identical between
-<code>m</code> and <code>m2</code>.</p>
+<code class="sourceCode R"><span><span class="va">my_obj</span></span>
+<span><span class="co">#&gt; [1] 48</span></span></code></pre></div>
+<p>Now that we’ve created this object, R knows all about it and will
+keep track of it during this current R session. All of the objects that
+are created are stored in the current workspace and can be viewed in
+RStudio by clicking on the ‘Environment’ tab in the top right hand
+pane.</p>
+<p>There are many different types of values that can be assigned to an
+object. For instance:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">m2</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">50</span>, scenario <span class="op">=</span> <span class="va">scenario_01</span>, pair <span class="op">=</span> <span class="va">m</span><span class="op">)</span></span>
-<span><span class="va">m3</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">50</span><span class="op">)</span> <span class="co"># Compare to an additional baseline run with no pairing</span></span></code></pre></div>
-<div style="width:850px">
-<div class="float">
-<img src="simulation_pairing.jpg" alt="Figure 4. Comparison of simulated movement trajectories for paired and unpaired runs."><div class="figcaption">
-<strong>Figure 4.</strong> Comparison of
-simulated movement trajectories for paired and unpaired runs.</div>
-</div>
-</div>
-</div>
-<div class="section level3">
-<h3 id="viewing-data">Viewing data<a class="anchor" aria-label="anchor" href="#viewing-data"></a>
-</h3>
-<p>Outputs from the <code><a href="../reference/narw.html">narw()</a></code> simulator can be viewed in the R
-console using the <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method. <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> is
-part of a group of generic functions that can be applied to various R
-objects and will behave differently depending on the class of the object
-that is passed to them. Other generic functions include
-<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, or <code><a href="https://rdrr.io/r/base/write.html" class="external-link">write()</a></code>
-(among others) – these are covered in later sections.
-<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> can also be called implicitly, that is, simply by
-typing the name of the relevant object in the console and pressing
-<code>[enter]</code> on the keyboard. The default behavior for objects
-of class <code>narwsim</code> as returned by <code><a href="../reference/narw.html">narw()</a></code> is to
-give a tabular overview of the data from the first 5 days of the
-simulation, for the first animal in each population cohort. Optional
-arguments allow users to override these default settings and display
-data for specific days, animals, and/or cohorts. The
-<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method has the following arguments:</p>
-<table style="width:100%;" class="table">
-<colgroup>
-<col width="3%">
-<col width="5%">
-<col width="90%">
-</colgroup>
-<thead><tr class="header">
-<th>Argument</th>
-<th>Default value</th>
-<th>Description</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>obj</code></td>
-<td><code>-</code></td>
-<td>Input model object of class <code>narwsim</code>, as returned by
-<code><a href="../reference/narw.html">narw()</a></code>.</td>
-</tr>
-<tr class="even">
-<td><code>rowID</code></td>
-<td><code>1:5</code></td>
-<td>Positive integer or vector of positive integers indicating which
-days of the simulation should be displayed. Defaults to the first first
-days.</td>
-</tr>
-<tr class="odd">
-<td><code>whale</code></td>
-<td><code>1</code></td>
-<td>Positive integer indicating the individual for which data should be
-extracted. Only the first individual is included by default.</td>
-</tr>
-<tr class="even">
-<td><code>cohort</code></td>
-<td><code>1:6</code></td>
-<td>Positive integer or vector of positive integers indicating which
-cohorts should be considered. Defaults to all cohorts. Cohort
-identifiers are listed in an object called <code>cohorts</code>. Note
-that calves are included with their mothers (i.e.,
-<code>cohort = 5</code>).</td>
-</tr>
-</tbody>
-</table>
-<p>For example, the code below displays the first 5 days of the
-simulation for the fourth adult male.</p>
+<code class="sourceCode R"><span><span class="va">my_obj2</span> <span class="op">&lt;-</span> <span class="st">"North Atlantic right whales"</span></span></code></pre></div>
+<p>Here, we created another object, this time called
+<code>my_obj2,</code> and assigned it the value of
+<code>"North Atlantic right whales"</code>, which is a character string.
+Notice that we have enclosed the string in quotes, as this is the way
+text is entered in R. If you forget to use the quotes, you will receive
+an error message.</p>
+<p>To change the value of an existing object, we simply reassign a new
+value to it. For example, to change the value of <code>my_obj2</code>
+from <code>"North Atlantic right whales"</code> to the number
+<code>1024</code>, we can type:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">m</span>, rowID <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, whale <span class="op">=</span> <span class="fl">4</span>, cohort <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; =========================================================================================</span></span>
-<span><span class="co">#&gt; Adults (male) </span></span>
-<span><span class="co">#&gt; =========================================================================================</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Locations </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    whale day  date  easting northing region resid_m resid_sd pleave</span></span>
-<span><span class="co">#&gt; 1:     4   1 01-10 605.5000 831.5000    SNE    20.4      1.1      0</span></span>
-<span><span class="co">#&gt; 2:     4   2 02-10 590.5175 834.6409    SNE    20.4      1.1      0</span></span>
-<span><span class="co">#&gt; 3:     4   3 03-10 593.5212 823.2677    SNE    20.4      1.1      0</span></span>
-<span><span class="co">#&gt; 4:     4   4 04-10 588.7098 817.7874    SNE    20.4      1.1      0</span></span>
-<span><span class="co">#&gt; 5:     4   5 05-10 595.2244 817.4389    SNE    20.4      1.1      0</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Attributes </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt;    whale day cohort gsl seus alive      age        bc   length length_a</span></span>
-<span><span class="co">#&gt; 1:     4   1      3   1    0     1 48.83200 0.3074689 13.62678 1362.755</span></span>
-<span><span class="co">#&gt; 2:     4   2      3   1    0     1 48.83474 0.3070702 13.62678 1362.755</span></span>
-<span><span class="co">#&gt; 3:     4   3      3   1    0     1 48.83748 0.3066648 13.62678 1362.755</span></span>
-<span><span class="co">#&gt; 4:     4   4      3   1    0     1 48.84022 0.3062777 13.62678 1362.755</span></span>
-<span><span class="co">#&gt; 5:     4   5      3   1    0     1 48.84296 0.3058729 13.62678 1362.755</span></span>
-<span><span class="co">#&gt;    length_b length_c     mass leanmass  fatmass    mass_a   mass_b   mouth_r</span></span>
-<span><span class="co">#&gt; 1:    -0.37    -0.18 26554.09 18389.53 8164.557 -4.834189 2.984353 0.1482461</span></span>
-<span><span class="co">#&gt; 2:    -0.37    -0.18 26538.82 18389.54 8149.280 -4.834189 2.984353 0.1482461</span></span>
-<span><span class="co">#&gt; 3:    -0.37    -0.18 26523.30 18389.54 8133.762 -4.834189 2.984353 0.1482461</span></span>
-<span><span class="co">#&gt; 4:    -0.37    -0.18 26508.50 18389.54 8118.962 -4.834189 2.984353 0.1482461</span></span>
-<span><span class="co">#&gt; 5:    -0.37    -0.18 26493.04 18389.54 8103.504 -4.834189 2.984353 0.1482461</span></span>
-<span><span class="co">#&gt;    mouth_a  mouth_w abort starve died date_died p_surv</span></span>
-<span><span class="co">#&gt; 1:    76.7 2.020117     0      0    0         0      1</span></span>
-<span><span class="co">#&gt; 2:    76.7 2.020117     0      0    0         0      1</span></span>
-<span><span class="co">#&gt; 3:    76.7 2.020117     0      0    0         0      1</span></span>
-<span><span class="co">#&gt; 4:    76.7 2.020117     0      0    0         0      1</span></span>
-<span><span class="co">#&gt; 5:    76.7 2.020117     0      0    0         0      1</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Stressors </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    whale day    gear_risk is_entgl entgl_head entgl_sev entgl_d entgl_start</span></span>
-<span><span class="co">#&gt; 1:     4   1 0.0003928734        0          0         0       0           0</span></span>
-<span><span class="co">#&gt; 2:     4   2 0.0004807485        0          0         0       0           0</span></span>
-<span><span class="co">#&gt; 3:     4   3 0.0002767621        0          0         0       0           0</span></span>
-<span><span class="co">#&gt; 4:     4   4 0.0003692962        0          0         0       0           0</span></span>
-<span><span class="co">#&gt; 5:     4   5 0.0003182602        0          0         0       0           0</span></span>
-<span><span class="co">#&gt;    entgl_end is_entgl_calf entgl_head_calf entgl_sev_calf entgl_d_calf</span></span>
-<span><span class="co">#&gt; 1:         0             0               0              0            0</span></span>
-<span><span class="co">#&gt; 2:         0             0               0              0            0</span></span>
-<span><span class="co">#&gt; 3:         0             0               0              0            0</span></span>
-<span><span class="co">#&gt; 4:         0             0               0              0            0</span></span>
-<span><span class="co">#&gt; 5:         0             0               0              0            0</span></span>
-<span><span class="co">#&gt;    entgl_start_calf entgl_end_calf strike_risk strike strike_calf noise_resp</span></span>
-<span><span class="co">#&gt; 1:                0              0           0      0           0          0</span></span>
-<span><span class="co">#&gt; 2:                0              0           0      0           0          0</span></span>
-<span><span class="co">#&gt; 3:                0              0           0      0           0          0</span></span>
-<span><span class="co">#&gt; 4:                0              0           0      0           0          0</span></span>
-<span><span class="co">#&gt; 5:                0              0           0      0           0          0</span></span>
-<span><span class="co">#&gt;    noise_lvl dB_thresh</span></span>
-<span><span class="co">#&gt; 1:         0         0</span></span>
-<span><span class="co">#&gt; 2:         0         0</span></span>
-<span><span class="co">#&gt; 3:         0         0</span></span>
-<span><span class="co">#&gt; 4:         0         0</span></span>
-<span><span class="co">#&gt; 5:         0         0</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Activity budgets </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    whale day  d_travel swimspeed      glide glide_feed glide_echelon  t_travel</span></span>
-<span><span class="co">#&gt; 1:     4   1 15.308182 0.4362719 0.09548216  0.2122222             0  9.746841</span></span>
-<span><span class="co">#&gt; 2:     4   2 11.763092 0.5867546 0.09580268  0.5034039             0  5.568811</span></span>
-<span><span class="co">#&gt; 3:     4   3  7.292765 0.2015919 0.09530025  0.3808557             0 10.048854</span></span>
-<span><span class="co">#&gt; 4:     4   4  6.523927 0.7087248 0.09240483  0.3572311             0  2.556990</span></span>
-<span><span class="co">#&gt; 5:     4   5 11.780559 0.5843444 0.11241783  0.3440076             0  5.600083</span></span>
-<span><span class="co">#&gt;    t_feed t_rest_nurse</span></span>
-<span><span class="co">#&gt; 1:      0     14.25316</span></span>
-<span><span class="co">#&gt; 2:      0     18.43119</span></span>
-<span><span class="co">#&gt; 3:      0     13.95115</span></span>
-<span><span class="co">#&gt; 4:      0     21.44301</span></span>
-<span><span class="co">#&gt; 5:      0     18.39992</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Growth </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    whale day delta_fat  EDlip EDpro lip_anab lip_catab perc_muscle perc_viscera</span></span>
-<span><span class="co">#&gt; 1:     4   1 -16.98626 39.539 23.64      0.8       0.8   0.5537975    0.2009494</span></span>
-<span><span class="co">#&gt; 2:     4   2 -15.27719 39.539 23.64      0.8       0.8   0.5537975    0.2009494</span></span>
-<span><span class="co">#&gt; 3:     4   3 -15.51873 39.539 23.64      0.8       0.8   0.5537975    0.2009494</span></span>
-<span><span class="co">#&gt; 4:     4   4 -14.79983 39.539 23.64      0.8       0.8   0.5537975    0.2009494</span></span>
-<span><span class="co">#&gt; 5:     4   5 -15.45744 39.539 23.64      0.8       0.8   0.5537975    0.2009494</span></span>
-<span><span class="co">#&gt;    perc_bones</span></span>
-<span><span class="co">#&gt; 1:  0.2452532</span></span>
-<span><span class="co">#&gt; 2:  0.2452532</span></span>
-<span><span class="co">#&gt; 3:  0.2452532</span></span>
-<span><span class="co">#&gt; 4:  0.2452532</span></span>
-<span><span class="co">#&gt; 5:  0.2452532</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Energy balance </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    whale day     E_tot E_in    E_out</span></span>
-<span><span class="co">#&gt; 1:     4   1 -537.2958    0 537.2958</span></span>
-<span><span class="co">#&gt; 2:     4   2 -483.2358    0 483.2358</span></span>
-<span><span class="co">#&gt; 3:     4   3 -490.8761    0 490.8761</span></span>
-<span><span class="co">#&gt; 4:     4   4 -468.1364    0 468.1364</span></span>
-<span><span class="co">#&gt; 5:     4   5 -488.9372    0 488.9372</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Energy intake </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    whale day feed  preyconc   minprey     gape feedspeed captEff impedance</span></span>
-<span><span class="co">#&gt; 1:     4   1    0 0.1459147 0.4686015 2.698368 0.4362719 0.91575         0</span></span>
-<span><span class="co">#&gt; 2:     4   2    0 0.2088843 0.4686015 2.698368 0.5867546 0.91575         0</span></span>
-<span><span class="co">#&gt; 3:     4   3    0 0.1812733 0.4686015 2.698368 0.2015919 0.91575         0</span></span>
-<span><span class="co">#&gt; 4:     4   4    0 0.1777585 0.4686015 2.698368 0.7087248 0.91575         0</span></span>
-<span><span class="co">#&gt; 5:     4   5    0 0.1920669 0.4686015 2.698369 0.5843444 0.91575         0</span></span>
-<span><span class="co">#&gt;    feed_effort eta_lwrBC eta_upprBC targetBC    cop_mass     cop_kJ digestEff</span></span>
-<span><span class="co">#&gt; 1:   0.9720419        10         30  0.41718 0.001670151 0.02391922      0.94</span></span>
-<span><span class="co">#&gt; 2:   0.9725672        10         30  0.41718 0.001670151 0.02391922      0.94</span></span>
-<span><span class="co">#&gt; 3:   0.9730333        10         30  0.41718 0.001670151 0.02391922      0.94</span></span>
-<span><span class="co">#&gt; 4:   0.9735007        10         30  0.41718 0.001670151 0.02391922      0.94</span></span>
-<span><span class="co">#&gt; 5:   0.9739406        10         30  0.41718 0.001670151 0.02391922      0.94</span></span>
-<span><span class="co">#&gt;    metabEff_juv metabEff_ad       E_cop</span></span>
-<span><span class="co">#&gt; 1:    0.7403977       0.875 0.004762958</span></span>
-<span><span class="co">#&gt; 2:    0.7403977       0.875 0.004762958</span></span>
-<span><span class="co">#&gt; 3:    0.7403977       0.875 0.004762958</span></span>
-<span><span class="co">#&gt; 4:    0.7403977       0.875 0.004762958</span></span>
-<span><span class="co">#&gt; 5:    0.7403977       0.875 0.004762958</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; Energetic costs </span></span>
-<span><span class="co">#&gt; --------------------------</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    whale day    E_out      rmr        LC scalar_LC     stroke stroke_feed</span></span>
-<span><span class="co">#&gt; 1:     4   1 537.2958 461.4070 75.865741         1 0.11767379   0.1657861</span></span>
-<span><span class="co">#&gt; 2:     4   2 483.2358 461.4070 21.805709         1 0.10679613   0.1722876</span></span>
-<span><span class="co">#&gt; 3:     4   3 490.8761 461.4071 29.445972         1 0.13005281   0.1668962</span></span>
-<span><span class="co">#&gt; 4:     4   4 468.1364 461.4071  6.706255         1 0.05179131   0.1609393</span></span>
-<span><span class="co">#&gt; 5:     4   5 488.9372 461.4071 27.507052         1 0.13819525   0.1636449</span></span>
-<span><span class="co">#&gt;      E_growth</span></span>
-<span><span class="co">#&gt; 1: 0.02309301</span></span>
-<span><span class="co">#&gt; 2: 0.02308162</span></span>
-<span><span class="co">#&gt; 3: 0.02307024</span></span>
-<span><span class="co">#&gt; 4: 0.02305887</span></span>
-<span><span class="co">#&gt; 5: 0.02304751</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">my_obj2</span> <span class="op">&lt;-</span> <span class="fl">1024</span></span></code></pre></div>
+<p>Once we have created a few objects, we can perform operations with
+them. For example, the following code creates a new object
+<code>my_obj3</code> and assigns it the value of <code>my_obj</code>
+added to <code>my_obj2</code> which is 1072 (48 + 1024 = 1072).</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># By contrast, the below will show all data </span></span>
-<span><span class="va">m</span> <span class="co"># Same as print(m)</span></span></code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method is only used
-for viewing data inside the R console. To export / save data on disk,
-use the <code><a href="https://rdrr.io/r/base/write.html" class="external-link">write()</a></code> method described in the <a href="#exporting-data">Exporting data</a> section.</p>
-</blockquote>
-</div>
-<div class="section level3">
-<h3 id="model-summary-and-diagnostics">Model summary and diagnostics<a class="anchor" aria-label="anchor" href="#model-summary-and-diagnostics"></a>
-</h3>
-<p>The <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> method provides a range of diagnostics
-that are helpful for assessing whether simulated whale behavior aligns
-with biological expectations. These relate to individual (1) health, (2)
-movements, (3) habitat use, (4) behavior (i.e., activity budgets), (5)
-stressor exposure, and (6) energy intake vs. expenditure (see Table 1
-below).</p>
-<p>The function takes the following arguments:</p>
-<table style="width:100%;" class="table">
-<colgroup>
-<col width="4%">
-<col width="5%">
-<col width="90%">
-</colgroup>
-<thead><tr class="header">
-<th>Argument</th>
-<th>Default value</th>
-<th>Description</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>obj</code></td>
-<td><code>-</code></td>
-<td>Model object of class <code>narwsim</code>, as returned by
-<code><a href="../reference/narw.html">narw()</a></code>.</td>
-</tr>
-<tr class="even">
-<td><code>what</code></td>
-<td><code>"all"</code></td>
-<td>Character string indicating which component(s) of the summary to
-display. Can be one of: <code>"health"</code>, <code>"movements"</code>,
-<code>"habitat"</code>, <code>"behavior"</code>,
-<code>"stressors"</code>, <code>"strike"</code>, <code>"gear"</code>,
-<code>"noise"</code>, <code>"other"</code>, or <code>"energy"</code>.
-See below for details. Defaults to <code>"all"</code> for a complete
-summary.</td>
-</tr>
-<tr class="odd">
-<td><code>relative</code></td>
-<td><code>FALSE</code></td>
-<td>Logical. If <code>TRUE</code>, percentages are calculated relative
-to class totals. Defaults to <code>FALSE</code>.</td>
-</tr>
-<tr class="even">
-<td><code>quintile</code></td>
-<td><code>TRUE</code></td>
-<td>Logical. If <code>TRUE</code>, body condition plots (under the
-“health” section) are based on quintiles of the data.</td>
-</tr>
-<tr class="odd">
-<td><code>plot</code></td>
-<td><code>FALSE</code></td>
-<td>Logical. If <code>TRUE</code>, plots are produced in addition to a
-text-based summary.</td>
-</tr>
-<tr class="even">
-<td><code>whale</code></td>
-<td><code>1:nsim</code></td>
-<td>Positive integer indicating the individual for which data should be
-extracted. By default, considers all <code>nsim</code> individuals.</td>
-</tr>
-<tr class="odd">
-<td><code>cohort</code></td>
-<td><code>1:6</code></td>
-<td>Positive integer or vector of positive integers indicating which
-cohorts should be considered. Defaults to all cohorts. Cohort
-identifiers are listed in an object called <code>cohorts</code>.</td>
-</tr>
-</tbody>
-</table>
-<table style="width:99%;" class="table">
-<caption>Table 1. Overview of model diagnostics and summary statistics
-returned by the <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> command.</caption>
-<colgroup>
-<col width="4%">
-<col width="12%">
-<col width="2%">
-<col width="79%">
-</colgroup>
-<thead><tr class="header">
-<th>Category</th>
-<th>Component</th>
-<th>Plots</th>
-<th>Details</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>health</code></td>
-<td>Mortality</td>
-<td>No</td>
-<td>Whale mortality by region, cohort, and cause of death (i.e.,
-starvation vs. vessel strike) .</td>
-</tr>
-<tr class="even">
-<td></td>
-<td>Pregnancy</td>
-<td>No</td>
-<td>Observed abortion rate in females that started the simulation in a
-pregnant state.</td>
-</tr>
-<tr class="odd">
-<td></td>
-<td>Births</td>
-<td>No</td>
-<td>Mean (range) date of calving events.</td>
-</tr>
-<tr class="even">
-<td></td>
-<td>Body condition</td>
-<td>Yes</td>
-<td>Time series of individual body condition (expressed as relative fat
-mass), by cohort.</td>
-</tr>
-<tr class="odd">
-<td></td>
-<td>Growth</td>
-<td>Yes</td>
-<td>Growth curves, by cohort.</td>
-</tr>
-<tr class="even">
-<td><code>movements</code></td>
-<td>Locations</td>
-<td>No</td>
-<td>Breakdown of (daily) locations by cohort, region, and country (U.S.
-vs. Canada).</td>
-</tr>
-<tr class="odd">
-<td></td>
-<td>Destinations</td>
-<td>No</td>
-<td>Comparison of assigned vs. realized migratory destinations both
-within and across cohorts. Migratory endpoints include the Southeastern
-United States calving grounds (SEUS) and Canadian feeding grounds in the
-Gulf of St Lawrence (GSL).</td>
-</tr>
-<tr class="even">
-<td></td>
-<td>Step lengths</td>
-<td>Yes</td>
-<td>Summary of daily movements, reported as mean (± SD, range) distances
-traveled per day, by cohort. Distributions of daily step lengths are
-also visualized by region and as a whole.</td>
-</tr>
-<tr class="odd">
-<td></td>
-<td>Migration</td>
-<td>No</td>
-<td>Summary of yearly movements, reported as mean (± SD, range) total
-distance covered over the time span of the simulation, by cohort.</td>
-</tr>
-<tr class="even">
-<td><code>habitat</code></td>
-<td>Occupancy</td>
-<td>No</td>
-<td>Cohort-specific summary of the numbers of animals visiting each
-region, and the number of regions visited by animals.</td>
-</tr>
-<tr class="odd">
-<td></td>
-<td>Residency</td>
-<td>No</td>
-<td>Breakdown of days spent in each.</td>
-</tr>
-<tr class="even">
-<td><code>behavior</code></td>
-<td>Activity budgets</td>
-<td>Yes</td>
-<td>Mean (± SD) hours spent engaging in each of the four categories of
-behavior considered in the model (i.e., traveling, resting, nursing, and
-feeding), by region. A visual breakdown by region is also produced for
-each category of behavior.</td>
-</tr>
-<tr class="odd">
-<td><code>stressors</code></td>
-<td>Entanglements (<code>gear</code>)</td>
-<td>Yes</td>
-<td>Various summaries by cohort, including: entanglement rates,
-durations, severities, probabilities, and attachment sites along the
-body.</td>
-</tr>
-<tr class="even">
-<td></td>
-<td>Vessel strikes (<code>strike</code>)</td>
-<td>No</td>
-<td>Strike rates by cohort.</td>
-</tr>
-<tr class="odd">
-<td></td>
-<td>Noise (<code>noise</code>)</td>
-<td>No</td>
-<td>Summary of mean (± SD, range) noise levels encountered, behavioral
-response thresholds, and numbers of days during which a response to
-pile-driving was observed.</td>
-</tr>
-<tr class="even">
-<td></td>
-<td>Other sources of mortality (<code>other</code>)</td>
-<td>No</td>
-<td>Summary of mortality from other sources, by cohort.</td>
-</tr>
-<tr class="odd">
-<td>Energy</td>
-<td>Energy budget</td>
-<td>No</td>
-<td>Mean (± SD, range) daily energy intake and expenditure (expressed in
-MJ/day), by cohort. Also reported are the mean (± SD, range) % time
-individuals are in energetic deficit (energy balance &lt; 0) or surplus
-(energy balance &gt; 0).</td>
-</tr>
-</tbody>
-</table>
+<code class="sourceCode R"><span><span class="va">my_obj3</span> <span class="op">&lt;-</span> <span class="va">my_obj</span> <span class="op">+</span> <span class="va">my_obj2</span></span>
+<span><span class="va">my_obj3</span></span>
+<span><span class="co">#&gt; [1] 1072</span></span></code></pre></div>
+<p>Naming objects is one of the most difficult things to do in R.
+Ideally, object names should be kept both short and informative, which
+is not always straightforward. We recommend using either an underscore
+or a dot between words or capitalizing words if object names containing
+multiple words are needed. Some examples are shown below.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Summary for adult females only</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">m</span>, cohort <span class="op">=</span> <span class="fl">4</span><span class="op">:</span><span class="fl">6</span><span class="op">)</span></span>
-<span><span class="co">#&gt; -------------------------------------------------------------</span></span>
-<span><span class="co">#&gt; -------------------------------------------------------------</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;      NORTH ATLANTIC RIGHT WHALE (Eubalaena glacialis)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;              *** PCoMS MODEL SUMMARY ***</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; -------------------------------------------------------------</span></span>
-<span><span class="co">#&gt; -------------------------------------------------------------</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; BOF: Bay of Fundy</span></span>
-<span><span class="co">#&gt; CCB: Cape Cod Bay</span></span>
-<span><span class="co">#&gt; CST: Cabot Strait</span></span>
-<span><span class="co">#&gt; GMAN: Grand Manan Basin</span></span>
-<span><span class="co">#&gt; GOM: Gulf of Maine and Georges Bank</span></span>
-<span><span class="co">#&gt; GSL: Gulf of St Lawrence</span></span>
-<span><span class="co">#&gt; MIDA: Mid-Atlantic</span></span>
-<span><span class="co">#&gt; SCOS: Scotian Shelf</span></span>
-<span><span class="co">#&gt; SEUS: Southeastern United States</span></span>
-<span><span class="co">#&gt; SNE: Southern New England</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; SIMULATIONS</span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; No. animals: 100 </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Cohort(s)</span></span>
-<span><span class="co">#&gt; ----------</span></span>
-<span><span class="co">#&gt; c(m,f): Calves (male, female)</span></span>
-<span><span class="co">#&gt; ad(f,p): Adults (female, pregnant)</span></span>
-<span><span class="co">#&gt; ad(f,l): Adults (female, lactating)</span></span>
-<span><span class="co">#&gt; ad(f,r): Adults (female, resting)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Simulation start: October </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; HEALTH</span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Mortality +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort                       alive        dead       </span></span>
-<span><span class="co">#&gt; ---------------------------  -----------  -----------</span></span>
-<span><span class="co">#&gt; Adults (female, resting)     74.0% (74)   26.0% (26) </span></span>
-<span><span class="co">#&gt; Adults (female, lactating)   48.0% (48)   52.0% (52) </span></span>
-<span><span class="co">#&gt; Adults (female, pregnant)    81.0% (81)   19.0% (19) </span></span>
-<span><span class="co">#&gt; Calves (male, female)        40.0% (40)   60.0% (60) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Mortality (by source) +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    cause_death   N          </span></span>
-<span><span class="co">#&gt; --------  ------------  -----------</span></span>
-<span><span class="co">#&gt; ad(f,l)   starve        38.0% (38) </span></span>
-<span><span class="co">#&gt; ad(f,l)   other         14.0% (14) </span></span>
-<span><span class="co">#&gt; ad(f,p)   other         17.0% (17) </span></span>
-<span><span class="co">#&gt; ad(f,p)   strike        2.0%  (2)  </span></span>
-<span><span class="co">#&gt; ad(f,r)   other         25.0% (25) </span></span>
-<span><span class="co">#&gt; ad(f,r)   starve        1.0%  (1)  </span></span>
-<span><span class="co">#&gt; c(m,f)    starve        38.0% (38) </span></span>
-<span><span class="co">#&gt; c(m,f)    other         14.0% (14) </span></span>
-<span><span class="co">#&gt; c(m,f)    none          8.0%  (8)  </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Mortality (by region) +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region   cause_death   ad(f,r)     ad(f,l)     ad(f,p)    c(m,f)    </span></span>
-<span><span class="co">#&gt; -------  ------------  ----------  ----------  ---------  ----------</span></span>
-<span><span class="co">#&gt; GOM      none          0.0%  (0)   0.0%  (0)   0.0% (0)   3.0%  (3) </span></span>
-<span><span class="co">#&gt; GSL      none          0.0%  (0)   0.0%  (0)   0.0% (0)   3.0%  (3) </span></span>
-<span><span class="co">#&gt; SNE      none          0.0%  (0)   0.0%  (0)   0.0% (0)   2.0%  (2) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region   cause_death   ad(f,r)      ad(f,l)     ad(f,p)    c(m,f)    </span></span>
-<span><span class="co">#&gt; -------  ------------  -----------  ----------  ---------  ----------</span></span>
-<span><span class="co">#&gt; CABOT    other         1.0%  (1)    1.0%  (1)   1.0% (1)   1.0%  (1) </span></span>
-<span><span class="co">#&gt; GOM      other         6.0%  (6)    5.0%  (5)   8.0% (8)   5.0%  (5) </span></span>
-<span><span class="co">#&gt; GSL      other         10.0% (10)   2.0%  (2)   3.0% (3)   2.0%  (2) </span></span>
-<span><span class="co">#&gt; SCOS     other         0.0%  (0)    0.0%  (0)   1.0% (1)   0.0%  (0) </span></span>
-<span><span class="co">#&gt; SNE      other         8.0%  (8)    6.0%  (6)   4.0% (4)   6.0%  (6) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region   cause_death   ad(f,r)     ad(f,l)      ad(f,p)    c(m,f)     </span></span>
-<span><span class="co">#&gt; -------  ------------  ----------  -----------  ---------  -----------</span></span>
-<span><span class="co">#&gt; CCB      starve        0.0%  (0)   1.0%  (1)    0.0% (0)   0.0%  (0)  </span></span>
-<span><span class="co">#&gt; GOM      starve        0.0%  (0)   3.0%  (3)    0.0% (0)   3.0%  (3)  </span></span>
-<span><span class="co">#&gt; GSL      starve        0.0%  (0)   2.0%  (2)    0.0% (0)   2.0%  (2)  </span></span>
-<span><span class="co">#&gt; MIDA     starve        0.0%  (0)   10.0% (10)   0.0% (0)   10.0% (10) </span></span>
-<span><span class="co">#&gt; SCOS     starve        1.0%  (1)   1.0%  (1)    0.0% (0)   1.0%  (1)  </span></span>
-<span><span class="co">#&gt; SEUS     starve        0.0%  (0)   8.0%  (8)    0.0% (0)   7.0%  (7)  </span></span>
-<span><span class="co">#&gt; SNE      starve        0.0%  (0)   13.0% (13)   0.0% (0)   15.0% (15) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region   cause_death   ad(f,r)     ad(f,l)     ad(f,p)    c(m,f)    </span></span>
-<span><span class="co">#&gt; -------  ------------  ----------  ----------  ---------  ----------</span></span>
-<span><span class="co">#&gt; SNE      strike        0.0%  (0)   0.0%  (0)   2.0% (2)   0.0%  (0) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Pregnancies +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Abortion rate: 1% (1)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Births +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; No. births: 100 (100%)</span></span>
-<span><span class="co">#&gt; DOB: 1 Jan</span></span></code></pre></div>
-<p><img src="narwind_files/figure-html/model_summary-1.png" width="700"></p>
-<pre><code><span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; MOVEMENTS (km)</span></span>
-<span><span class="co">#&gt; =============================================================</span></span></code></pre>
-<p><img src="narwind_files/figure-html/model_summary-2.png" width="700"><img src="narwind_files/figure-html/model_summary-3.png" width="700"><img src="narwind_files/figure-html/model_summary-4.png" width="700"></p>
-<pre><code><span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Migratory destinations (by cohort) +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    SEUS   reach_not      reach        </span></span>
-<span><span class="co">#&gt; --------  -----  -------------  -------------</span></span>
-<span><span class="co">#&gt; ad(f,p)   0      100.0% (100)   0.0%   (0)   </span></span>
-<span><span class="co">#&gt; ad(f,p)   1      0.0%   (0)     0.0%   (0)   </span></span>
-<span><span class="co">#&gt; ad(f,l)   0      0.0%   (0)     0.0%   (0)   </span></span>
-<span><span class="co">#&gt; ad(f,l)   1      0.0%   (0)     100.0% (100) </span></span>
-<span><span class="co">#&gt; ad(f,r)   0      100.0% (100)   0.0%   (0)   </span></span>
-<span><span class="co">#&gt; ad(f,r)   1      0.0%   (0)     0.0%   (0)   </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    GSL   reach_not    reach      </span></span>
-<span><span class="co">#&gt; --------  ----  -----------  -----------</span></span>
-<span><span class="co">#&gt; ad(f,p)   0     19.0% (19)   35.0% (35) </span></span>
-<span><span class="co">#&gt; ad(f,p)   1     4.0%  (4)    42.0% (42) </span></span>
-<span><span class="co">#&gt; ad(f,l)   0     62.0% (62)   4.0%  (4)  </span></span>
-<span><span class="co">#&gt; ad(f,l)   1     7.0%  (7)    27.0% (27) </span></span>
-<span><span class="co">#&gt; ad(f,r)   0     25.0% (25)   35.0% (35) </span></span>
-<span><span class="co">#&gt; ad(f,r)   1     1.0%  (1)    39.0% (39) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Migratory destinations (all individuals) +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; SEUS   reach_not      reach        </span></span>
-<span><span class="co">#&gt; -----  -------------  -------------</span></span>
-<span><span class="co">#&gt; 0      200.0% (200)   0.0%   (0)   </span></span>
-<span><span class="co">#&gt; 1      0.0%   (0)     100.0% (100) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; GSL   reach_not      reach        </span></span>
-<span><span class="co">#&gt; ----  -------------  -------------</span></span>
-<span><span class="co">#&gt; 0     106.0% (106)   74.0%  (74)  </span></span>
-<span><span class="co">#&gt; 1     12.0%  (12)    108.0% (108) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Step lengths and migration distances +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    step                     migration                     </span></span>
-<span><span class="co">#&gt; --------  -----------------------  ------------------------------</span></span>
-<span><span class="co">#&gt; ad(f,p)   15 (±19.3) [0–169.5]     6,621 (±1,448) [899–10,229]   </span></span>
-<span><span class="co">#&gt; ad(f,l)   18.6 (±21) [0–176.8]     7,945 (±1,182) [4,351–10,449] </span></span>
-<span><span class="co">#&gt; ad(f,r)   15.2 (±19.4) [0–157.9]   6,563 (±1,237) [2,122–9,670]  </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; HABITAT USE</span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region   ad(f,l)         ad(f,p)         ad(f,r)       </span></span>
-<span><span class="co">#&gt; -------  --------------  --------------  --------------</span></span>
-<span><span class="co">#&gt; BOF      0.0%     (0)    0.0%     (0)    0.0%     (0)  </span></span>
-<span><span class="co">#&gt; CCB      0.2%   (100)    0.0%     (1)    0.0%    (11)  </span></span>
-<span><span class="co">#&gt; CST      0.0%     (0)    0.0%     (0)    0.0%     (0)  </span></span>
-<span><span class="co">#&gt; GMAN     0.0%     (0)    0.0%     (0)    0.0%     (0)  </span></span>
-<span><span class="co">#&gt; GOM      14.9%  (6092)   35.5% (14031)   36.5% (14277) </span></span>
-<span><span class="co">#&gt; GSL      5.7%  (2330)    16.9%  (6687)   15.6%  (6109) </span></span>
-<span><span class="co">#&gt; MIDA     11.4%  (4658)   1.7%   (687)    2.8%  (1083)  </span></span>
-<span><span class="co">#&gt; SCOS     3.2%  (1302)    11.8%  (4654)   11.7%  (4568) </span></span>
-<span><span class="co">#&gt; SEUS     20.9%  (8555)   0.0%     (0)    0.0%     (0)  </span></span>
-<span><span class="co">#&gt; SNE      43.6% (17801)   34.0% (13423)   33.4% (13036) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; country   ad(f,l)         ad(f,p)         ad(f,r)       </span></span>
-<span><span class="co">#&gt; --------  --------------  --------------  --------------</span></span>
-<span><span class="co">#&gt; Canada    8.9%  (3632)    28.7% (11341)   27.3% (10677) </span></span>
-<span><span class="co">#&gt; U.S.      91.1% (37206)   71.3% (28142)   72.7% (28407) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Number of animals visiting each region (N = 100) +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region   ad(f,p)      ad(f,l)      ad(f,r)    </span></span>
-<span><span class="co">#&gt; -------  -----------  -----------  -----------</span></span>
-<span><span class="co">#&gt; BOF      0% (0)       0% (0)       0% (0)     </span></span>
-<span><span class="co">#&gt; CCB      1% (1)       5% (5)       4% (4)     </span></span>
-<span><span class="co">#&gt; CST      0% (0)       0% (0)       0% (0)     </span></span>
-<span><span class="co">#&gt; GMAN     0% (0)       0% (0)       0% (0)     </span></span>
-<span><span class="co">#&gt; GOM      100% (100)   90% (90)     100% (100) </span></span>
-<span><span class="co">#&gt; GSL      77% (77)     31% (31)     74% (74)   </span></span>
-<span><span class="co">#&gt; MIDA     38% (38)     100% (100)   45% (45)   </span></span>
-<span><span class="co">#&gt; SCOS     96% (96)     56% (56)     97% (97)   </span></span>
-<span><span class="co">#&gt; SEUS     0% (0)       100% (100)   0% (0)     </span></span>
-<span><span class="co">#&gt; SNE      100% (100)   100% (100)   100% (100) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Days spent in each region +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region   ad(f,p)                  ad(f,l)                 ad(f,r)                </span></span>
-<span><span class="co">#&gt; -------  -----------------------  ----------------------  -----------------------</span></span>
-<span><span class="co">#&gt; BOF      0 (±0) [0–0]             0 (±0) [0–0]            0 (±0) [0–0]           </span></span>
-<span><span class="co">#&gt; CCB      1 (±0) [1–1]             20 (±18.1) [1–41]       2.8 (±1.7) [1–5]       </span></span>
-<span><span class="co">#&gt; CST      0 (±0) [0–0]             0 (±0) [0–0]            0 (±0) [0–0]           </span></span>
-<span><span class="co">#&gt; GMAN     0 (±0) [0–0]             0 (±0) [0–0]            0 (±0) [0–0]           </span></span>
-<span><span class="co">#&gt; GOM      140.3 (±54.9) [15–296]   67.7 (±32.3) [1–155]    142.8 (±53.9) [38–281] </span></span>
-<span><span class="co">#&gt; GSL      86.8 (±63.6) [2–285]     75.2 (±42.4) [9–154]    82.6 (±65.6) [1–254]   </span></span>
-<span><span class="co">#&gt; MIDA     18.1 (±22.4) [1–104]     46.6 (±15.4) [26–95]    24.1 (±28.4) [1–134]   </span></span>
-<span><span class="co">#&gt; SCOS     48.5 (±23.9) [1–107]     23.2 (±12.9) [1–52]     47.1 (±17.8) [1–91]    </span></span>
-<span><span class="co">#&gt; SEUS     0 (±0) [0–0]             85.2 (±13.1) [52–115]   0 (±0) [0–0]           </span></span>
-<span><span class="co">#&gt; SNE      134.2 (±75.1) [1–350]    178 (±56.2) [63–326]    130.4 (±73.8) [15–313] </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Total number of regions visited +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  No.regions  ad(f,p)      ad(f,l)      ad(f,r)    </span></span>
-<span><span class="co">#&gt; -----------  -----------  -----------  -----------</span></span>
-<span><span class="co">#&gt;           2  1.0%  (1)    - (NA)       - (NA)     </span></span>
-<span><span class="co">#&gt;           3  12.0% (12)   10.0% (10)   6.0%  (6)  </span></span>
-<span><span class="co">#&gt;           4  3.0%  (3)    30.0% (30)   5.0%  (5)  </span></span>
-<span><span class="co">#&gt;           5  45.0% (45)   16.0% (16)   51.0% (51) </span></span>
-<span><span class="co">#&gt;           6  29.0% (29)   10.0% (10)   30.0% (30) </span></span>
-<span><span class="co">#&gt;           7  8.0%  (8)    32.0% (32)   4.0%  (4)  </span></span>
-<span><span class="co">#&gt;           8  2.0%  (2)    2.0%  (2)    4.0%  (4)  </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; ACTIVITY BUDGETS</span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++  Adults (female, pregnant)  +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region      travel (hrs)    rest/nurse (hrs)   feed (hrs)    </span></span>
-<span><span class="co">#&gt; ----------  --------------  -----------------  --------------</span></span>
-<span><span class="co">#&gt; SNE         4.4 (±3.98)     14.11 (±6.3)       12.71 (±2.66) </span></span>
-<span><span class="co">#&gt; GOM         3.3 (±2.49)     8.85 (±3.98)       12.82 (±2.54) </span></span>
-<span><span class="co">#&gt; SCOS        15.66 (±6.01)   2.27 (±3.47)       6.65 (±4.5)   </span></span>
-<span><span class="co">#&gt; CABOT       2.9 (±1.93)     8.63 (±3.35)       12.83 (±2.56) </span></span>
-<span><span class="co">#&gt; GSL         2.82 (±2.2)     8.55 (±3.16)       12.75 (±2.58) </span></span>
-<span><span class="co">#&gt; BOF_lower   2.99 (±2.7)     9.4 (±4.6)         12.73 (±2.61) </span></span>
-<span><span class="co">#&gt; BOF_upper   3.1 (±2.55)     9.21 (±4.38)       12.84 (±2.64) </span></span>
-<span><span class="co">#&gt; MIDA        14.63 (±6.18)   4.95 (±5.39)       8.09 (±4.44)  </span></span>
-<span><span class="co">#&gt; CCB         2.12 (±NA)      10.64 (±NA)        11.24 (±NA)   </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++  Adults (female, lactating)  +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region      travel (hrs)    rest/nurse (hrs)   feed (hrs)    </span></span>
-<span><span class="co">#&gt; ----------  --------------  -----------------  --------------</span></span>
-<span><span class="co">#&gt; SNE         4.35 (±3.93)    13.26 (±6.12)      12.77 (±2.61) </span></span>
-<span><span class="co">#&gt; MIDA        16.78 (±5.96)   5.6 (±5.58)        7.14 (±4.65)  </span></span>
-<span><span class="co">#&gt; SEUS        12.32 (±5.81)   11.68 (±5.81)      0 (± 0)       </span></span>
-<span><span class="co">#&gt; GOM         3.36 (±2.71)    9.78 (±4.8)        12.7 (±2.58)  </span></span>
-<span><span class="co">#&gt; SCOS        15.94 (±6.11)   2.39 (±3.57)       6.51 (±4.57)  </span></span>
-<span><span class="co">#&gt; CABOT       2.99 (±2.01)    9.11 (±3.77)       12.74 (±2.52) </span></span>
-<span><span class="co">#&gt; GSL         2.84 (±2.28)    10.34 (±5.62)      12.82 (±2.54) </span></span>
-<span><span class="co">#&gt; BOF_lower   3.36 (±3.11)    12.14 (±6.33)      12.51 (±2.64) </span></span>
-<span><span class="co">#&gt; CCB         2.22 (±2.18)    19.88 (±5.21)      11.85 (±2.99) </span></span>
-<span><span class="co">#&gt; BOF_upper   2.77 (±2.47)    8.14 (±2.84)       13.08 (±2.67) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++  Adults (female, resting)  +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region      travel (hrs)    rest/nurse (hrs)   feed (hrs)    </span></span>
-<span><span class="co">#&gt; ----------  --------------  -----------------  --------------</span></span>
-<span><span class="co">#&gt; SNE         4.43 (±3.99)    14.19 (±6.39)      12.81 (±2.61) </span></span>
-<span><span class="co">#&gt; GOM         3.35 (±2.54)    8.98 (±4.09)       12.78 (±2.59) </span></span>
-<span><span class="co">#&gt; SCOS        15.6 (±6.04)    2.4 (±3.59)        6.67 (±4.51)  </span></span>
-<span><span class="co">#&gt; MIDA        13.17 (±6.53)   5.2 (±6.02)        8.7 (±4.38)   </span></span>
-<span><span class="co">#&gt; GSL         2.81 (±2.16)    8.52 (±3.08)       12.77 (±2.58) </span></span>
-<span><span class="co">#&gt; CABOT       2.83 (±1.7)     8.67 (±3.32)       12.84 (±2.5)  </span></span>
-<span><span class="co">#&gt; BOF_lower   3.07 (±2.52)    9.28 (±4.33)       12.82 (±2.64) </span></span>
-<span><span class="co">#&gt; CCB         2.93 (±1.55)    8.25 (±3.13)       12.81 (±2.92) </span></span>
-<span><span class="co">#&gt; BOF_upper   2.7 (±2.05)     8.66 (±3.34)       13.02 (±2.63)</span></span></code></pre>
-<p><img src="narwind_files/figure-html/model_summary-5.png" width="700"><img src="narwind_files/figure-html/model_summary-6.png" width="700"><img src="narwind_files/figure-html/model_summary-7.png" width="700"></p>
-<pre><code><span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; STRESSORS</span></span>
-<span><span class="co">#&gt; =============================================================</span></span></code></pre>
-<p><img src="narwind_files/figure-html/model_summary-8.png" width="700"></p>
-<pre><code><span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Entanglements +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; entangled   rate        </span></span>
-<span><span class="co">#&gt; ----------  ------------</span></span>
-<span><span class="co">#&gt; no          85.5% (342) </span></span>
-<span><span class="co">#&gt; yes         14.5% (58)  </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; position   rate       </span></span>
-<span><span class="co">#&gt; ---------  -----------</span></span>
-<span><span class="co">#&gt; body       34.5% (20) </span></span>
-<span><span class="co">#&gt; head       65.5% (38) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    not entangled   entangled  </span></span>
-<span><span class="co">#&gt; --------  --------------  -----------</span></span>
-<span><span class="co">#&gt; ad(f,l)   91.0% (91)      9.0%  (9)  </span></span>
-<span><span class="co">#&gt; ad(f,p)   86.0% (86)      14.0% (14) </span></span>
-<span><span class="co">#&gt; ad(f,r)   78.0% (78)      22.0% (22) </span></span>
-<span><span class="co">#&gt; c(m,f)    87.0% (87)      13.0% (13) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    No. events per animal   p(entangled)         </span></span>
-<span><span class="co">#&gt; --------  ----------------------  ---------------------</span></span>
-<span><span class="co">#&gt; ad(f,p)   1.07 (±0.27) [1–2]      0 (±0.002) [0–0.222] </span></span>
-<span><span class="co">#&gt; ad(f,l)   1 (±0) [1–1]            0 (±0.002) [0–0.091] </span></span>
-<span><span class="co">#&gt; ad(f,r)   1 (±0) [1–1]            0 (±0.003) [0–0.153] </span></span>
-<span><span class="co">#&gt; c(m,f)    1 (±0) [1–1]            NA                   </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    minor        moderate   severe   </span></span>
-<span><span class="co">#&gt; --------  -----------  ---------  ---------</span></span>
-<span><span class="co">#&gt; ad(f,p)   10.0% (10)   4.0% (4)   0.0% (0) </span></span>
-<span><span class="co">#&gt; ad(f,l)   7.0%  (7)    1.0% (1)   1.0% (1) </span></span>
-<span><span class="co">#&gt; ad(f,r)   17.0% (17)   5.0% (5)   0.0% (0) </span></span>
-<span><span class="co">#&gt; c(m,f)    6.0%  (6)    7.0% (7)   0.0% (0) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    minor (days)         moderate (days)       severe (days)   </span></span>
-<span><span class="co">#&gt; --------  -------------------  --------------------  ----------------</span></span>
-<span><span class="co">#&gt; ad(f,p)   174 (±91) [71–355]   107 (±75) [26–193]    0 (±0) [0–0]    </span></span>
-<span><span class="co">#&gt; ad(f,l)   129 (±66) [45–222]   177 (±0) [177–177]    65 (±0) [65–65] </span></span>
-<span><span class="co">#&gt; ad(f,r)   116 (±54) [23–238]   155 (±46) [118–229]   0 (±0) [0–0]    </span></span>
-<span><span class="co">#&gt; c(m,f)    132 (±49) [45–186]   143 (±60) [75–237]    0 (±0) [0–0]    </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Vessel strikes +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; strike   rate         </span></span>
-<span><span class="co">#&gt; -------  -------------</span></span>
-<span><span class="co">#&gt; no       398.0% (398) </span></span>
-<span><span class="co">#&gt; yes      2.0% (2)     </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    not struck     struck   </span></span>
-<span><span class="co">#&gt; --------  -------------  ---------</span></span>
-<span><span class="co">#&gt; ad(f,l)   100.0% (100)   0.0% (0) </span></span>
-<span><span class="co">#&gt; ad(f,p)   98.0%  (98)    2.0% (2) </span></span>
-<span><span class="co">#&gt; ad(f,r)   100.0% (100)   0.0% (0) </span></span>
-<span><span class="co">#&gt; c(m,f)    100.0% (100)   0.0% (0) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    p(strike)                           </span></span>
-<span><span class="co">#&gt; --------  ------------------------------------</span></span>
-<span><span class="co">#&gt; ad(f,p)   3.05e-05 (±0.0001085) [0–0.0022455] </span></span>
-<span><span class="co">#&gt; ad(f,l)   4.14e-05 (±0.0001194) [0–0.0025054] </span></span>
-<span><span class="co">#&gt; ad(f,r)   2.82e-05 (±0.0000997) [0–0.0022644] </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Other sources of mortality +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; mortality   rate        </span></span>
-<span><span class="co">#&gt; ----------  ------------</span></span>
-<span><span class="co">#&gt; alive       80.8% (323) </span></span>
-<span><span class="co">#&gt; dead        19.2% (77)  </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    alive        dead       </span></span>
-<span><span class="co">#&gt; --------  -----------  -----------</span></span>
-<span><span class="co">#&gt; ad(f,l)   86.0% (86)   14.0% (14) </span></span>
-<span><span class="co">#&gt; ad(f,p)   83.0% (83)   17.0% (17) </span></span>
-<span><span class="co">#&gt; ad(f,r)   75.0% (75)   25.0% (25) </span></span>
-<span><span class="co">#&gt; c(m,f)    79.0% (79)   21.0% (21) </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; +++++++++++ Pile-driving noise +++++++++++</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    noise level               response threshold        response   Duration (days) </span></span>
-<span><span class="co">#&gt; --------  ------------------------  ------------------------  ---------  ----------------</span></span>
-<span><span class="co">#&gt; ad(f,p)   62.797 (±32.868) [0–80]   118.1 (±65.0) [0–199.9]   0.0% (0)   0 (±0) [0–0]    </span></span>
-<span><span class="co">#&gt; ad(f,l)   62.392 (±33.146) [0–80]   117.3 (±65.5) [0–199.9]   0.0% (0)   0 (±0) [0–0]    </span></span>
-<span><span class="co">#&gt; ad(f,r)   62.512 (±33.064) [0–80]   117.6 (±65.3) [0–199.9]   0.0% (0)   0 (±0) [0–0]    </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; ENERGY BUDGETS (MJ per day) </span></span>
-<span><span class="co">#&gt; =============================================================</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    Energy_intake                     Energy_expenditure               </span></span>
-<span><span class="co">#&gt; --------  --------------------------------  ---------------------------------</span></span>
-<span><span class="co">#&gt; ad(f,p)   1,352.9 (±1,657.3) [0–18,580.6]   879.7 (±718.1) [427.6–6,162.4]   </span></span>
-<span><span class="co">#&gt; ad(f,l)   740.1 (±1,314.0) [0–17,369.7]     2,197.7 (±681.1) [445.2–5,533.3] </span></span>
-<span><span class="co">#&gt; ad(f,r)   917.7 (±1,107.4) [0–12,511.1]     574.5 (±202.4) [424.0–2,475.4]   </span></span>
-<span><span class="co">#&gt; c(m,f)    1,392.9 (±776.3) [0–3,104.5]      515.9 (±125.5) [241.9–1,637.2]   </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    Deficit                     Surplus                   </span></span>
-<span><span class="co">#&gt; --------  --------------------------  --------------------------</span></span>
-<span><span class="co">#&gt; ad(f,p)   48.3% (±12.2) [28.7–96.8]   51.7% (±12.2) [3.2–71.3]  </span></span>
-<span><span class="co">#&gt; ad(f,l)   88% (±7.2) [68.7–100]       12% (±7.2) [0–31.3]       </span></span>
-<span><span class="co">#&gt; ad(f,r)   49% (±13.5) [23.4–97.8]     51% (±13.5) [2.2–76.6]    </span></span>
-<span><span class="co">#&gt; c(m,f)    17.1% (±11.2) [0.4–28.5]    82.9% (±11.2) [71.5–99.6]</span></span></code></pre>
-</div>
-<div class="section level3">
-<h3 id="plotting-model-outputs">Plotting model outputs<a class="anchor" aria-label="anchor" href="#plotting-model-outputs"></a>
-</h3>
-<p>Several plots can be obtained from <code>narwsim</code> objects – all
-are produced using the <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> method. By default, a call to
-<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> will generate maps of simulated whale tracks, with
-labels indicating the locations of births (if relevant) and deaths
-(color-coded by cause of mortality). The number of tracks shown is
-limited to a maximum of <code>100</code> to improve legibility and
-ensure that the code runs smoothly; we recommend against modifying this
-default setting, unless absolutely necessary (i.e., fewer/more tracks
-can be displayed by changing the value passed to the <code>nL</code>
-argument). Similarly to the other methods described in preceding
-sections, the <code>cohort</code> and <code>whale</code> arguments can
-be used to display data for particular cohorts and/or individuals of
-interest. The <code>bymonth</code> and <code>bywhale</code> arguments
-can also be set to <code>TRUE</code> to color-code track segments either
-by calendar month or by individual, respectively. Lastly, when
-<code>web</code> is set to <code>TRUE</code>, interactive web-based maps
-are produced using the <a href="https://plotly.com/ggplot2/" class="external-link"><code>ggplotly</code></a> R package.
-These can be zoomed and panned using the mouse cursor to get a closer
-look at specific areas of interest. The location (easting, northing) and
-ID of each animal are displayed upon mouse hover.</p>
-<p>Other maps/visualizations can be generated using the
-<code>what</code> argument (see details below).</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">m</span>, cohort <span class="op">=</span> <span class="fl">4</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span></span></code></pre></div>
-<p><img src="narw_tracks.jpg"></p>
-<table style="width:100%;" class="table">
-<colgroup>
-<col width="3%">
-<col width="4%">
-<col width="91%">
-</colgroup>
-<thead><tr class="header">
-<th>Argument</th>
-<th>Default value</th>
-<th>Description</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>obj</code></td>
-<td><code>-</code></td>
-<td>Model object of class <code>narwsim</code>, as returned by
-<code><a href="../reference/narw.html">narw()</a></code>.</td>
-</tr>
-<tr class="even">
-<td><code>what</code></td>
-<td><code>"map"</code></td>
-<td>
-<p>Character string indicating which plots to return. Set to:</p>
-<ul>
-<li><p><code>"map"</code> (default) to generate maps of simulated
-tracks</p></li>
-<li><p><code>"pred"</code> to visualize how survival and body condition
-are predicted to vary as a function of individual health</p></li>
-<li><p><code>"inits"</code> to check the starting locations of
-individuals in each month</p></li>
-<li><p><code>"migrate"</code> to display areas where whales were
-actively moving northwards</p></li>
-<li><p><code>"feed"</code> to display areas where feeding
-occurred</p></li>
-</ul>
-</td>
-</tr>
-<tr class="odd">
-<td><code>whale</code></td>
-<td><code>1:nsim</code></td>
-<td>Positive integer or vector of integers indicating the individual(s)
-for which data should be extracted. By default, the function plots
-tracks for all <code>nsim</code> simulated animals.</td>
-</tr>
-<tr class="even">
-<td><code>cohort</code></td>
-<td><code>1:6</code></td>
-<td>Positive integer or vector of positive integers indicating which
-cohorts should be considered. Defaults to all cohorts. Cohort
-identifiers are listed in an object called <code>cohorts</code>.</td>
-</tr>
-<tr class="odd">
-<td><code>web</code></td>
-<td><code>FALSE</code></td>
-<td>Logical. Whether to produce static maps (<code>FALSE</code>) or
-interactive, web-based maps (<code>TRUE</code>).</td>
-</tr>
-<tr class="even">
-<td><code>nL</code></td>
-<td><code>100</code></td>
-<td>Positive integer. Number of tracks to plot (when
-<code>what = "map"</code>) or number of draws to plot from the Bayesian
-posterior distribution of survival, health, and gestation models (when
-<code>what = "pred"</code>). In the former case, this argument should be
-kept &lt; 100 to minimize memory usage and avoid lengthy run times.</td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="section level3" data-link="Exporting data">
-<h3 id="propagating-uncertainty">Propagating uncertainty<a class="anchor" aria-label="anchor" href="#propagating-uncertainty"></a>
-</h3>
-<p>At the end of each run, generalized additive models (GAMs) are fitted
-to simulator outputs to assess how the initial health status of
-individuals within each population cohort affected their body condition
-and survival trajectories across the year. The fitted GAMs inform the
-stochastic population model used to generate predictions of future right
-whale abundance. Forward propagation of the uncertainty associated with
-GAM coefficients is indispensable for decision-making, and can be
-achieved using the <code>augment()</code> function.
-<code>augment()</code> performs random draws from the posterior
-distributions of GAM coefficients using a Bayesian Metropolis-Hastings
-algorithm and returns replicate realizations of the fitted smooths.</p>
-<p>The model object <code>m</code> now contains an additional component
-called <code>post</code> where the posterior draws have been saved.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">m</span>, <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="co">#&gt; List of 11</span></span>
-<span><span class="co">#&gt;  $ sim     :List of 6</span></span>
-<span><span class="co">#&gt;  $ gam     :List of 2</span></span>
-<span><span class="co">#&gt;  $ dead    :Classes 'data.table' and 'data.frame':   235 obs. of  23 variables:</span></span>
-<span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
-<span><span class="co">#&gt;   ..- attr(*, "index")= int(0) </span></span>
-<span><span class="co">#&gt;   .. ..- attr(*, "__cohort")= int [1:235] 176 177 178 179 180 181 182 183 184 185 ...</span></span>
-<span><span class="co">#&gt;   .. ..- attr(*, "__abb__whale__cohort")= int [1:235] 27 28 29 30 31 32 33 34 35 36 ...</span></span>
-<span><span class="co">#&gt;   .. ..- attr(*, "__whale")= int [1:235] 124 27 149 176 98 125 150 79 28 151 ...</span></span>
-<span><span class="co">#&gt;  $ birth   :Classes 'data.table' and 'data.frame':   100 obs. of  23 variables:</span></span>
-<span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
-<span><span class="co">#&gt;   ..- attr(*, "index")= int(0) </span></span>
-<span><span class="co">#&gt;   .. ..- attr(*, "__cohort")= int(0) </span></span>
-<span><span class="co">#&gt;   .. ..- attr(*, "__whale")= int(0) </span></span>
-<span><span class="co">#&gt;   .. ..- attr(*, "__cohort__whale")= int(0) </span></span>
-<span><span class="co">#&gt;  $ abort   :Classes 'data.table' and 'data.frame':   100 obs. of  2 variables:</span></span>
-<span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
-<span><span class="co">#&gt;   ..- attr(*, "index")= int(0) </span></span>
-<span><span class="co">#&gt;   .. ..- attr(*, "__whale")= int(0) </span></span>
-<span><span class="co">#&gt;  $ max_bc  : Named num [1:6] 0.543 0.542 0.537 0.593 0.6 ...</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "names")= chr [1:6] "jv(ml)" "jv(fml)" "ad(ml)" "ad(f,p)" ...</span></span>
-<span><span class="co">#&gt;  $ param   :List of 17</span></span>
-<span><span class="co">#&gt;  $ init    :List of 3</span></span>
-<span><span class="co">#&gt;  $ run     : 'hms' num 00:11:47</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "units")= chr "secs"</span></span>
-<span><span class="co">#&gt;  $ scenario:List of 12</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "class")= chr [1:2] "narwscenario" "list"</span></span>
-<span><span class="co">#&gt;  $ post    :List of 8</span></span>
-<span><span class="co">#&gt;  - attr(*, "class")= chr [1:2] "narwsim" "list"</span></span>
-<span><span class="co">#&gt;  - attr(*, "seed")= int [1:626] 10403 150 -1781719014 -1410108128 1916999664 -427117377 -404607876 1411468239 -1343881052 828601281 ...</span></span></code></pre></div>
-<blockquote>
-<p><strong>Note:</strong> The use of <code>augment()</code> is not
-compulsory but is highly recommended. Population projections obtained
-without running <code>augment()</code> first will only account for
-process variance (i.e., the uncertainty resulting from replicate
-projections).</p>
-</blockquote>
-</div>
-<div class="section level3" data-link="Exporting data">
-<h3 id="predicting-whale-abundance">Predicting whale abundance<a class="anchor" aria-label="anchor" href="#predicting-whale-abundance"></a>
-</h3>
-<p>The <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> method implements a stochastic population
-model and allows users to both generate and summarize <code>n</code>
-replicate projections of right whale abundance over a time horizon of
-interest (e.g., 35 years from current, which is the default). Longer
-projections can be obtained by modifying the <code>yrs</code> argument,
-which can either be specified as a desired number of years or as a
-target year for the end of the projection.</p>
-<p>Prediction uncertainty is estimated from both process variance (i.e.,
-replicate projections) and parameter uncertainty (i.e., statistical
-uncertainty in the relationships between individual body condition and
-health/survival, respectively). The latter is considered only if
-replicate coefficients have been sampled from the posteriors of the
-fitted survival and body condition GAMs using the <code>augment()</code>
+<code class="sourceCode R"><span><span class="va">output_summary</span> <span class="op">&lt;-</span> <span class="st">"my analysis"</span></span>
+<span><span class="va">output.summary</span> <span class="op">&lt;-</span> <span class="st">"my analysis"</span></span>
+<span><span class="va">outputSummary</span> <span class="op">&lt;-</span> <span class="st">"my analysis"</span></span></code></pre></div>
+<p>Importantly, note that an object name cannot start with a number or a
+dot followed by a number (i.e. <code>2my_variable</code> or
+<code>.2my_variable</code>). Non-alphanumeric characters (e.g., &amp;,
+^, /, ! etc.) or reserved words (i.e. <code>TRUE</code>,
+<code>NA</code>) should also be avoided, and it’s never a good idea to
+give objects the same name as a built-in R function (see below).</p>
+<p>The objects above are assigned a single value and are therefore very
+simple. However, more complex objects can also be created. R
+<strong>functions</strong> are an example of complex objects. An R
+function can be thought of as an object which contains a series of
+instructions to perform a specific task. Functions may be parameterized
+with one or more <strong>arguments</strong>, which control the way in
+which those tasks are performed or customize the values used in the
+internal calculations performed by the function. The base installation
+of R comes with numerous functions already pre-defined, however one can
+increase the power of R by installing custom functions from external
+packages, which is what you have done by installing
+<code>narwind</code>.</p>
+<p>There are a couple of really important points to note about R
+functions. Firstly, when using a function in R, the function name is
+<strong>always</strong> followed by a pair of round brackets, even if
+nothing is contained between the brackets (i.e., the function takes no
+arguments). Secondly, the argument(s) of a function are placed inside
+the round brackets and are separated by commas.</p>
+<p>In the example below, we first create a vector of integer numbers
+between 1 and 25 using the shorthand <code>:</code>, and we then
+calculate the average of these numbers using the <code>mean</code>
 function.</p>
-<p><code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> assumes that piling activities take place
-right at the onset of the projection (i.e., in year 1), such that the
-<code>piling</code> argument is set to <code>1</code>. In this case, two
-<code>narwsim</code> objects respectively relating to the construction
-and the operation &amp; maintenance phases of development, need to be
-passed to <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>. If <code>piling &gt; 1</code>, such
-that construction occurs at some time point between the start and the
-end of the projection, then an additional <code>narwsim</code> object
-representing baseline conditions (in the absence of wind farm activity)
-is also required to cover the period until construction begins.</p>
-<blockquote>
-<p><strong>Note:</strong> If a single <code>narwsim</code> object is
-passed to <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>, then <code>piling</code> is ignored if
-the <code>phase</code> attribute of the input object is <code>0</code>
-or <code>2</code>. This allows projections to be obtained for baseline
-conditions only (<code>phase = 0</code>) or operations &amp; maintenance
-conditions only (<code>phase = 2</code>).</p>
-</blockquote>
-<p>Note also that <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> cannot process more than one
-scenario bundle at a time; therefore, separate calls to
-<code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> must be made to compare population projections
-for multiple, alternative scenarios, e.g. involving different schedules
-of piling, different wind farm sites etc.</p>
-<p>The table below details the arguments that <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>
-accepts.</p>
-<table style="width:100%;" class="table">
-<colgroup>
-<col width="5%">
-<col width="6%">
-<col width="87%">
-</colgroup>
-<thead><tr class="header">
-<th>Argument</th>
-<th>Default value</th>
-<th>Description</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>obj</code></td>
-<td><code>-</code></td>
-<td>One or more objects of class <code>narwsim</code>, as returned by
-<code><a href="../reference/narw.html">narw()</a></code>.</td>
-</tr>
-<tr class="even">
-<td><code>n</code></td>
-<td><code>1000</code></td>
-<td>Integer. Number of replicates projections.</td>
-</tr>
-<tr class="odd">
-<td><code>yrs</code></td>
-<td><code>35</code></td>
-<td>Integer. Time horizon, specified either as the desired number of
-years (from current) or the desired target end year. Defaults to
-<code>35</code>, which is commensurate with the expected average
-lifespan of a typical wind farm.</td>
-</tr>
-<tr class="even">
-<td><code>param</code></td>
-<td><code>TRUE</code></td>
-<td>If <code>TRUE</code>, prediction variance includes parameter
-uncertainty.</td>
-</tr>
-<tr class="odd">
-<td><code>piling</code></td>
-<td><code>1</code></td>
-<td>Integer. Year of construction. By default, piling occurs on the
-first year of the projection, followed by O&amp;M for the
-remainder.</td>
-</tr>
-<tr class="even">
-<td><code>progress</code></td>
-<td><code>TRUE</code></td>
-<td>Logical. If <code>TRUE</code>, a progress bar is printed to the R
-console during execution.</td>
-</tr>
-</tbody>
-</table>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">narw.preds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span></code></pre></div>
-<pre><code>#&gt; --------------------------------------------------------------------------------
-#&gt; --------------------------------------------------------------------------------
-#&gt; 
-#&gt;                  NORTH ATLANTIC RIGHT WHALE (Eubalaena glacialis)
-#&gt; 
-#&gt;                             *** POPULATION MODEL ***
-#&gt; 
-#&gt; --------------------------------------------------------------------------------
-#&gt; --------------------------------------------------------------------------------
-#&gt; 
-#&gt; Date: 2024-03-20 
-#&gt; Time: 19:52:16 (UTC)
-#&gt; 
-#&gt; ––– Projections:
-#&gt; 
-#&gt; + Replicates: N = 10 
-#&gt; + Burn-in: 5 years
-#&gt; + Horizon: 35 years [from current]
-#&gt; + Parameter uncertainty: Yes 
-#&gt; 
-#&gt; ––– Timeline:
-#&gt; 
-#&gt; Baseline (yr 1 to 35)
-#&gt; 
-#&gt; ––– Execution:
-#&gt; 
-#&gt; 
-Initializing ...
-Initializing [ok]  
-#&gt; 
-Running projections [ok]  
-#&gt; 
-Summarizing outputs ...
-Summarizing outputs [ok]  
-#&gt; ---------------------------------
-#&gt; Done | Time elapsed: 00:00:18</code></pre>
-<blockquote>
-<p><strong>Note:</strong> <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> returns an object of
-class <code>narwproj</code>, which contains several datasets and model
-outputs in list format. Any call to <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> must
-therefore be assigned to an R object, as shown below.</p>
-</blockquote>
-<p>Population trends can be visualized using the <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>
-command. When set to <code>TRUE</code>, the <code>cohort</code> argument
-shows time series of abundance for each population cohort, rather than
-for the whole population (the default). The <code>interval</code>
-argument can be used to display/hide confidence intervals around the
-trend. Setting the <code>noaa</code> argument to <code>TRUE</code> will
-overlay the population trend estimated by Runge <em>et al.</em> (2023).
-Other parameters can be modified to adjust plot aesthetics (see
-below).</p>
-<table style="width:99%;" class="table">
-<colgroup>
-<col width="6%">
-<col width="8%">
-<col width="84%">
-</colgroup>
-<thead><tr class="header">
-<th>Argument</th>
-<th>Default value</th>
-<th>Description</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>interval</code></td>
-<td><code>TRUE</code></td>
-<td>Logical. If <code>TRUE</code>, percentile confidence intervals are
-shown on the plots.</td>
-</tr>
-<tr class="even">
-<td><code>cohort</code></td>
-<td><code>FALSE</code></td>
-<td>Logical. If <code>TRUE</code>, separate plots are returned for each
-population cohort. If <code>FALSE</code>, a single plot of the overall
-population trend is shown.</td>
-</tr>
-<tr class="odd">
-<td><code>noaa</code></td>
-<td><code>FALSE</code></td>
-<td>Logical. If <code>TRUE</code> the population trajectory predicted as
-part of NOAA’s population viability analysis (Runge et al., 2023) is
-also plotted. Defaults to <code>FALSE</code>.</td>
-</tr>
-<tr class="even">
-<td><code>scales</code></td>
-<td><code>"free"</code></td>
-<td>Character. Defines whether axis scales should be constant or vary
-across plots. Can be one of <code>"fixed"</code> or <code>"free"</code>
-(the default).</td>
-</tr>
-<tr class="odd">
-<td><code>ncol</code></td>
-<td><code>3</code></td>
-<td>Integer. Number of columns for the plot layout when
-<code>cohort = TRUE</code>.</td>
-</tr>
-<tr class="even">
-<td><code>nx</code></td>
-<td><code>5</code></td>
-<td>Integer. Desired number of x-axis intervals. Non-integer values are
-rounded down.</td>
-</tr>
-<tr class="odd">
-<td><code>ny</code></td>
-<td><code>5</code></td>
-<td>Integer. Desired number of y-axis intervals. Non-integer values are
-rounded down.</td>
-</tr>
-</tbody>
-</table>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">narw.proj</span><span class="op">)</span></span></code></pre></div>
-<p><img src="vignette_poptrend.jpeg"></p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">narw.proj</span>, cohort <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="vignette_poptrend_cohort.jpg"></p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">my_numbers</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">25</span></span>
+<span><span class="va">my_numbers</span></span>
+<span><span class="co">#&gt;  [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">my_numbers</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 13</span></span></code></pre></div>
+<p>If we wanted to use this average later on in our analysis we could
+just assign it to another object. The mean</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">my_average</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="va">my_numbers</span><span class="op">)</span></span></code></pre></div>
+<p>Note that argument names need not be specified when calling an R
+function, insofar as they are given in the correct order. For example,
+the <code>rnorm</code> function (which comes with R) can be used to
+generate random draws from a Normal distribution. The function takes
+three arguments, namely the number of values to generate, and the mean
+and standard deviation of the distribution, in this exact order. The two
+lines of code below are therefore equivalent, and return 10 random
+variates from a Normal distribution with mean of 120 and standard
+deviation of 12:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">10</span>, mean <span class="op">=</span> <span class="fl">120</span>, sd <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">120</span>, <span class="fl">12</span><span class="op">)</span></span></code></pre></div>
+<p>However, argument names must be given if arguments appear in a
+different order.</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span>sd <span class="op">=</span> <span class="fl">12</span>, n <span class="op">=</span> <span class="fl">10</span>, mean <span class="op">=</span> <span class="fl">120</span><span class="op">)</span></span></code></pre></div>
+<p>R has a built-in help facility that provides information on any
+function. To access it, simply use the <code><a href="https://rdrr.io/r/utils/help.html" class="external-link">help()</a></code> function. For
+example, to open the help page for the <code><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean()</a></code> function,
+type:</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/help.html" class="external-link">help</a></span><span class="op">(</span><span class="st">"mean"</span><span class="op">)</span></span></code></pre></div>
+<p>or use the equivalent shortcut, <code>?</code>.</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="op">?</span><span class="va">mean</span></span></code></pre></div>
+<p>The corresponding help page is displayed in the ‘Help’ tab in the
+Files pane (usually in the bottom right of RStudio).</p>
 </div>
-<div class="section level3">
-<h3 id="exporting-data">Exporting data<a class="anchor" aria-label="anchor" href="#exporting-data"></a>
-</h3>
-<p>The <code><a href="https://rdrr.io/r/base/write.html" class="external-link">write()</a></code> method is the gateway for saving data on
-disk. When calling <code><a href="https://rdrr.io/r/base/write.html" class="external-link">write()</a></code>, model outputs are exported as a
-Microsoft Excel spreadsheet (.xlsx), stored in the user’s current
-working directory. <code><a href="https://rdrr.io/r/base/write.html" class="external-link">write()</a></code> can be used with both objects of
-class <code>narwsim</code> and <code>narwproj</code>; in the former
-case, a separate file will be produced for each cohort in
-<code>cohortID</code>. It is recommended to only use this function for
-short simulation runs (<code>nsim = 100</code>) or less, or to use the
-<code>cohort</code> and <code>whale</code> arguments to extract data for
-specific individuals/cohorts. If the simulation run was given a label
-when using <code><a href="../reference/narw.html">narw()</a></code>, then this label is appended to the
-output file name.</p>
-<table style="width:99%;" class="table">
-<colgroup>
-<col width="8%">
-<col width="6%">
-<col width="9%">
-<col width="74%">
-</colgroup>
-<thead><tr class="header">
-<th>Object class</th>
-<th>Argument</th>
-<th>Default value</th>
-<th>Description</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>narwsim</code></td>
-<td><code>obj</code></td>
-<td><code>-</code></td>
-<td>Input model object, as returned by <code><a href="../reference/narw.html">narw()</a></code>.</td>
-</tr>
-<tr class="even">
-<td></td>
-<td><code>prefix</code></td>
-<td><code>"narwsim"</code></td>
-<td>Character string. Prefix appended to the output file name.</td>
-</tr>
-<tr class="odd">
-<td></td>
-<td><code>whale</code></td>
-<td><code>1:nsim</code></td>
-<td>Positive integer indicating the individual(s) for which data should
-be extracted. By default, all individuals are included.</td>
-</tr>
-<tr class="even">
-<td></td>
-<td><code>cohort</code></td>
-<td><code>1:6</code></td>
-<td>Positive integer or vector of positive integers indicating which
-cohort(s) should be considered. Defaults to all cohorts.</td>
-</tr>
-<tr class="odd">
-<td><code>narwproj</code></td>
-<td><code>obj</code></td>
-<td><code>-</code></td>
-<td>Input projection object, as returned by <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>.</td>
-</tr>
-<tr class="even">
-<td></td>
-<td><code>prefix</code></td>
-<td><code>"narwproj"</code></td>
-<td>Character string. Prefix appended to the output file name.</td>
-</tr>
-<tr class="odd">
-<td></td>
-<td><code>...</code></td>
-<td></td>
-<td>Additional arguments passed to <code>write.xlsx</code>
-</td>
-</tr>
-</tbody>
-</table>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/write.html" class="external-link">write</a></span><span class="op">(</span><span class="va">m</span>, whale <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">10</span>, cohort <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/write.html" class="external-link">write</a></span><span class="op">(</span><span class="va">narw.preds</span>, prefix <span class="op">=</span> <span class="st">"NARW_abundance"</span><span class="op">)</span></span></code></pre></div>
+<div class="section level2">
+<h2 id="further-information">Further information<a class="anchor" aria-label="anchor" href="#further-information"></a>
+</h2>
+<p>Novice R users may find the below resources useful.</p>
+<div class="vembedr">
+<div>
+<iframe src="https://www.youtube.com/embed/yZ0bV2Afkjc" width="533" height="300" frameborder="0" allowfullscreen="" data-external="1"></iframe>
 </div>
 </div>
-<div class="footnotes footnotes-end-of-document">
-<hr>
-<ol>
-<li id="fn1"><p>Population Consequences of Multiple Stressors (PCoMS)<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
-</ol>
+<p>Getting Started with Data in R <a href="https://moderndive.netlify.app/1-getting-started.html" class="external-link uri">https://moderndive.netlify.app/1-getting-started.html</a></p>
+<p>Introduction to R <a href="https://ourcodingclub.github.io/tutorials/intro-to-r/" class="external-link uri">https://ourcodingclub.github.io/tutorials/intro-to-r/</a></p>
+<p>RStudio tutorial <a href="https://www.datacamp.com/tutorial/r-studio-tutorial" class="external-link uri">https://www.datacamp.com/tutorial/r-studio-tutorial</a></p>
+<p>R basics 101 <a href="https://rladiessydney.org/courses/ryouwithme/01-basicbasics-0/" class="external-link uri">https://rladiessydney.org/courses/ryouwithme/01-basicbasics-0/</a></p>
 </div>
   </div>
 
