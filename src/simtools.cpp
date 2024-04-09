@@ -598,6 +598,7 @@ Rcpp::List movesim(
   double percent_glide_foraging = 0.0L;
   double percent_glide = 0.0L;
   double scalar_LC = 0.0L;
+  double scalar_LC_calf = 0.0L;
   double LC_tot = 0.0L;
   double LC_tot_calves = 0.0L;
   double percent_glide_echelon = 0.0L;
@@ -1157,43 +1158,42 @@ Rcpp::List movesim(
             // ------------------------------------------------------------
             // STARVATION MORTALITY
             // ------------------------------------------------------------
+
+            // No mortality during burn-in
+            if(current_day >= start_simulation){
+            
+            // Body condition-dependent mortality, similar to Hin et al. (2019)
+            // Probability of the animal starving given its health
+            // p_starve = starvation_mortality(animal->bc, starvation_onset, starvation, starvation_scalar);
+            p_starve = starvation_mortality(animal->bc, starvation_coefs, starvation_death, starvation_onset);
+            p_starve = 1-(std::pow(1-p_starve, 1.0L/365.0L));
+            has_starved = R::rbinom(1, p_starve);
+            
+            // p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_onset, starvation, starvation_scalar);
+            p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_coefs, starvation_death, starvation_onset);
+            p_starve_calf = 1-(std::pow(1-p_starve_calf, 1.0L/365.0L));
+            has_starved_calf = R::rbinom(1, p_starve_calf);
+            
+            if(has_starved){
               
-              if(current_day >= start_simulation){
-                
-                // Body condition-dependent mortality, similar to Hin et al. (2019)
-                // Probability of the animal starving given its health
-                // p_starve = starvation_mortality(animal->bc, starvation_onset, starvation, starvation_scalar);
-                p_starve = starvation_mortality(animal->bc, starvation_coefs, starvation_death, starvation_onset);
-                p_starve = 1-(std::pow(1-p_starve, 1.0L/365.0L));
-                has_starved = R::rbinom(1, p_starve);
-                
-                // p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_onset, starvation, starvation_scalar);
-                p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_coefs, starvation_death, starvation_onset);
-                p_starve_calf = 1-(std::pow(1-p_starve_calf, 1.0L/365.0L));
-                has_starved_calf = R::rbinom(1, p_starve_calf);
-                
-              }
+              animal->alive = 0;
+              animal->starve = 1;
+              date_death[current_animal] = current_day;
               
-              if(has_starved){
-                
-                animal->alive = 0;
-                animal->starve = 1;
-                date_death[current_animal] = current_day;
-                
-                if(calves[current_animal].alive == 1){
-                  calves[current_animal].alive = 0;
-                  date_death_calf[current_animal] = current_day;
-                }
+              if(calves[current_animal].alive == 1){
+                calves[current_animal].alive = 0;
+                date_death_calf[current_animal] = current_day;
               }
-              
-              if(calves[current_animal].alive == 1 && born[current_animal] == 1) {
-                if(has_starved_calf){
-                  calves[current_animal].alive = 0;
-                  calves[current_animal].starve = 1;
-                  date_death_calf[current_animal] = current_day;
-                  animal->north = 1;
-                }
+            }
+            
+            if(calves[current_animal].alive == 1 && born[current_animal] == 1) {
+              if(has_starved_calf){
+                calves[current_animal].alive = 0;
+                calves[current_animal].starve = 1;
+                date_death_calf[current_animal] = current_day;
+                animal->north = 1;
               }
+            }
             
             // ===================================
             // ENTANGLEMENT
@@ -1249,8 +1249,6 @@ Rcpp::List movesim(
               } 
             } // End if calves entangled
             
-            // No mortality during burn-in
-            if(current_day >= start_simulation){
               
               // ===================================
               // VESSEL STRIKES
@@ -1344,6 +1342,9 @@ Rcpp::List movesim(
         
         if(animal->alive){
           
+          // Retrieve the seed for the current animal
+          int currentseed = doseresp_seed(current_animal, cohortID - 1);
+          
           // ------------------------------------------------------------
           // MOVEMENT
           // ------------------------------------------------------------
@@ -1371,9 +1372,6 @@ Rcpp::List movesim(
           
           // Noise levels +++
           dB = layers[current_day](current_x, current_y, 'N');
-          
-          // Retrieve the seed for the current animal
-          int currentseed = doseresp_seed(current_animal, cohortID - 1);
           
           // Response threshold (dB)
           response_dB = response_threshold(doseresp, current_day, t, currentseed);
@@ -1622,8 +1620,8 @@ Rcpp::List movesim(
           if(cohortID == 5 && calves[current_animal].alive == 1) resting_metab_calves = RMR(calves[current_animal].lean_mass); 
           
           // Stroke rate during routine swimming -- (d.u.)
-          stroke_rate_foraging = rtnorm(0.1635468, 0.004291999, 0, INFINITY);
-          stroke_rate = rtnorm(0.1051259, 0.02903964, 0, INFINITY);
+          stroke_rate_foraging = rtnorm(0.1650784, 0.003930294, 0, INFINITY);
+          stroke_rate = rtnorm(0.11375, 0.02678894, 0, INFINITY);
           
           // Percentage of time spent gliding -- (d.u.)
           percent_glide_foraging = R::rgamma(17.393772, 0.02006944); // Corresponds to mean of 36%, min of 10% and max of 75%
@@ -1639,10 +1637,14 @@ Rcpp::List movesim(
           // in their last month of pregnancy.
           
           // Pregnant females in the last month of pregnancy
-          if((cohortID == 4 && current_day > start_simulation && current_month == densitySeq.back()) |
-             (cohortID == 5 && current_day < start_simulation && current_month == densitySeq.back())){
+          if((cohortID == 4 && current_day > start_simulation) |
+             (cohortID == 5 && current_day < start_simulation)){
             
-            scalar_LC = 1/0.86;
+            if(current_month == densitySeq.back()){
+              scalar_LC = 1/0.86;
+            } else {
+              scalar_LC = 1.0L;
+            }
             
           // Lactating mothers with calf swimming in echelon position
           } else if(cohortID == 5 && current_day >= start_simulation){
@@ -1650,17 +1652,19 @@ Rcpp::List movesim(
             if(calves[current_animal].alive == 1 && calves[current_animal].age <= 30/365.0L){
               
               scalar_LC = 1.17;
+              scalar_LC_calf = 0.83;
               percent_glide_echelon = glide_echelon;
               
             } else {
               
-              scalar_LC = 1;
+              scalar_LC = 1.0L;
+              scalar_LC_calf = 1.0L;
               percent_glide_echelon = percent_glide;
             }
             
           } else {
             
-            scalar_LC = 1;
+            scalar_LC = 1.0L;
           }
           
           LC_tot = locomotor_costs(animal->tot_mass, 
@@ -1682,7 +1686,7 @@ Rcpp::List movesim(
                                             percent_glide_echelon,
                                             0, 
                                             travel_time * 3600, 
-                                            scalar_LC);
+                                            scalar_LC_calf);
           }
           
           // ------------------------------------------------------------
@@ -2538,7 +2542,7 @@ Rcpp::List movesim(
           
           *(attrib_costs_calves_out++) = resting_metab_calves;           // Resting metabolic rate
           *(attrib_costs_calves_out++) = LC_tot_calves;                  // Locomotory costs
-          *(attrib_costs_calves_out++) = scalar_LC;                      // Scalar on locomotory costs
+          *(attrib_costs_calves_out++) = scalar_LC_calf;                 // Scalar on locomotory costs
           *(attrib_costs_calves_out++) = E_growth_calves;                // Energetic cost associated with growth
           *(attrib_costs_calves_out++) = lean_mass_increment_calves;     // Daily change in mass
           

@@ -5,7 +5,6 @@
 #' @param ... One or more objects of class \code{narwsim}.
 #' @param n Integer. Number of replicate projections. Defaults to \code{100}.
 #' @param yrs Integer. Time horizon, specified either as the desired number of years (from current) or the desired target end year. Defaults to \code{35}, which is commensurate with the average lifespan of a typical wind farm.
-#' @param param Logical. If \code{TRUE}, prediction variance includes parameter uncertainty.  
 #' @param piling Integer. Year of construction. Defaults to \code{1}, such that piling occurs on the first year of the projection, followed by O&M for the remainder.
 #' @param progress Logical. If \code{TRUE}, a progress bar is shown during execution. Defaults to \code{FALSE}
 #' @return A list of class \code{narwproj}.
@@ -20,11 +19,7 @@
 predict.narwsim <- function(...,
                             n = 100,
                             yrs = 35,
-                            param = TRUE,
                             piling = 1,
-                            noaa = FALSE,
-                            survival_prob = NULL,
-                            min_gest = NULL,
                             progress = TRUE) {
 
   cat("--------------------------------------------------------------------------------\n")
@@ -42,6 +37,12 @@ predict.narwsim <- function(...,
   #'------------------------------------------------------------
   # Function checks ----
   #'------------------------------------------------------------
+  
+  # For package development only
+  param <- TRUE
+  noaa <- FALSE
+  survival_prob <- NULL
+  min_gest <- NULL
   
   args <- list(...)
   
@@ -337,10 +338,16 @@ predict.narwsim <- function(...,
     # sample(x = bc_init[[as.character(x)]], size = 1, replace = TRUE)
   # })
     
+    # bc_dist <- data.table::data.table(
+    #   cohort = unique(obj[[schedule.phases[1]]]$gam$dat$cohort),
+    #   mean = c(0.3593643, 0.4125728, 0.4336672, 0.4608405, 0.4537379, 0.5369984, 0.3669689),
+    #   sd = c(0.07952667, 0.05916375, 0.06419653, 0.05955169, 0.05712539, 0.06022515, 0.13665292)
+    # )
+    
     bc_dist <- data.table::data.table(
       cohort = unique(obj[[schedule.phases[1]]]$gam$dat$cohort),
-      mean = c(0.3593643, 0.4125728, 0.4336672, 0.4608405, 0.4537379, 0.5369984, 0.3669689),
-      sd = c(0.07952667, 0.05916375, 0.06419653, 0.05955169, 0.05712539, 0.06022515, 0.13665292)
+      mean = c(0.35884621, 0.2904040, 0.2904040, 0.27617455, 0.27617455, 0.30989147, 0.27617455),
+      sd = c(0.07788818, 0.0681619, 0.0681619, 0.06969136, 0.06969136, 0.06917943, 0.06969136)
     )
     
     bc <- sapply(X = cohort.vec, FUN = function(x) {

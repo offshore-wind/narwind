@@ -269,6 +269,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// a2l_vec
+Rcpp::NumericVector a2l_vec(Rcpp::NumericVector age, Eigen::MatrixXd gompertz);
+RcppExport SEXP _narwind_a2l_vec(SEXP ageSEXP, SEXP gompertzSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type age(ageSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type gompertz(gompertzSEXP);
+    rcpp_result_gen = Rcpp::wrap(a2l_vec(age, gompertz));
+    return rcpp_result_gen;
+END_RCPP
+}
 // mL
 Eigen::MatrixXd mL(int n, bool sd);
 RcppExport SEXP _narwind_mL(SEXP nSEXP, SEXP sdSEXP) {
@@ -303,6 +315,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type L(LSEXP);
     Rcpp::traits::input_parameter< double >::type lean(leanSEXP);
     rcpp_result_gen = Rcpp::wrap(length2mass_vec(L, lean));
+    return rcpp_result_gen;
+END_RCPP
+}
+// L2mass_vec
+Rcpp::NumericVector L2mass_vec(Rcpp::NumericVector L, Eigen::MatrixXd param, double lean);
+RcppExport SEXP _narwind_L2mass_vec(SEXP LSEXP, SEXP paramSEXP, SEXP leanSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type L(LSEXP);
+    Rcpp::traits::input_parameter< Eigen::MatrixXd >::type param(paramSEXP);
+    Rcpp::traits::input_parameter< double >::type lean(leanSEXP);
+    rcpp_result_gen = Rcpp::wrap(L2mass_vec(L, param, lean));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -914,9 +939,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_narwind_agL_vec", (DL_FUNC) &_narwind_agL_vec, 2},
     {"_narwind_age2length", (DL_FUNC) &_narwind_age2length, 2},
     {"_narwind_age2length_vec", (DL_FUNC) &_narwind_age2length_vec, 1},
+    {"_narwind_a2l_vec", (DL_FUNC) &_narwind_a2l_vec, 2},
     {"_narwind_mL", (DL_FUNC) &_narwind_mL, 2},
     {"_narwind_length2mass", (DL_FUNC) &_narwind_length2mass, 3},
     {"_narwind_length2mass_vec", (DL_FUNC) &_narwind_length2mass_vec, 2},
+    {"_narwind_L2mass_vec", (DL_FUNC) &_narwind_L2mass_vec, 3},
     {"_narwind_increment_cohort", (DL_FUNC) &_narwind_increment_cohort, 8},
     {"_narwind_feeding_threshold", (DL_FUNC) &_narwind_feeding_threshold, 2},
     {"_narwind_feeding_threshold_vec", (DL_FUNC) &_narwind_feeding_threshold_vec, 2},

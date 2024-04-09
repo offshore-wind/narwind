@@ -57,7 +57,9 @@ private:
   // size_t is the type returned by the sizeof operator and is widely 
   // used in the standard library to represent sizes and counts.
   std::size_t sampleInd() {
+    GetRNGstate();
     double u = R::runif(0,1);
+    PutRNGstate();
     double q = 0;
     std::size_t k = 0;
     double *w = weights.data();
@@ -174,6 +176,19 @@ public:
         
         // Retrieve density value (weight) at new x,y
         char lyr;
+        
+        if(animal.seus == 1 & animal.gsl == 0){
+          lyr = 'S';
+        } else if(animal.seus == 0 & animal.gsl == 1){
+          lyr = 'G';
+        } else {
+          if(environment.id > 11){
+            lyr = 'O';
+          }  else {
+            lyr = 'D';
+          }   
+        }
+        
         // if(animal.seus == 1 & animal.gsl == 0){
         //   lyr = 'S';
         // } else if(animal.seus == 0 & animal.gsl == 1){
@@ -182,81 +197,81 @@ public:
         //   lyr = 'D';
         // }
 
-        if(animal.cohortID == 5){ // Lactating females
-
-          if(environment.id > 11){ // Last three months
-            
-            lyr = 'O';
-            
-          } else { // First 12 months
-
-            if(animal.seus == 1 && animal.gsl == 0){
-              
-              lyr = 'S';
-              
-            } else if(animal.seus == 0 && animal.gsl == 1){
-              
-              lyr = 'G';
-              
-            } else if(animal.seus == 1 && animal.gsl == 1){ 
-              
-              if((environment.id >= 9 && environment.id <= 11) |
-                 (environment.id >= 0 && environment.id <= 2)) { // Oct–Mar
-                
-                lyr = 'S';
-                
-              } else if((environment.id >= 5 && environment.id <= 8)){ // Jun–Sep
-                
-                lyr = 'G';
-                
-              } else { // Rest of year
-                
-                lyr = 'D';
-                
-              }
-              
-            } else {
-              
-              lyr = 'D';
-              
-            }
-            
-          }
-
-        } else { // All other cohorts
-
-          if(animal.seus == 1 && animal.gsl == 0){
-            
-            lyr = 'S';
-            
-          } else if(animal.seus == 0 && animal.gsl == 1){
-            
-            lyr = 'G';
-            
-          } else if(animal.seus == 1 && animal.gsl == 1){ 
-            
-            if((environment.id >= 9 && environment.id <= 11) |
-               (environment.id >= 0 && environment.id <= 2)) { // Oct–Mar
-              
-              lyr = 'S';
-              
-            } else if((environment.id >= 5 && environment.id <= 8)){ // Jun–Sep
-              
-              lyr = 'G';
-              
-            } else { // Rest of year
-              
-              lyr = 'D';
-              
-            }
-            
-          } else {
-            
-            lyr = 'D';
-            
-          }
-
-        }
+        // if(animal.cohortID == 5){ // Lactating females
+        //   
+        //   if(environment.id > 11){ // Last three months
+        //     
+        //     lyr = 'O';
+        //     
+        //   } else { // First 12 months
+        // 
+        //     if(animal.seus == 1 && animal.gsl == 0){
+        //       
+        //       lyr = 'S';
+        //       
+        //     } else if(animal.seus == 0 && animal.gsl == 1){
+        //       
+        //       lyr = 'G';
+        //       
+        //     } else if(animal.seus == 1 && animal.gsl == 1){ 
+        //       
+        //       if((environment.id >= 9 && environment.id <= 11) |
+        //          (environment.id >= 0 && environment.id <= 2)) { // Oct–Mar
+        //         
+        //         lyr = 'S';
+        //         
+        //       } else if((environment.id >= 5 && environment.id <= 8)){ // Jun–Sep
+        //         
+        //         lyr = 'G';
+        //         
+        //       } else { // Rest of year
+        //         
+        //         lyr = 'D';
+        //         
+        //       }
+        //       
+        //     } else {
+        //       
+        //       lyr = 'D';
+        //       
+        //     }
+        //     
+        //   }
+        // 
+        // } else { // All other cohorts
+        // 
+        //   if(animal.seus == 1 && animal.gsl == 0){
+        //     
+        //     lyr = 'S';
+        //     
+        //   } else if(animal.seus == 0 && animal.gsl == 1){
+        //     
+        //     lyr = 'G';
+        //     
+        //   } else if(animal.seus == 1 && animal.gsl == 1){ 
+        //     
+        //     if((environment.id >= 9 && environment.id <= 11) |
+        //        (environment.id >= 0 && environment.id <= 2)) { // Oct–Mar
+        //       
+        //       lyr = 'S';
+        //       
+        //     } else if((environment.id >= 5 && environment.id <= 8)){ // Jun–Sep
+        //       
+        //       lyr = 'G';
+        //       
+        //     } else { // Rest of year
+        //       
+        //       lyr = 'D';
+        //       
+        //     }
+        //     
+        //   } else {
+        //     
+        //     lyr = 'D';
+        //     
+        //   }
+        // 
+        // }
 
         
 
@@ -386,6 +401,7 @@ public:
       
       dist_to_latent = std::pow(animal.x - active_latent.x, 2) + std::pow(animal.y - active_latent.y, 2);
       
+      // Merge with latent attractor if within 10 km of it (distances on squared scale here)
       if(dist_to_latent < 100) {
         
         animal.x = active_latent.x;
@@ -445,81 +461,93 @@ public:
         
         char lyr;
         
-        if(animal.cohortID == 5){ // Lactating females
-          
-          if(environment.id > 11){ // Last three months
-            
+        if(animal.seus == 1 & animal.gsl == 0){
+          lyr = 'S';
+        } else if(animal.seus == 0 & animal.gsl == 1){
+          lyr = 'G';
+        } else {
+          if(environment.id > 11){
             lyr = 'O';
-            
-          } else { // First 12 months
-            
-            if(animal.seus == 1 && animal.gsl == 0){
-              
-              lyr = 'S';
-              
-            } else if(animal.seus == 0 && animal.gsl == 1){
-              
-              lyr = 'G';
-              
-            } else if(animal.seus == 1 && animal.gsl == 1){ 
-              
-              if((environment.id >= 9 && environment.id <= 11) |
-                 (environment.id >= 0 && environment.id <= 2)) { // Oct–Mar
-                
-                lyr = 'S';
-                
-              } else if((environment.id >= 5 && environment.id <= 8)){ // Jun–Sep
-                
-                lyr = 'G';
-                
-              } else { // Rest of year
-                
-                lyr = 'D';
-                
-              }
-              
-            } else {
-              
-              lyr = 'D';
-              
-            }
-            
-          }
-          
-        } else { // All other cohorts
-          
-          if(animal.seus == 1 && animal.gsl == 0){
-            
-            lyr = 'S';
-            
-          } else if(animal.seus == 0 && animal.gsl == 1){
-            
-            lyr = 'G';
-            
-          } else if(animal.seus == 1 && animal.gsl == 1){ 
-            
-            if((environment.id >= 9 && environment.id <= 11) |
-               (environment.id >= 0 && environment.id <= 2)) { // Oct–Mar
-              
-              lyr = 'S';
-              
-            } else if((environment.id >= 5 && environment.id <= 8)){ // Jun–Sep
-              
-              lyr = 'G';
-              
-            } else { // Rest of year
-              
-              lyr = 'D';
-              
-            }
-            
-          } else {
-            
+          }  else {
             lyr = 'D';
-            
-          }
-          
+          }   
         }
+        
+        // if(animal.cohortID == 5){ // Lactating females
+        //   
+        //   if(environment.id > 11){ // Last three months
+        //     
+        //     lyr = 'O';
+        //     
+        //   } else { // First 12 months
+        //     
+        //     if(animal.seus == 1 && animal.gsl == 0){
+        //       
+        //       lyr = 'S';
+        //       
+        //     } else if(animal.seus == 0 && animal.gsl == 1){
+        //       
+        //       lyr = 'G';
+        //       
+        //     } else if(animal.seus == 1 && animal.gsl == 1){ 
+        //       
+        //       if((environment.id >= 9 && environment.id <= 11) |
+        //          (environment.id >= 0 && environment.id <= 2)) { // Oct–Mar
+        //         
+        //         lyr = 'S';
+        //         
+        //       } else if((environment.id >= 5 && environment.id <= 8)){ // Jun–Sep
+        //         
+        //         lyr = 'G';
+        //         
+        //       } else { // Rest of year
+        //         
+        //         lyr = 'D';
+        //         
+        //       }
+        //       
+        //     } else {
+        //       
+        //       lyr = 'D';
+        //       
+        //     }
+        //     
+        //   }
+        //   
+        // } else { // All other cohorts
+        //   
+        //   if(animal.seus == 1 && animal.gsl == 0){
+        //     
+        //     lyr = 'S';
+        //     
+        //   } else if(animal.seus == 0 && animal.gsl == 1){
+        //     
+        //     lyr = 'G';
+        //     
+        //   } else if(animal.seus == 1 && animal.gsl == 1){ 
+        //     
+        //     if((environment.id >= 9 && environment.id <= 11) |
+        //        (environment.id >= 0 && environment.id <= 2)) { // Oct–Mar
+        //       
+        //       lyr = 'S';
+        //       
+        //     } else if((environment.id >= 5 && environment.id <= 8)){ // Jun–Sep
+        //       
+        //       lyr = 'G';
+        //       
+        //     } else { // Rest of year
+        //       
+        //       lyr = 'D';
+        //       
+        //     }
+        //     
+        //   } else {
+        //     
+        //     lyr = 'D';
+        //     
+        //   }
+        //   
+        // }
         
         // if(animal.seus == 1 & animal.gsl == 0){
         //   lyr = 'S';

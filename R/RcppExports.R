@@ -33,14 +33,8 @@ NULL
 #' @name RMR
 NULL
 
-#' Random deviate from a truncated Normal distribution
-#' 
-#' @param location Location parameter
-#' @param scale Scale parameter
-#' @param L Lower bound
-#' @param U Upper bound
-rtnorm <- function(location, scale, L, U) {
-    .Call('_narwind_rtnorm', PACKAGE = 'narwind', location, scale, L, U)
+rtnorm <- function(mean, sd, low, high) {
+    .Call('_narwind_rtnorm', PACKAGE = 'narwind', mean, sd, low, high)
 }
 
 estBetaParams <- function(mu, std) {

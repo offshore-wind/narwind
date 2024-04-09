@@ -151,6 +151,23 @@ inline double UseAlg3(const double low, ///< lower bound of distribution
 }
 
 
+// //' Random deviate from a truncated Normal distribution
+// //' 
+// //' @param location Location parameter
+// //' @param scale Scale parameter
+// //' @param L Lower bound
+// //' @param U Upper bound
+// // [[Rcpp::export]]
+// double rtnorm(double location,
+//                double scale,
+//                double L,
+//                double U) {
+//    
+//    double tot = R::pnorm(L, location, scale, TRUE, FALSE) + R::runif(0,1) * (R::pnorm(U, location, scale, TRUE, FALSE) - R::pnorm(L, location, scale, TRUE, FALSE));
+//    double out = location + scale * R::qnorm(tot, 0, 1, TRUE, FALSE);
+//    return out;
+// }
+
 /// Draw from an arbitrary truncated normal distribution.
 
 ///
@@ -897,32 +914,40 @@ long double start_bcondition(double cohort){
   long double bc;
   double lower = 0.05;
   double upper = 0.665289; // find_maxBC()
+  GetRNGstate();
   
   // Calves
   if(cohort == 0){
     
-    bc = rtnorm(0.35884621, 0.07788818, lower, upper);
+    bc = R::runif(lower, 0.45);
+    // bc = rtnorm(0.35884621, 0.07788818, lower, upper);
     
     // Juveniles (males and females)
   } else if(cohort == 1 | cohort == 2){
     
     // bc = rtnorm(0.28574784, 0.02027885, 0.05, 0.665289);
-    bc = rtnorm(0.2904040, 0.0681619, lower, upper);
+    // bc = rtnorm(0.2904040, 0.0681619, lower, upper);
+    bc = R::runif(lower, upper);
+    // bc = rtnorm(0.4, 0.1, lower, upper);
     
     // Adult males, resting females, pregnant females
   } else if(cohort == 3 | cohort == 4 | cohort == 6) {
     
     // bc = rtnorm(0.25940715, 0.01519702, 0.05, 0.665289);
-    bc = rtnorm(0.27617455, 0.06969136, lower, upper);
+    // bc = rtnorm(0.27617455, 0.06969136, lower, upper);
+    bc = R::runif(lower, upper);
+    // bc = rtnorm(0.4, 0.1, lower, upper);
     
     // Lactating females, which start simulation as late pregnant
   } else {
     
     // Christiansen values, which do not reflect our "lactating females" starting as late pregnant
     // bc = rtnorm(0.30989147, 0.06917943, 0.35, upper); 
-    bc = rtnorm(0.4462601, 0.1026832, 0.4, upper);
+    bc = R::runif(0.4, upper);
+    // bc = rtnorm(0.4462601, 0.1026832, 0.4, upper);
     
   }
+  PutRNGstate();
   return bc;
   
 }
@@ -1067,24 +1092,24 @@ Eigen::MatrixXd agL_vec(Rcpp::NumericVector age, bool sd = false){
    return gompertz(0,0) * exp(gompertz(0,1)*exp(gompertz(0,2)*age)) / 100; // cm to m
  }
 
-// // [[Rcpp::export]]
-// Rcpp::NumericVector age2length_vec(Rcpp::NumericVector age, Eigen::MatrixXd gompertz){        
-//   int n = age.size();
-//   int nr = gompertz.rows();
-//   if(n != nr) Rcpp::stop("Arguments have different lengths");
-//   Rcpp::NumericVector a(n);
-//   
-//   for(int i = 0; i < n; i++) {
-//     a[i] = gompertz(i,0) * exp(gompertz(i,1)*exp(gompertz(i,2)*age[i])) / 100; // cm to m
-//   }
-//   return a;
-// }
-
 // [[Rcpp::export]]
 Rcpp::NumericVector age2length_vec(Rcpp::NumericVector age){        
   int n = age.size();
   Rcpp::NumericVector a(n);
   Eigen::MatrixXd gompertz = agL_vec(age);
+  for(int i = 0; i < n; i++) {
+    a[i] = gompertz(i,0) * exp(gompertz(i,1)*exp(gompertz(i,2)*age[i])) / 100; // cm to m
+  }
+  return a;
+}
+
+// [[Rcpp::export]]
+Rcpp::NumericVector a2l_vec(Rcpp::NumericVector age, Eigen::MatrixXd gompertz){
+  int n = age.size();
+  int nr = gompertz.rows();
+  if(n != nr) Rcpp::stop("Arguments have different lengths");
+  Rcpp::NumericVector a(n);
+
   for(int i = 0; i < n; i++) {
     a[i] = gompertz(i,0) * exp(gompertz(i,1)*exp(gompertz(i,2)*age[i])) / 100; // cm to m
   }
@@ -1167,7 +1192,7 @@ double length2mass(double L,
                    Eigen::MatrixXd param,
                    double lean = 0.5554227){
   
-  // lean determined by find_lean()
+  // lean determined by scale_growth()
   
   double a = param(0,0);
   double b = param(0,1);
@@ -1192,14 +1217,28 @@ double length2mass(double L,
 // }
 
 // [[Rcpp::export]]
-Rcpp::NumericVector length2mass_vec(Rcpp::NumericVector L, double lean = 0.5435686){
+Rcpp::NumericVector length2mass_vec(Rcpp::NumericVector L, 
+                                    double lean = 0.5554227){
   
   // lean determined by find_lean(45000)
   int n = L.size();
   Rcpp::NumericVector mass(n);
-  
   for(int i = 0; i < n; i++) {
     mass[i] = lean * std::pow(10, -4.834189)*std::pow(L[i] * 100, 2.984353); // m to cm
+  }
+  return(mass);
+}
+
+// [[Rcpp::export]]
+Rcpp::NumericVector L2mass_vec(Rcpp::NumericVector L, 
+                                    Eigen::MatrixXd param,
+                                    double lean = 0.5554227){
+  
+  // lean determined by find_lean(45000)
+  int n = L.size();
+  Rcpp::NumericVector mass(n);
+  for(int i = 0; i < n; i++) {
+    mass[i] = lean * std::pow(10, param(i,0))*std::pow(L[i] * 100, param(i,1)); // m to cm
   }
   return(mass);
 }
@@ -1870,6 +1909,7 @@ Rcpp::NumericVector milk_supply_vec(double kappa,
 //' Fetal blubber mass
 //' @name fetal_blubber_mass
 //' @param L Length of the fetus (m)
+//' @param BC Body condition at birth
 //' @param M_muscle Mass of muscles in the fetus (kg)
 //' @param M_viscera Mass of viscera in the fetus (kg)
 //' @param M_bones Mass of bone tissues in the fetus (kg)
