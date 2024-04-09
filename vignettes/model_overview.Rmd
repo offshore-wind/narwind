@@ -30,7 +30,7 @@ knitr::opts_chunk$set(
 
 ```{r, echo = FALSE}
 downloadthis::download_link(
-  link = "https://raw.githubusercontent.com/offshore-wind/narwind/99df759f85ce0f5d495a864a5d35bc854b5951d9/vignettes/pdf/getting_started.pdf",
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/1240faf44d7afb030838ae2fdcf58a12a2ab9b1e/vignettes/pdf/model_overview.pdf",
   button_label = "Download PDF",
   button_type = "primary",
   has_icon = TRUE,
@@ -74,7 +74,7 @@ The agent-based model is spatially explicit and is informed by several raster su
 Table 1. Spatial layers used to define the simulation landscape
 
 | Raster              | Resolution         | Derived from                                                                                                                                        | Source(s) / Data providers                                                            |
-|----------------|----------------|-------------------------|----------------|
+|-----------------|-----------------|-----------------------|-----------------|
 | Strike risk         | Monthly (10x10 km) | Records of sea-going vessel movements as captured by Automatic Identification Systems (AIS)                                                         | NOAA Fisheries (U.S. waters), MERIDIAN (Canadian waters)                              |
 | Entanglement risk   | Monthly (5x5 km)   | Risk estimates from NOAA's Decision Support Tool, complemented by a comparative analysis of fishing effort within northern U.S. vs. Canadian waters | NOAA Fisheries (U.S. waters), North Atlantic Fisheries Organization (Canadian waters) |
 | Pile-driving noise  | Daily (5x5 km)     | Simple acoustic propagation model, which assumes that transmission loss is dependent on log-range and frequency-specific absorption                 | \-                                                                                    |
