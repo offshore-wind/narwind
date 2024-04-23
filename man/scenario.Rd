@@ -13,5 +13,5 @@ An object of class \code{narwscenario}.
 Launches an interactive Shiny application to define custom scenarios for use in the bioenergetic model.
 }
 \author{
-Rob Schick, Phil J. Bouchet
+Rob Schick, Phil J. Bouchet, Enrico Pirotta
 }

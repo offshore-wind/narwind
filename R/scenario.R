@@ -3,15 +3,15 @@
 #' Launches an interactive Shiny application to define custom scenarios for use in the bioenergetic model.
 #' 
 #' @import shiny
-#' @import shinyjs
+#' @rawNamespace import(shinyjs, except = runExample)
 #' @import shinythemes
 #' @import shinydashboard
 #' @import shinyFeedback
 #' @import shinyvalidate
 #' @import leaflet
-#' @import dplyr
+#' @rawNamespace import(dplyr, except = c(first, last, between))
 #' @export
-#' @author Rob Schick, Phil J. Bouchet
+#' @author Rob Schick, Phil J. Bouchet, Enrico Pirotta
 #' @return An object of class \code{narwscenario}.
 
 scenario <- function() {
