@@ -256,57 +256,6 @@ scenario <- function() {
                      "+x_0=0 +y_0=0",
                      "+ellps=WGS84 +datum=WGS84 +units=m +no_defs")
     
-    # 3 Different Scenarios 
-    load("data/scenario_01.rda")
-    load("data/scenario_02.rda")
-    load("data/scenario_03.rda")
-    
-    # NARW Density Layers 
-    load("data/density_narw.rda")
-    
-    # Load Traffic Data
-    traffic <- readRDS("data/traffic.rds")
-    
-    # Strike Layer
-    load("data/strike_layer.rda") 
-    
-    # Vessel Grid
-    load("data/vessel_grid.rda")
-    
-    # World Grid
-    load("data/world.rda")
-    
-    # Wind Farms 
-    windfarm1 <- sf::st_read(dsn = paste0("data/app_shape_files/WindFarm1_subset.shp"), 
-                             quiet = TRUE) 
-    
-    windfarm2 <- sf::st_read(dsn = paste0("data/app_shape_files/WindFarm2.shp"), 
-                             quiet = TRUE) 
-    
-    windfarm3 <- sf::st_read(dsn = paste0("data/app_shape_files/WindFarm3.shp"), 
-                             quiet = TRUE) 
-    
-    # Ship Routes to Wind Farms 
-    route_wf1 <- sf::st_read(dsn = paste0("data/app_shape_files/WindFarm1_Route.shp"), 
-                             quiet = TRUE) 
-    
-    route_wf2 <- sf::st_read(dsn = paste0("data/app_shape_files/WindFarm2_Route.shp"), 
-                             quiet = TRUE) 
-    
-    route_wf3 <- sf::st_read(dsn = paste0("data/app_shape_files/WindFarm3_Route.shp"), 
-                             quiet = TRUE) 
-    
-    # Supporting Shape Files 
-    atba <- sf::st_read(dsn = paste0("data/app_shape_files/atba.shp"), 
-                        quiet = TRUE) 
-    
-    tss <- sf::st_read(dsn = paste0("data/app_shape_files/tss.shp"), 
-                       quiet = TRUE) 
-    
-    speed_zones <- sf::st_read(dsn = paste0("data/app_shape_files/speed_NARW.shp"), 
-                               quiet = TRUE) 
-    
-    
     output$sidebar <- renderMenu({
       
       sidebarMenu(
