@@ -35,6 +35,7 @@ ByteCompile: true
 License: GPL (>= 2)
 Imports: 
     Rcpp (>= 1.0.8),
+    htmltools (>= 0.5.8),
     abind,
     data.table,
     dplyr,
@@ -47,7 +48,6 @@ Imports:
     gtable,
     grid,
     hms,
-    htmltools (>= 0.5.8),
     janitor,
     knitr,
     leaflet,
