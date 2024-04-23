@@ -47,7 +47,7 @@ Imports:
     gtable,
     grid,
     hms,
-    htmltools,
+    htmltools (>= 0.5.8),
     janitor,
     knitr,
     leaflet,
