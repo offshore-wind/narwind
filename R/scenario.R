@@ -4,6 +4,7 @@
 #' 
 #' @import shiny
 #' @rawNamespace import(shinyjs, except = runExample)
+#' @import htmltools
 #' @import shinythemes
 #' @import shinydashboard
 #' @import shinyFeedback
