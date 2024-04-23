@@ -1243,3 +1243,67 @@ array2dt <- function(a){
   names(y) <- colnames(a)
   return(y)
 }
+
+# ++ [FUNCTION] Read shapefile
+# ++ [PARAM] shp_path –– Location of shapefile
+Read_Shapefile <- function(shp_path) {
+  infiles <- shp_path$datapath 
+  dir <- unique(dirname(infiles)) 
+  outfiles <- file.path(dir, shp_path$name) 
+  name <- strsplit(shp_path$name[1], "\\.")[[1]][1] 
+  purrr::walk2(infiles, outfiles, ~file.rename(.x, .y)) 
+  x <- read_sf(file.path(dir, paste0(name, ".shp"))) 
+  return(x)
+}
+
+# ++ [FUNCTION] Define the breaks for colour scale of NARW density
+# ++ [PARAM] dat –– Predicted NARW density
+colour_breaks <- function(dat) {
+  colour.breaks <- 25 * c(0, 0.016, 0.025, 0.04, 0.063, 0.1,
+                          0.16, 0.25, 0.4, 0.63, 1, 1.6, 
+                          2.5, 4, 6.3, 10) / 100
+  colour.breaks <- c(colour.breaks, seq(max(colour.breaks), 
+                                        ceiling(max(dat$Nhat, na.rm = TRUE)), 
+                                        length.out = 5))
+  colour.breaks <- round(colour.breaks[!duplicated(colour.breaks)], 3)
+  return(colour.breaks)
+}
+
+# ++ [FUNCTION] Format NARW raster for Shiny app
+# ++ [PARAM] r –– NARW density raster
+# ++ [PARAM] duke –– Logical. Use Duke's colour scale for plotting
+# ++ [PARAM] positive –– Logical. Restrict to positive density predictions
+# ++ [PARAM] quantile –– Logical. Plot using quantiles
+# ++ [PARAM] breaks –– Breaks for plotting scale
+# ++ [PARAM] title –– Title of plot
+format_raster <- function(r, duke = FALSE, positive = FALSE, quantile = FALSE, breaks = NULL, title = NULL){
+  
+  if(class(r) == "SpatialGridDataFrame") r <- raster::raster(r)
+  
+  dat <- raster::as.data.frame(r, xy = TRUE)
+  names(dat)[3] <- "Nhat"
+  dat <- dat[complete.cases(dat),]
+  
+  if(positive) dat <- dat |> dplyr::filter(Nhat > 0)
+  
+  if (is.null(breaks)) {
+    if (quantile) {
+      colour.breaks <- c(0, quantile(dat$Nhat, seq(0, 1, 0.1)))
+    } else {
+      if (duke) {
+        colour.breaks <- colour_breaks(dat)
+      } else {
+        colour.breaks <- c(0, rgeoda::natural_breaks(10, dat[, "Nhat", drop = FALSE]), max(dat$Nhat))
+      }
+    }
+  } else {
+    colour.breaks <- breaks
+  }
+  
+  colour.breaks <- unique(colour.breaks)
+  
+  r_cut <- raster::cut(r, breaks = colour.breaks)
+  
+  return(r_cut)
+  
+}
