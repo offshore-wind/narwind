@@ -7,7 +7,7 @@
 #' @import shinythemes
 #' @import shinydashboard
 #' @import shinyFeedback
-#' @import shinyValidate
+#' @import shinyvalidate
 #' @import leaflet
 #' @import dplyr
 #' @export
