@@ -7,7 +7,6 @@
 narw(
   nsim = 1000,
   scenario = NULL,
-  pair = NULL,
   label = "",
   piling.hrs = 4,
   n.cores = NULL,
@@ -19,8 +18,6 @@ narw(
 \item{nsim}{Integer. Number of simulated animals.}
 
 \item{scenario}{An object of class \code{narwscenario}, as returned by \code{\link{scenario}}.}
-
-\item{pair}{An object of class \code{narwsim}, to which the current simulation must be matched. With the exception of wind farm parameters, simulation conditions between paired runs are identical; pairing is therefore useful for comparative assessments of competing offshore wind scenarios.}
 
 \item{label}{Character. Text label assigned to the simulation object; used for plotting.}
 
@@ -47,7 +44,6 @@ m <- narw(1000)
 '...............................
 ...............................
 '...............................
-allowing progress bar to be used in foreach -----------------------------
 ...............................
 ................................
 }

@@ -4,7 +4,6 @@
 #' 
 #' @param nsim Integer. Number of simulated animals.
 #' @param scenario An object of class \code{narwscenario}, as returned by \code{\link{scenario}}.
-#' @param pair An object of class \code{narwsim}, to which the current simulation must be matched. With the exception of wind farm parameters, simulation conditions between paired runs are identical; pairing is therefore useful for comparative assessments of competing offshore wind scenarios.
 #' @param label Character. Text label assigned to the simulation object; used for plotting.
 #' @param piling.hrs Numeric. Length of time (hours) during which whales cease foraging following a response to pile-driving noise exposure.
 #' @param n.cores Integer. Number of cores to use for parallel processing. By default, each population cohort is assigned to a separate worker if enough cores are available. If not, N-2 cores are used, where N is the number of cores available.
@@ -25,29 +24,28 @@
 
 narw <- function(nsim = 1e3,
                  scenario = NULL,
-                 pair = NULL,
                  label = "",
                  piling.hrs = 4,
                  n.cores = NULL,
                  progress = TRUE,
                  ...){
   
+  
+  # pair: An object of class \code{narwsim}, to which the current simulation must be matched. With the exception of wind farm parameters, simulation conditions between paired runs are identical; pairing is therefore useful for comparative assessments of competing offshore wind scenarios.
+  # pair = NULL
+  
   # Match random seed if pairing scenario is provided
   # if(!is.null(attr(pair,"seed"))){
   #   assign(".Random.seed",  attr(pair, "seed"), .GlobalEnv)
   # }
   
-  if(!is.null(attr(pair,"seed"))){
-    rdseed <- attr(pair,"seed")
-  } else {
-    rdseed <- sample(1:10000, size = 1)
-  }
-  
-  set.seed(rdseed)
-  
-  # Harvest the state of the random seed
-  # rdseed <- get(".Random.seed", .GlobalEnv)
-  # rdseed <- rdseed[whichseed]
+  # if(!is.null(attr(pair,"seed"))){
+  #   rdseed <- attr(pair,"seed")
+  # } else {
+  #   rdseed <- sample(1:10000, size = 1)
+  # }
+  # 
+  # set.seed(rdseed)
   
   # Function ellipsis –– optional arguments
   args <- list(...)
@@ -86,7 +84,7 @@ narw <- function(nsim = 1e3,
     }
   }
   
-  if(!is.null(pair) & !inherits(pair, "narwsim")) stop("Input to <pair> must be an object of class <narwsim>")
+  # if(!is.null(pair) & !inherits(pair, "narwsim")) stop("Input to <pair> must be an object of class <narwsim>")
   
   if(piling.hrs < 0 | piling.hrs > 24) stop("<piling.hrs> must be between 0 and 24.")
   
@@ -170,7 +168,7 @@ narw <- function(nsim = 1e3,
   
   cat("+ Animats: N =", formatC(nsim, big.mark = ","), "[individual(s) / cohort]\n")
   cat("+ Label:", ifelse(!label == "", label, "None"), "\n")
-  cat("+ Pairing:", ifelse(is.null(pair), "None", ifelse(pair$param$label == "", deparse(substitute(pair)), pair$param$label)), "\n\n")
+  # cat("+ Pairing:", ifelse(is.null(pair), "None", ifelse(pair$param$label == "", deparse(substitute(pair)), pair$param$label)), "\n\n")
   
   cat("+ Cohorts: \n\n")
   for (h in cohort) cat(cohorts[id==h, abb], ": ", cohorts[id==h, name], "\n", sep = "")
@@ -478,29 +476,7 @@ narw <- function(nsim = 1e3,
     cl <- snow::makeSOCKcluster(n.cores)
     doSNOW::registerDoSNOW(cl)
     on.exit(snow::stopCluster(cl))
-    parallel::clusterSetRNGStream(cl, rdseed)
-    
-    # cl <- snow::makeCluster(n.cores, outfile = "")
-    # dl <- file("runlog.Rout", open = "wt")
-    # sink(dl, type = "output", append = TRUE)
-    # sink(dl, type = "message", append = TRUE)
-    
-    # Define progress bar for use in foreach
-    # pb <- progress::progress_bar$new(
-    #   format = "Running simulations [:bar] :percent eta: :eta",
-    #   total = length(cohortID),
-    #   width = 80,
-    #   clear = FALSE)
-    
-    #' allowing progress bar to be used in foreach -----------------------------
-    # pbar <- function(n) pb$tick()
-    
-    # sink(tempfile())
-    # pb <- utils::txtProgressBar(max = length(cohortID), style = 3)
-    # sink()
-    # pbar <- function(n) utils::setTxtProgressBar(pb, n)
-    # 
-    # opts <- list(progress = pbar)
+    # parallel::clusterSetRNGStream(cl, rdseed)
     
     console(msg = paste0("Initializing parallel computing (", n.cores, " cores)"), suffix = tickmark())
     
@@ -938,7 +914,7 @@ narw <- function(nsim = 1e3,
   # Add custom class and random seed attribute
   class(outsim) <- c("narwsim", class(outsim))
   class(outsim$init$xy) <- c("xyinits", class(outsim$init$xy))
-  attr(outsim, "seed") <- rdseed
+  # attr(outsim, "seed") <- rdseed
   
   # Print run time
   cat("---------------------------------\n")
