@@ -119,7 +119,7 @@ Similarly, the `cohort` argument can be used to only display data for specific p
 cohorts
 ```
 
-Based on this, the code below prints a complete summary (all categories of data listed in the above table) for the cohorts of lactating (ID = 5) females
+Based on this, the code below prints a complete summary (all categories of data listed in the above table) for the cohorts of lactating (ID = 5) females:
 
 ```{r model_summary}
 # Summary for adult females only

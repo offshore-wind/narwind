@@ -73,13 +73,13 @@ model_base_10 <- narw(nsim = 10)
 
 ### Offshore wind scenario
 
-The `scenario` argument is used to run models that entail wind farm construction activities. Scenario objects must be created using the `scenario()` function described in the previous tutorial. The code snippet below shows how to run the agent-based model for the first of the three preset scenarios that come with the package:
+The `scenario` argument is used to run models that entail wind farm construction activities. Scenario objects must be created using the `scenario()` function described in the previous tutorial, but note that three preset scenarios are available in the package for demonstration purposes (see Tutorial 2). The code snippet below shows how to run the agent-based model for the first of the three preset scenarios that come with the package:
 
 ```{r run_model01, eval = FALSE}
 model_scenario_01 <- narw(nsim = 1000, scenario = scenario_01)
 ```
 
-To save model results, remember that calls to `narw()` must be assigned to an R object using the assignment `<-` operator. In the examples above, we stored model outputs in custom objects arbitrarily named `model_scenario_01`.
+To save model results, remember that calls to `narw()` must be assigned to an R object using the assignment `<-` operator. In the examples above, we stored model outputs in a custom object arbitrarily named `model_scenario_01`.
 
 ### Pairing simulations
 
@@ -151,3 +151,4 @@ model_01 <- narw(1000, scenario = scenario_01, pair = model_base, label = "Scena
 model_02 <- narw(1000, scenario = scenario_02, pair = model_base, label = "Scenario 02")
 model_03 <- narw(1000, scenario = scenario_03, pair = model_base, label = "Scenario 03")
 ```
+

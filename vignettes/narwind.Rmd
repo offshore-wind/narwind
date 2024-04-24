@@ -133,7 +133,7 @@ The working directory can also be changed by going to `Session` \> `Set Working 
 
 Alternatively, you can use the shortcut `Ctrl` + `Shift` + `H` to set a working directory in RStudio.
 
-For further information on using R and RStudio, please refer to Claudia Engel's [**Introduction to R**](https://cengel.github.io/R-intro/)book, which is the source of much of the content in this section of the tutorial. If you are coming to R from a traditional point-and-click statistics package such, RStudio’s Thomas Mock has created a free video webinar titled [A Gentle Introduction to Tidy Statistics In R](https://resources.rstudio.com/webinars/a-gentle-introduction-to-tidy-statistics-in-r). This one-hour introduction covers how to get started quickly with the basics of research statistics in R, providing an emphasis on reading data into R, exploratory data analysis, statistical testing, and producing publication-ready plots. Additional RStudio webinars and videos can be found via the topic menus on the left side of that page.
+For further information on using R and RStudio, please refer to Claudia Engel's [**Introduction to R**](https://cengel.github.io/R-intro/) book, which is the source of much of the content in this section of the tutorial. If you are coming to R from a traditional point-and-click statistics package, RStudio’s Thomas Mock has created a free video webinar titled [A Gentle Introduction to Tidy Statistics In R](https://resources.rstudio.com/webinars/a-gentle-introduction-to-tidy-statistics-in-r). This one-hour introduction covers how to get started quickly with the basics of research statistics in R, providing an emphasis on reading data into R, exploratory data analysis, statistical testing, and producing publication-ready plots. Additional RStudio webinars and videos can be found via the topic menus on the left side of that page.
 
 ## Package installation
 
@@ -173,7 +173,7 @@ devtools::install_github("offshore-wind/narwind", dependencies = TRUE)
 
 ![](installation_complete.PNG)
 
--   **Step 5:** Load the package.In R, packages need to be loaded into the current session for their functions to be made available to users. This is done using the `library()` command, which in the case of `narwind` prints a welcome message with basic information in the R console:
+-   **Step 6:** Load the package. In R, packages need to be loaded into the current session for their functions to be made available to users. This is done using the `library()` command, which in the case of `narwind` prints a welcome message with basic information in the R console:
 
 ```{r pkg, include = FALSE}
 devtools::load_all()
