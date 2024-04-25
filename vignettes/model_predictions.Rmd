@@ -83,7 +83,7 @@ The table below details the arguments that `predict()` accepts.
 | `n`        | `100`         | Integer. Number of replicates projections.                                                                                                                                                                               |
 | `yrs`      | `35`          | Integer. Time horizon, specified either as the desired number of years (from current) or the desired target end year. Defaults to `35`, which is commensurate with the expected average lifespan of a typical wind farm. |
 | `param`    | `TRUE`        | If `TRUE`, prediction variance includes parameter uncertainty.                                                                                                                                                           |
-| `piling`   | `1`           | Integer. Year of construction. By default, piling occurs on the first year of the projection, followed by O&M for the remainder.                                                                                         |
+| `piling`   | `1`           | Integer. Year of construction. By default, piling occurs on the first year of the projection, followed by operation and maintenance for the remainder.                                                                                         |
 | `progress` | `TRUE`        | Logical. If `TRUE`, a progress bar is printed to the R console during execution.                                                                                                                                         |
 
 #### Projection horizon
@@ -109,7 +109,7 @@ preds_n1 <- predict(model_base, n = 1)
 
 #### Schedule of development
 
-Population projections involve three successive phases: a baseline phase without wind farm activity between 2019 and the current year (e.g., 2024), followed by an optional, one-year construction phase, and an operational phase that lasts for the remainder of the projection. The timing of construction and O&M activities within the time horizon of a projection is defined by the scenario **bundle** (i.e., one or more R objects containing the outputs of one or more runs of the agent-based model) which is passed to `predict()`.
+Population projections involve three successive phases: a baseline phase without wind farm activity between 2019 and the current year (e.g., 2024), followed by an optional, one-year construction phase, and an operational phase that lasts for the remainder of the projection. The timing of construction and operation and maintenance activities within the time horizon of a projection is defined by the ** scenario bundle** (i.e., one or more R objects containing the outputs of one or more runs of the agent-based model) which is passed to `predict()`.
 
 There are several possible options:
 
@@ -119,13 +119,13 @@ There are several possible options:
     proj_baseline <- predict(model_base)
     ```
 
--   **Operation and maintenance only** – no construction activities are considered, however maintenance and servicing operations apply throughout the projection. This requires two runs of the agent-based model (and therefore, two R objects), corresponding to baseline conditions and an O&M scenario (e.g., the third preset scenario within the package), respectively. Multiple R objects can be given in sequence, separated by commas:
+-   **Operation and maintenance only** – no construction activities are considered, however maintenance and servicing operations apply throughout the projection. This requires two runs of the agent-based model (and therefore, two R objects), corresponding to baseline conditions and an operation scenario (e.g., the third preset scenario within the package), respectively. Multiple R objects can be given in sequence, separated by commas:
 
     ```{r, eval = FALSE}
     proj_OM <- predict(model_base, model_03)
     ```
 
--   **Construction, followed by 0&M.** Here, piling activities take place during a single year, and are followed by maintenance operations for the remainder. By default, `predict()` assumes that piling occurs at the onset of the projection (i.e., in year 1, the current year), such that the `piling` argument is set to `1`. Three separate runs of the agent-based model are needed in this instance, for baseline conditions, a construction scenario (e.g., `model_01`), and an O&M scenario (e.g., `model_03`) respectively. For example
+-   **Construction, followed by 0&M.** Here, piling activities take place during a single year, and are followed by maintenance operations for the remainder. By default, `predict()` assumes that piling occurs at the onset of the projection (i.e., in year 1, the current year), such that the `piling` argument is set to `1`. Three separate runs of the agent-based model are needed in this instance, for baseline conditions, a construction scenario (e.g., `model_01`), and an operation scenario (e.g., `model_03`) respectively. For example
 
     ```{r, eval = FALSE}
     proj_construction <- predict(model_base, model_01, model_03)

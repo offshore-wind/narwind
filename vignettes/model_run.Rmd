@@ -57,7 +57,6 @@ Several arguments can be passed to `narw()`, as listed below. We detail each of 
 |-------------------|-------------------|----------------------------------|
 | `nsim`          | `1000`                 | Positive integer. Number of simulated animals.                                                                                                                                                                                                                                                                                                                     |
 | `scenario`      | `NULL`                 | An optional scenario object, as returned by the `scenario()` function.                                                                                                                                                                                                                                                                                             |
-| `pair`          | `NULL`                 | Simulation outputs, as returned by a previous run of the `narw()` function, to which the current simulation must be matched. With the exception of wind farm parameters, simulation conditions between paired runs are identical; pairing is therefore useful to enable comparative assessments of population projections under competing offshore wind scenarios. |
 | `label`         | `""`                   | Character. Text label assigned to the simulation object; used for plotting.                                                                                                                                                                                                                                                                                        |
 | `piling.hrs`    | `4`                    | Numeric. Length of time (hours) during which whales cease foraging following a response to pile-driving noise exposure.                                                                                                                                                                                                                                            |
 | `n.cores`       | `NULL`                 | Positive integer. Number of CPU cores to use for parallel processing. The default value of `NULL` detects the processor configuration and runs computations on the maximum allowable number of available cores.                                                                                                                                                    |
@@ -80,24 +79,6 @@ model_scenario_01 <- narw(nsim = 1000, scenario = scenario_01)
 ```
 
 To save model results, remember that calls to `narw()` must be assigned to an R object using the assignment `<-` operator. In the examples above, we stored model outputs in a custom object arbitrarily named `model_scenario_01`.
-
-### Pairing simulations
-
-It is important to note that the agent-based model is stochastic, such that successive runs of the model will return different results (e.g., different simulated movement tracks for each agent). However, meaningful comparisons of population projections between contrasting offshore wind scenario bundles are only possible if simulated conditions are maintained between model runs. The `pair` argument was designed to enable this using random seed matching, which allows users to supply an existing model object – as returned by `narw()` – that can act as a "template" for the current simulation (Figure 3.1).
-
-For instance, the code below performs three separate runs of the model (with n = 50 simulated agents). The first and second lines are repeat simulations under baseline conditions. The third involves piling taking place at three sites, as defined in the `scenario_01` object (see previous Tutorial). The third run is paired with the baseline scenario stored in `model_baseline`, using the `pair` argument. With the exception of wind farm-related parameters, all simulated conditions are therefore identical between `model_baseline` and `model_scenario_01`.
-
-```{r model_match, eval = FALSE}
-model_baseline <- narw(nsim = 50)
-model_baseline_repeat <- narw(nsim = 50)
-model_scenario_01 <- narw(nsim = 50, 
-                          scenario = scenario_01, 
-                          pair = model_scenario_01)
-```
-
-::: {style="width:850px"}
-![**Figure 3.1.** Comparison of simulated movement trajectories for paired and unpaired runs.](simulation_pairing.jpg)
-:::
 
 ### Labeling
 
@@ -147,8 +128,8 @@ The code below runs models for each of the three preset offshore wind scenarios,
 
 ```{r threescenarios, eval = FALSE}
 model_base <- narw(1000, label  = "Baseline")
-model_01 <- narw(1000, scenario = scenario_01, pair = model_base, label = "Scenario 01")
-model_02 <- narw(1000, scenario = scenario_02, pair = model_base, label = "Scenario 02")
-model_03 <- narw(1000, scenario = scenario_03, pair = model_base, label = "Scenario 03")
+model_01 <- narw(1000, scenario = scenario_01, label = "Scenario 01")
+model_02 <- narw(1000, scenario = scenario_02, label = "Scenario 02")
+model_03 <- narw(1000, scenario = scenario_03, label = "Scenario 03")
 ```
 

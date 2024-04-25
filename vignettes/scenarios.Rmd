@@ -49,7 +49,7 @@ This tutorial describes how to define custom offshore wind scenarios for use in 
 
 ## Example scenarios
 
-The `narwind` package ships with three preset offshore wind scenarios, which summarize hypothetical phases of development at two sites off the Southern New England coast and a third off the Virginia coast (Figure 2.1).
+The `narwind` package comes with three preset offshore wind scenarios, which summarize hypothetical phases of development at two sites off the Southern New England coast and a third off the Virginia coast (Figure 2.1).
 
 Those sites were chosen as they represent two of the largest commercial offshore wind energy projects earmarked for development along the U.S. Atlantic seaboard in the next five years, and both overlap (or are in close proximity to) critical habitats for right whales, including the species’ migratory corridor (relevant to both Virginia and New England), as well as important feeding grounds such as Georges Bank and Nantucket Shoals (relevant to New England) (Figure 2.1). Additionally, each area is used by different cohorts of the population in different seasons, allowing for: (1) scenarios with asynchronous construction schedules to be considered, and (2) assessments of impacts at different stages of the NARW life cycle. To maintain consistency with previous studies, the Southern New England test case follows the specific wind farm scenarios defined in @Southall2021.
 
@@ -59,7 +59,7 @@ Those sites were chosen as they represent two of the largest commercial offshore
 ![**Figure 2.1.** Locations of wind farm sites included in the default narwind scenarios.](windfarm_sites.jpg)
 :::
 
-> **Note 2.2:** Throughout this document, we refer to the R objects describing construction or operation activities as **scenarios**. Multiple scenarios (e.g., relating to successive phases of development spanning several years) together form a **scenario bundle**.
+> **Note 2.2:** Throughout this document, we refer to the R objects describing construction or operation activities as **scenarios**. Multiple scenarios (e.g., relating to successive phases of development spanning several years) are referred to as a **scenario bundle**.
 
 ### Southern New England (SNE)
 
@@ -75,7 +75,7 @@ Wind farm 3 is square in shape and covers an area of ca. 196 km 2 (14 x 14 km), 
 
 ![Figure 2.2](BOEM_140M0121C0008_figure35.jpg)
 
-A total of 90 monopiles are installed in Farm 3 under the proposed scenario. This is proportionally within the bounds of the CVOW project design envelope (n = 179–205, for a lease area twice the size of Farm 3). The preferred layout is a grid pattern oriented at 35 degrees to minimize wake losses within the wind farm. Turbines are expected to be placed approximately 0.75 nm (1.39 km) apart in an east-west direction and 0.93 nm (1.72 km) apart in a north-south direction. These distances may vary slightly during construction (subject to micro-siting); however, those variations are ignored for the purposes of scenario testing. This turbine layout has been designed to maximize power density in the lease area while minimizing costs to the rate payer under the Virginia Clean Economy Act and considering all existing uses of OCS-A 0483 and surrounding waters, including shipping traffic patterns, commercial and recreational fishing activities, marine safety, and impacts to biological and cultural resources.
+A total of 90 monopiles are installed in Farm 3 under the proposed scenario. This is proportionally within the bounds of the CVOW project design envelope (n = 179–205, for a lease area twice the size of Farm 3). The preferred layout is a grid pattern oriented at 35 degrees to minimize wake losses within the wind farm. Turbines are expected to be placed approximately 0.75 nm (1.39 km) apart in an east-west direction and 0.93 nm (1.72 km) apart in a north-south direction. These distances may vary slightly during construction (subject to micro-siting); however, those variations are ignored for the purposes of scenario exploration. This turbine layout has been designed to maximize power density in the lease area while minimizing costs to the rate payer under the Virginia Clean Economy Act and considering all existing uses of OCS-A 0483 and surrounding waters, including shipping traffic patterns, commercial and recreational fishing activities, marine safety, and impacts to biological and cultural resources.
 
 ### Timing of activities
 
@@ -135,7 +135,7 @@ The agent-based model uses scenario objects to define disturbance conditions in 
 
 ## Custom scenarios
 
-Users can modify the above parameters to generate bespoke scenarios for other wind farm sites of interest. This is achieved through an interactive, point-and-click Shiny app, which can be launched using the `scenario()` command. Using the assignment operator `<-`, we can save custom scenarios right from within the current R session by assigning them to R objects (e.g., `my_custom_scenario` in the example below) that can be passed to the agent-based model.
+Users can modify the above parameters to generate bespoke scenarios for other wind farm sites of interest. This is achieved through an interactive, point-and-click Shiny app, which can be launched using the `scenario()` command. Using the assignment operator `<-`, we can save custom scenarios right from within the current R session by assigning them to R objects (e.g., `my_custom_scenario` in the example below) that can be passed to the agent-based bioenergetic model.
 
 ```{r app_launch, eval = FALSE}
 my_custom_scenario <- scenario()
@@ -155,25 +155,25 @@ The app consists of three main structural elements (Figure 2.5), namely:
 
 The map and sidebar always stay in place, however the contents of the main text area change dynamically in response to user selections.
 
-The sidebar is split into a series of tabs (top) and tick boxes (bottom). Tabs give access to the app's features and with the exception of the Whale Density tab (which is only used for visualization purposes), allow users to modify scenario parameters. By contrast, tick boxes can only be used to toggle map layers on and off, i.e., they have no role in scenario building.
+The sidebar is split into a series of tabs (top) and checkboxes (bottom). Tabs give access to the app's features and with the exception of the Whale Density tab (which is only used for visualization purposes), allow users to modify scenario parameters. By contrast, checkboxes can only be used to toggle map layers on and off, i.e., they have no role in scenario building.
 
-The map is interactive and can be zoomed (using either the +/- buttons in the top left or a scroll of the mouse), panned (by clicking and dragging). Distance measurements can also be taken by clicking on the ruler icon in the top right and following the on-screen instructions.
+The map is interactive and can be zoomed (using either the `+/-` buttons in the top left or a scroll of the mouse), panned (by clicking and dragging), and minimized (using the `-` symbol on the top right). Distance measurements can also be taken by clicking on the ruler icon in the top right and following the on-screen instructions.
 
 Designing a custom offshore wind scenario can be done in one of two ways:
 
 -   By modifying one of the three preset scenarios available in the package
 
--   By crafting a scenario from scratch
+-   By generating a scenario from scratch
 
 We explain how to do this in the sections below.
 
 ### Scenario set up
 
-First, start by clicking on the Scenario Set Up tab. The central text area will change to reveal several drop-down menus (Figure 2.6).
+First, start by clicking on the Scenario Seletion tab. The central text area will change to reveal several drop-down menus (Figure 2.6).
 
-To adapt one of the pre-defined scenarios, choose either Scenario 1, Scenario 2, or Scenario 3 as appropriate. The parameters associated with the selected scenario will be populated throughout the rest of the app.
+To adapt one of the pre-defined scenarios, choose either Scenario 1, Scenario 2, or Scenario 3 as appropriate. The parameters associated with the selected scenario will be populated throughout the rest of the app. The scenario can then be viewed, and the default scenario parameters can be modified using the controls found in the Piling Noise and Vessel Traffic tabs. Modifications to scenario parameters will feed through to an R object that can be used directly in the bioenergetic model.
 
-To define a custom scenario, choose Custom Scenario. Two new fields will appear, allowing turbine locations and vessel routes to be uploaded as separate files. An additional drop-down menu will also be available to indicate whether the custom scenario relates to construction or O&M activities. This is important, as it ensures that the scenario object is correctly labeled.
+To define a custom scenario, choose Custom Scenario. Three new fields will appear, allowing the user to upload files for the wind energy area (WEA) boundary, the piling locations and timings, and the vessel routes that underpin the scenario they wish to explore. An additional drop-down menu will also be available to indicate whether the custom scenario relates to construction or operational activities. This is important, as it ensures that the scenario object is correctly labeled. The custom scenario can then be viewed in the same way as the pre-loaded scenarios, and scenario parameters can be modified using the controls found in the Piling Noise and Vessel Traffic tabs. As with the pre-loaded scenarios, modifications made to scenario parameters within the app tabs will feed through to the final R object that will be used in the bioenergetic model.
 
 ![**Figure 2.6.** Scenario set up tab](shiny_setup.png)
 
@@ -181,22 +181,53 @@ Turbine locations must be provided as a `.csv` file containing a minimum of thre
 
 ![Figure 2.7. List of turbine locations](shiny_csv.jpg){width="500"}
 
-Similarly, vessel routes to each wind farm site must be provided as a `.shp` file of spatial line features, each with the following attributes: a `windfarm` ID (same as above) and a sequential `routeID` number (`1`, `2`, etc.) for each route associated with a particular farm.
+Similarly, vessel routes to each wind farm site must be provided as a `.shp` file of spatial line features, each with the following attributes: a `windfarm` ID (same as above) and a sequential `routeID` number (`1`, `2`, etc.) for each route associated with a particular farm. A `.shp` file must also be provided for the wind energy area (WEA) boundary.
 
 ### Piling noise
 
+The acoustic footprint of pile-driving can be visualized as a circular buffer centered on a given piling location. Buffer boundaries mark the distance at which noise levels have decreased to a target value, under the assumption that transmission loss (TL) depends on log-range (log10R) and frequency-specific absorption. If the selected scenario relates to the construction phase, then ticking the `Show noise footprint` checkbox will add buffers to the map and activate additional controls. If the scenario relates to the operational phase of a wind farm site, then there are no changes to be made on this tab. When the scenario involves a construction phase, then the following can be viewed and modified by the user:
+
+**Target Noise Level**
+
+This slider controls the size of the footprint shown; a larger value corresponds to a smaller buffer, as noise levels are highest at the piling site and decline with increasing distance from the source. This slider is for visualization only, i.e., it has no effect on any scenario parameters that feed into the bioenergetic model.
+
+**Piling Date**
+
+This slider can be used to cycle through the calendar year and display wind farm scenario parameters for a chosen day. The play button can be used to launch a day-by-day animation. This slider is for visualization only, i.e., it has no effect on any scenario parameters that feed into the bioenergetic model.
+
+**Source level value**
+
+By default, the source level is set to the value associated with the selected scenario or uploaded scenario but can be modified by the user on this tab. Any changes to this number will be included as a scenario parameter value.  
+
+**Log-range Coefficient**
+
+As a sound wave propagates from a localized source, its energy spreads over an increasingly larger area and its intensity therefore declines. This parameter controls the rate at which spreading loss occurs. Higher values capture stronger range attenuation. By default, the Log-range coefficient is set to the value associated with the selected scenario or uploaded scenario but can be modified by the user on this tab. Any changes to this number will be included as a scenario parameter value.  
+
+**Absorption Coefficient**
+
+This parameter determines the rate at which sound energy is transformed into heat as the sound wave propagates away from the source, inducing friction between water molecules. The value of the absorption coefficient (in dB/km) depends on the frequency of the sound, and likely varies with water properties such as temperature. By default, the Absorption coefficient is set to the value associated with the selected scenario or uploaded scenario but can be modified by the user on this tab. Any changes to this number will be included as a scenario parameter value.  
+
+**Noise Mitigation**
+
+This parameter controls the reduction in source level achieved using noise abatement systems such as bubble curtains. By default, the magnitude of noise attenuation is set to the value associated with the selected scenario or uploaded scenario but can be modified by the user on this tab. Any changes to this number will be included as a scenario parameter value.  
+At the bottom of this tab there is a button allowing for values to be reset to the default for the scenario. Any user-modified values will be reflected in the  final R object that will be used in the bioenergetic model.  
+
+
 ### Vessel traffic
+
+Ticking the `Vessel density` checkbox prompts the user to choose whether they wish to display a baseline vessel density layer or a scenario vessel density layer (relating to the scenario selected on the Scenario Selection tab). The user should also select which month they wish to visualize. The colour scale goes from yellow (low density) through orange to green/blue, with green/blue indicating the highest vessel density.
+The table on this tab allows the user to specify the number, speed and number of trips made by each class of vessel that should be included in the scenario parameters for the bioenergetic model. Values in the table can be changed by clicking on the relevant cell. Changes can be saved by clicking the `Save Changes` button at the bottom.
 
 ### Whale density
 
+Ticking the `Whale density` checkbox overlays whale density on the map according to the month that is selected. The colour scale goes from dark blue (low density) through green to yellow, with yellow indicating the highest whale density areas.
+
 ### Download
 
-Once all changes to scenario parameters have been made, the scenario object can be downloaded using the green Download Scenario button located on the left.
+Once all changes to scenario parameters have been made, the scenario object can be downloaded using the green `Download Scenario` button located on the left. The saved scenario will also be automatically loaded into the open R session, for use in the bioenergetic model. 
 
-The `gantt()` function in R can be used to check that the timing of piling activities has been set up correctly in scenarios involving construction. For example:
+### Geographical features
 
-```{r}
-gantt(scenario_02)
-```
+The bottom of the left-hand side-bar consists of a list of check boxes that allow different geographical features to be visualized on the map. This includes the boundaries of the pre-loaded wind farm sites, the vessel routes to these wind energy areas, the turbine locations, as well as the location of traffic separation schemes, areas to be avoided (for NARW), and NARW speed zones.  
 
 ## References
