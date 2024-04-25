@@ -65,7 +65,7 @@ export(proj_base, prefix = "NARW_abundance")
 All arguments to `export()` are listed below.
 
 | Object class | Argument | Default value | Description                                                                                                                 |
-|----------------|----------------|----------------|-------------------------|
+|--------------|----------|---------------|-----------------------------------------------------------------------------------------------------------------------------|
 | `narwsim`    | `obj`    | `-`           | Input model object, as returned by `narw()`.                                                                                |
 |              | `prefix` | `"narwsim"`   | Character string. Prefix appended to the output file name.                                                                  |
 |              | `whale`  | `1:nsim`      | Positive integer indicating the individual(s) for which data should be extracted. By default, all individuals are included. |
