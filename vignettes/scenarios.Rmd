@@ -73,7 +73,7 @@ To mimic realistic conditions, both wind farms are assumed to be developed using
 
 Wind farm 3 is square in shape and covers an area of ca. 196 km 2 (14 x 14 km), centered on (75.41°W, 36.89°N). The boundary of the lease area is located approximately 45 km from the northwest corner of the Eastern Shore Peninsula and 50 km east of Virginia Beach, VA. This farm overlaps lease area OCS-A 0483, which is part of the commercial development phase of the Coastal Virginia Offshore Wind (CVOW) project (Figure 2.3). The pilot phase of the project was completed in 2020 with the installation of two 6 MW turbine generators in adjacent lease area OCS-A 0497.
 
-![Figure 2.2](BOEM_140M0121C0008_figure35.jpg)
+![**Figure 2.3.** Location of the wind farms considered in the Virginia (VA) scenarios.](BOEM_140M0121C0008_figure35.jpg)
 
 A total of 90 monopiles are installed in Farm 3 under the proposed scenario. This is proportionally within the bounds of the CVOW project design envelope (n = 179–205, for a lease area twice the size of Farm 3). The preferred layout is a grid pattern oriented at 35 degrees to minimize wake losses within the wind farm. Turbines are expected to be placed approximately 0.75 nm (1.39 km) apart in an east-west direction and 0.93 nm (1.72 km) apart in a north-south direction. These distances may vary slightly during construction (subject to micro-siting); however, those variations are ignored for the purposes of scenario exploration. This turbine layout has been designed to maximize power density in the lease area while minimizing costs to the rate payer under the Virginia Clean Economy Act and considering all existing uses of OCS-A 0483 and surrounding waters, including shipping traffic patterns, commercial and recreational fishing activities, marine safety, and impacts to biological and cultural resources.
 
@@ -151,7 +151,7 @@ The app consists of three main structural elements (Figure 2.5), namely:
 
 -   An interactive map (right) – where scenario parameters and input layers can be visualized on the fly.
 
-![**Figure 2.5.** Layout and structure of the Shiny app within narwind](shiny_main.png)
+![**Figure 2.5.** Layout and structure of the Shiny app within narwind.](shiny_main.png)
 
 The map and sidebar always stay in place, however the contents of the main text area change dynamically in response to user selections.
 
@@ -175,11 +175,11 @@ To adapt one of the pre-defined scenarios, choose either Scenario 1, Scenario 2,
 
 To define a custom scenario, choose Custom Scenario. Three new fields will appear, allowing the user to upload files for the wind energy area (WEA) boundary, the piling locations and timings, and the vessel routes that underpin the scenario they wish to explore. An additional drop-down menu will also be available to indicate whether the custom scenario relates to construction or operational activities. This is important, as it ensures that the scenario object is correctly labeled. The custom scenario can then be viewed in the same way as the pre-loaded scenarios, and scenario parameters can be modified using the controls found in the Piling Noise and Vessel Traffic tabs. As with the pre-loaded scenarios, modifications made to scenario parameters within the app tabs will feed through to the final R object that will be used in the bioenergetic model.
 
-![**Figure 2.6.** Scenario set up tab](shiny_setup.png)
+![**Figure 2.6.** Scenario set up tab.](shiny_setup.png)
 
 Turbine locations must be provided as a `.csv` file containing a minimum of three columns (Figure 2.7): a `windfarm` column with a unique integer ID number for each wind farm site, a `longitude` column, and a `latitude` column. Optionally (strongly recommended), a `date` column can be supplied to indicate when each pile is due to be installed. If the `date` column is not provided, the day and month of operation start for each site must be given.
 
-![Figure 2.7. List of turbine locations](shiny_csv.jpg){width="500"}
+![**Figure 2.7.** List of turbine locations.](shiny_csv.jpg){width="500"}
 
 Similarly, vessel routes to each wind farm site must be provided as a `.shp` file of spatial line features, each with the following attributes: a `windfarm` ID (same as above) and a sequential `routeID` number (`1`, `2`, etc.) for each route associated with a particular farm. A `.shp` file must also be provided for the wind energy area (WEA) boundary.
 
