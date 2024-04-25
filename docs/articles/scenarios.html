@@ -89,7 +89,7 @@
 Rob Schick, Enrico Pirotta, Catriona Harris, Len Thomas</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2024-04-09</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2024-04-25</h4>
       
       
       <div class="hidden name"><code>scenarios.Rmd</code></div>
@@ -112,7 +112,7 @@ BOEM (for demonstration purposes) are also available.</p>
 <div class="section level2">
 <h2 id="example-scenarios">Example scenarios<a class="anchor" aria-label="anchor" href="#example-scenarios"></a>
 </h2>
-<p>The <code>narwind</code> package ships with three preset offshore
+<p>The <code>narwind</code> package comes with three preset offshore
 wind scenarios, which summarize hypothetical phases of development at
 two sites off the Southern New England coast and a third off the
 Virginia coast (Figure 2.1).</p>
@@ -129,7 +129,7 @@ schedules to be considered, and (2) assessments of impacts at different
 stages of the NARW life cycle. To maintain consistency with previous
 studies, the Southern New England test case follows the specific wind
 farm scenarios defined in <span class="citation">Southall <em>et
-al.</em> (<a href="#ref-Southall2021">2021</a>)</span>.</p>
+al.</em> (<a href="#ref-Southall2021" role="doc-biblioref">2021</a>)</span>.</p>
 <blockquote>
 <p><strong>Note 2.1:</strong> While realistic, these scenarios are not
 prescriptive and were designed only to demonstrate the benefits of
@@ -137,66 +137,62 @@ adopting a bioenergetic modeling approach for conducting impact
 assessments on large baleen whales.</p>
 </blockquote>
 <div style="width:850px">
-<div class="float">
-<img src="windfarm_sites.jpg" alt="Figure 2.1. Locations of wind farm sites included in the default narwind scenarios."><div class="figcaption">
-<strong>Figure 2.1.</strong> Locations of wind
-farm sites included in the default narwind scenarios.</div>
+<div class="figure">
+<img src="../../../../BOEM%20NARW%20bioenergetics/Package/narwind/articles/windfarm_sites.jpg" alt=""><p class="caption"><strong>Figure 2.1.</strong> Locations of wind farm
+sites included in the default narwind scenarios.</p>
 </div>
 </div>
 <blockquote>
 <p><strong>Note 2.2:</strong> Throughout this document, we refer to the
 R objects describing construction or operation activities as
 <strong>scenarios</strong>. Multiple scenarios (e.g., relating to
-successive phases of development spanning several years) together form a
-<strong>scenario bundle</strong>.</p>
+successive phases of development spanning several years) are referred to
+as a <strong>scenario bundle</strong>.</p>
 </blockquote>
 <div class="section level3">
 <h3 id="southern-new-england-sne">Southern New England (SNE)<a class="anchor" aria-label="anchor" href="#southern-new-england-sne"></a>
 </h3>
-<p>For consistency with existing risk assessment frameworks <span class="citation">(<a href="#ref-Southall2021">Southall <em>et al.</em>
-2021</a>)</span>, the SNE scenarios explore various patterns of
-installation, operation, and mitigation of two separate wind farms
-positioned within non-overlapping lease areas (Figure 2.2). These sites
-were identified following extensive consultations with BOEM, and with
-the intention to consider two developments that: (i) are similar but not
-identical to any current leases or proposed installation areas, (ii) lie
-at either end of the wind farm size spectrum for planned construction
-along the U.S. Atlantic seaboard, and (iii) are not adjacent to one
-another but are sufficiently close that their effects may be cumulative
-(Southall et al. 2021). Wind farm 1 is square in shape and covers an
-area of ca. 324 km 2 (18 x 18 km, approximately half the size of the
-corresponding site in (Southall et al. 2021), centered on (70.58°W,
-40.81°N). This farm overlaps three lease areas (i.e., Beacon Wind OCS-A
-0520, Mayflower Wind OCS-A 0521, and New England Wind OCS-A 0534), and
-represents a scenario slightly smaller than the largest existing or
-proposed offshore facilities currently being considered off the U.S.
-east coast. Wind farm 2 is rectangular in shape and covers an area of
-200 km 2 (10 x 20 km), centered on (71.12°W, 41.15°N). This farm mainly
-overlaps one lease area (Revolution Wind, OCS-A 0486; marginal overlap
-with South Fork Wind, OCS-A 0517), and represents a scenario slightly
-larger than the smallest existing or proposed offshore facilities
-currently being considered off the U.S. east coast. A summary of the
-main characteristics of each wind farm is given in the accompanying
-project report.</p>
-<div class="float">
-<img src="BOEM_140M0121C0008_figure34.jpg" alt="Figure 2.2. Location of the wind farms considered in the Southern New England (SNE) scenarios"><div class="figcaption">
-<strong>Figure 2.2.</strong> Location of the
-wind farms considered in the Southern New England (SNE) scenarios</div>
+<p>For consistency with existing risk assessment frameworks <span class="citation">(<a href="#ref-Southall2021" role="doc-biblioref">Southall <em>et al.</em> 2021</a>)</span>, the SNE
+scenarios explore various patterns of installation, operation, and
+mitigation of two separate wind farms positioned within non-overlapping
+lease areas (Figure 2.2). These sites were identified following
+extensive consultations with BOEM, and with the intention to consider
+two developments that: (i) are similar but not identical to any current
+leases or proposed installation areas, (ii) lie at either end of the
+wind farm size spectrum for planned construction along the U.S. Atlantic
+seaboard, and (iii) are not adjacent to one another but are sufficiently
+close that their effects may be cumulative (Southall et al. 2021). Wind
+farm 1 is square in shape and covers an area of ca. 324 km 2 (18 x 18
+km, approximately half the size of the corresponding site in (Southall
+et al. 2021), centered on (70.58°W, 40.81°N). This farm overlaps three
+lease areas (i.e., Beacon Wind OCS-A 0520, Mayflower Wind OCS-A 0521,
+and New England Wind OCS-A 0534), and represents a scenario slightly
+smaller than the largest existing or proposed offshore facilities
+currently being considered off the U.S. east coast. Wind farm 2 is
+rectangular in shape and covers an area of 200 km 2 (10 x 20 km),
+centered on (71.12°W, 41.15°N). This farm mainly overlaps one lease area
+(Revolution Wind, OCS-A 0486; marginal overlap with South Fork Wind,
+OCS-A 0517), and represents a scenario slightly larger than the smallest
+existing or proposed offshore facilities currently being considered off
+the U.S. east coast. A summary of the main characteristics of each wind
+farm is given in the accompanying project report.</p>
+<div class="figure">
+<img src="../../../../BOEM%20NARW%20bioenergetics/Package/narwind/articles/BOEM_140M0121C0008_figure34.jpg" alt=""><p class="caption"><strong>Figure 2.2.</strong> Location of the wind
+farms considered in the Southern New England (SNE) scenarios</p>
 </div>
 <p>To mimic realistic conditions, both wind farms are assumed to be
 developed using monopiles only. This includes a total of 100 monopiles
-in Farm 1 and 60 monopiles in Farm 2, following <span class="citation">Southall <em>et al.</em> (<a href="#ref-Southall2021">2021</a>)</span>. In keeping with U.S. Coast
-Guard recommendations, farm installations are to be oriented according
-to a fixed grid design consisting of east-to-west rows and
-north-to-south columns with a one nautical mile (1.85 km) spacing
-(Figure 2.2). This uniform layout was adopted following extensive
-stakeholder consultation and provides adequate separation among
-individual turbines to alleviate hazards to navigation and allow for
-potential search and rescue operations. Installation is performed using
-hydraulic impact and/or vibratory pile driving by fleets of jack-up,
-anchored, or dynamic positioning vessels – along with necessary support
-and supply vessels. Typical pile driving operations are expected to take
-1 to 4 hours.</p>
+in Farm 1 and 60 monopiles in Farm 2, following <span class="citation">Southall <em>et al.</em> (<a href="#ref-Southall2021" role="doc-biblioref">2021</a>)</span>. In keeping with U.S. Coast Guard
+recommendations, farm installations are to be oriented according to a
+fixed grid design consisting of east-to-west rows and north-to-south
+columns with a one nautical mile (1.85 km) spacing (Figure 2.2). This
+uniform layout was adopted following extensive stakeholder consultation
+and provides adequate separation among individual turbines to alleviate
+hazards to navigation and allow for potential search and rescue
+operations. Installation is performed using hydraulic impact and/or
+vibratory pile driving by fleets of jack-up, anchored, or dynamic
+positioning vessels – along with necessary support and supply vessels.
+Typical pile driving operations are expected to take 1 to 4 hours.</p>
 </div>
 <div class="section level3">
 <h3 id="virginia-va">Virginia (VA)<a class="anchor" aria-label="anchor" href="#virginia-va"></a>
@@ -209,8 +205,8 @@ lease area OCS-A 0483, which is part of the commercial development phase
 of the Coastal Virginia Offshore Wind (CVOW) project (Figure 2.3). The
 pilot phase of the project was completed in 2020 with the installation
 of two 6 MW turbine generators in adjacent lease area OCS-A 0497.</p>
-<div class="float">
-<img src="BOEM_140M0121C0008_figure35.jpg" alt="Figure 2.2"><div class="figcaption">Figure 2.2</div>
+<div class="figure">
+<img src="../../../../BOEM%20NARW%20bioenergetics/Package/narwind/articles/BOEM_140M0121C0008_figure35.jpg" alt=""><p class="caption">Figure 2.2</p>
 </div>
 <p>A total of 90 monopiles are installed in Farm 3 under the proposed
 scenario. This is proportionally within the bounds of the CVOW project
@@ -221,10 +217,10 @@ placed approximately 0.75 nm (1.39 km) apart in an east-west direction
 and 0.93 nm (1.72 km) apart in a north-south direction. These distances
 may vary slightly during construction (subject to micro-siting);
 however, those variations are ignored for the purposes of scenario
-testing. This turbine layout has been designed to maximize power density
-in the lease area while minimizing costs to the rate payer under the
-Virginia Clean Economy Act and considering all existing uses of OCS-A
-0483 and surrounding waters, including shipping traffic patterns,
+exploration. This turbine layout has been designed to maximize power
+density in the lease area while minimizing costs to the rate payer under
+the Virginia Clean Economy Act and considering all existing uses of
+OCS-A 0483 and surrounding waters, including shipping traffic patterns,
 commercial and recreational fishing activities, marine safety, and
 impacts to biological and cultural resources.</p>
 </div>
@@ -256,10 +252,9 @@ simultaneous and continuous operation (Figure 2.4). The primary
 footprint for operations is taken to be vessel traffic to and from wind
 farm sites; we do not consider vessel movements within farm areas.</p>
 <div style="width:650px">
-<div class="float">
-<img src="BOEM_140M0121C0008_figure40.jpg" alt="Figure 2.4. Schedule of piling activities under three pre-defined offshore wind scenarios."><div class="figcaption">
-<strong>Figure 2.4.</strong> Schedule of piling
-activities under three pre-defined offshore wind scenarios.</div>
+<div class="figure">
+<img src="../../../../BOEM%20NARW%20bioenergetics/Package/narwind/articles/BOEM_140M0121C0008_figure40.jpg" alt=""><p class="caption"><strong>Figure 2.4.</strong> Schedule of piling
+activities under three pre-defined offshore wind scenarios.</p>
 </div>
 </div>
 </div>
@@ -281,8 +276,18 @@ is an abridged representation of the structure of
 <span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
 <span><span class="co">#&gt;  $ routes       :List of 3</span></span>
 <span><span class="co">#&gt;  $ vessels      :Classes 'data.table' and 'data.frame':  35 obs. of  9 variables:</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "spec")=List of 3</span></span>
-<span><span class="co">#&gt;   .. ..- attr(*, "class")= chr "col_spec"</span></span>
+<span><span class="co">#&gt;   ..- attr(*, "spec")=</span></span>
+<span><span class="co">#&gt;   .. .. cols(</span></span>
+<span><span class="co">#&gt;   .. ..   phase = <span style="color: #BB0000;">col_factor(levels = NULL, ordered = FALSE, include_na = FALSE)</span>,</span></span>
+<span><span class="co">#&gt;   .. ..   vesselclass = <span style="color: #BB0000;">col_factor(levels = NULL, ordered = FALSE, include_na = FALSE)</span>,</span></span>
+<span><span class="co">#&gt;   .. ..   site = <span style="color: #BB0000;">col_factor(levels = NULL, ordered = FALSE, include_na = FALSE)</span>,</span></span>
+<span><span class="co">#&gt;   .. ..   windfarm = <span style="color: #00BB00;">col_integer()</span>,</span></span>
+<span><span class="co">#&gt;   .. ..   route = <span style="color: #00BB00;">col_integer()</span>,</span></span>
+<span><span class="co">#&gt;   .. ..   speed_knt = <span style="color: #00BB00;">col_integer()</span>,</span></span>
+<span><span class="co">#&gt;   .. ..   Nvessels = <span style="color: #00BB00;">col_integer()</span>,</span></span>
+<span><span class="co">#&gt;   .. ..   roundtrips_foundation = <span style="color: #00BB00;">col_double()</span>,</span></span>
+<span><span class="co">#&gt;   .. ..   .delim = ","</span></span>
+<span><span class="co">#&gt;   .. .. )</span></span>
 <span><span class="co">#&gt;   ..- attr(*, "problems")=&lt;externalptr&gt; </span></span>
 <span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
 <span><span class="co">#&gt;  $ start.month  : num [1:3] 1 2 1</span></span>
@@ -346,7 +351,7 @@ interactive, point-and-click Shiny app, which can be launched using the
 <code>&lt;-</code>, we can save custom scenarios right from within the
 current R session by assigning them to R objects (e.g.,
 <code>my_custom_scenario</code> in the example below) that can be passed
-to the agent-based model.</p>
+to the agent-based bioenergetic model.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">my_custom_scenario</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/scenario.html">scenario</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
@@ -362,52 +367,61 @@ model parameters, and required user inputs.</p></li>
 <li><p>An interactive map (right) – where scenario parameters and input
 layers can be visualized on the fly.</p></li>
 </ul>
-<div class="float">
-<img src="shiny_main.png" alt="Figure 2.5. Layout and structure of the Shiny app within narwind"><div class="figcaption">
-<strong>Figure 2.5.</strong> Layout and
-structure of the Shiny app within narwind</div>
+<div class="figure">
+<img src="../../../../BOEM%20NARW%20bioenergetics/Package/narwind/articles/shiny_main.png" alt=""><p class="caption"><strong>Figure 2.5.</strong> Layout and structure of
+the Shiny app within narwind</p>
 </div>
 <p>The map and sidebar always stay in place, however the contents of the
 main text area change dynamically in response to user selections.</p>
-<p>The sidebar is split into a series of tabs (top) and tick boxes
+<p>The sidebar is split into a series of tabs (top) and checkboxes
 (bottom). Tabs give access to the app’s features and with the exception
 of the Whale Density tab (which is only used for visualization
-purposes), allow users to modify scenario parameters. By contrast, tick
-boxes can only be used to toggle map layers on and off, i.e., they have
-no role in scenario building.</p>
-<p>The map is interactive and can be zoomed (using either the +/-
-buttons in the top left or a scroll of the mouse), panned (by clicking
-and dragging). Distance measurements can also be taken by clicking on
-the ruler icon in the top right and following the on-screen
-instructions.</p>
+purposes), allow users to modify scenario parameters. By contrast,
+checkboxes can only be used to toggle map layers on and off, i.e., they
+have no role in scenario building.</p>
+<p>The map is interactive and can be zoomed (using either the
+<code>+/-</code> buttons in the top left or a scroll of the mouse),
+panned (by clicking and dragging), and minimized (using the
+<code>-</code> symbol on the top right). Distance measurements can also
+be taken by clicking on the ruler icon in the top right and following
+the on-screen instructions.</p>
 <p>Designing a custom offshore wind scenario can be done in one of two
 ways:</p>
 <ul>
 <li><p>By modifying one of the three preset scenarios available in the
 package</p></li>
-<li><p>By crafting a scenario from scratch</p></li>
+<li><p>By generating a scenario from scratch</p></li>
 </ul>
 <p>We explain how to do this in the sections below.</p>
 </div>
 <div class="section level3">
 <h3 id="scenario-set-up">Scenario set up<a class="anchor" aria-label="anchor" href="#scenario-set-up"></a>
 </h3>
-<p>First, start by clicking on the Scenario Set Up tab. The central text
-area will change to reveal several drop-down menus (Figure 2.6).</p>
+<p>First, start by clicking on the Scenario Seletion tab. The central
+text area will change to reveal several drop-down menus (Figure
+2.6).</p>
 <p>To adapt one of the pre-defined scenarios, choose either Scenario 1,
 Scenario 2, or Scenario 3 as appropriate. The parameters associated with
-the selected scenario will be populated throughout the rest of the
-app.</p>
-<p>To define a custom scenario, choose Custom Scenario. Two new fields
-will appear, allowing turbine locations and vessel routes to be uploaded
-as separate files. An additional drop-down menu will also be available
-to indicate whether the custom scenario relates to construction or
-O&amp;M activities. This is important, as it ensures that the scenario
-object is correctly labeled.</p>
-<div class="float">
-<img src="shiny_setup.png" alt="Figure 2.6. Scenario set up tab"><div class="figcaption">
-<strong>Figure 2.6.</strong> Scenario set up
-tab</div>
+the selected scenario will be populated throughout the rest of the app.
+The scenario can then be viewed, and the default scenario parameters can
+be modified using the controls found in the Piling Noise and Vessel
+Traffic tabs. Modifications to scenario parameters will feed through to
+an R object that can be used directly in the bioenergetic model.</p>
+<p>To define a custom scenario, choose Custom Scenario. Three new fields
+will appear, allowing the user to upload files for the wind energy area
+(WEA) boundary, the piling locations and timings, and the vessel routes
+that underpin the scenario they wish to explore. An additional drop-down
+menu will also be available to indicate whether the custom scenario
+relates to construction or operational activities. This is important, as
+it ensures that the scenario object is correctly labeled. The custom
+scenario can then be viewed in the same way as the pre-loaded scenarios,
+and scenario parameters can be modified using the controls found in the
+Piling Noise and Vessel Traffic tabs. As with the pre-loaded scenarios,
+modifications made to scenario parameters within the app tabs will feed
+through to the final R object that will be used in the bioenergetic
+model.</p>
+<div class="figure">
+<img src="../../../../BOEM%20NARW%20bioenergetics/Package/narwind/articles/shiny_setup.png" alt=""><p class="caption"><strong>Figure 2.6.</strong> Scenario set up tab</p>
 </div>
 <p>Turbine locations must be provided as a <code>.csv</code> file
 containing a minimum of three columns (Figure 2.7): a
@@ -417,39 +431,120 @@ wind farm site, a <code>longitude</code> column, and a
 <code>date</code> column can be supplied to indicate when each pile is
 due to be installed. If the <code>date</code> column is not provided,
 the day and month of operation start for each site must be given.</p>
-<div class="float">
-<img src="shiny_csv.jpg" width="500" alt="Figure 2.7. List of turbine locations"><div class="figcaption">Figure 2.7. List of turbine locations</div>
+<div class="figure">
+<img src="../../../../BOEM%20NARW%20bioenergetics/Package/narwind/articles/shiny_csv.jpg" width="500" alt=""><p class="caption">Figure 2.7. List of turbine locations</p>
 </div>
 <p>Similarly, vessel routes to each wind farm site must be provided as a
 <code>.shp</code> file of spatial line features, each with the following
 attributes: a <code>windfarm</code> ID (same as above) and a sequential
 <code>routeID</code> number (<code>1</code>, <code>2</code>, etc.) for
-each route associated with a particular farm.</p>
+each route associated with a particular farm. A <code>.shp</code> file
+must also be provided for the wind energy area (WEA) boundary.</p>
 </div>
 <div class="section level3">
 <h3 id="piling-noise">Piling noise<a class="anchor" aria-label="anchor" href="#piling-noise"></a>
 </h3>
+<p>The acoustic footprint of pile-driving can be visualized as a
+circular buffer centered on a given piling location. Buffer boundaries
+mark the distance at which noise levels have decreased to a target
+value, under the assumption that transmission loss (TL) depends on
+log-range (log10R) and frequency-specific absorption. If the selected
+scenario relates to the construction phase, then ticking the
+<code>Show noise footprint</code> checkbox will add buffers to the map
+and activate additional controls. If the scenario relates to the
+operational phase of a wind farm site, then there are no changes to be
+made on this tab. When the scenario involves a construction phase, then
+the following can be viewed and modified by the user:</p>
+<p><strong>Target Noise Level</strong></p>
+<p>This slider controls the size of the footprint shown; a larger value
+corresponds to a smaller buffer, as noise levels are highest at the
+piling site and decline with increasing distance from the source. This
+slider is for visualization only, i.e., it has no effect on any scenario
+parameters that feed into the bioenergetic model.</p>
+<p><strong>Piling Date</strong></p>
+<p>This slider can be used to cycle through the calendar year and
+display wind farm scenario parameters for a chosen day. The play button
+can be used to launch a day-by-day animation. This slider is for
+visualization only, i.e., it has no effect on any scenario parameters
+that feed into the bioenergetic model.</p>
+<p><strong>Source level value</strong></p>
+<p>By default, the source level is set to the value associated with the
+selected scenario or uploaded scenario but can be modified by the user
+on this tab. Any changes to this number will be included as a scenario
+parameter value.</p>
+<p><strong>Log-range Coefficient</strong></p>
+<p>As a sound wave propagates from a localized source, its energy
+spreads over an increasingly larger area and its intensity therefore
+declines. This parameter controls the rate at which spreading loss
+occurs. Higher values capture stronger range attenuation. By default,
+the Log-range coefficient is set to the value associated with the
+selected scenario or uploaded scenario but can be modified by the user
+on this tab. Any changes to this number will be included as a scenario
+parameter value.</p>
+<p><strong>Absorption Coefficient</strong></p>
+<p>This parameter determines the rate at which sound energy is
+transformed into heat as the sound wave propagates away from the source,
+inducing friction between water molecules. The value of the absorption
+coefficient (in dB/km) depends on the frequency of the sound, and likely
+varies with water properties such as temperature. By default, the
+Absorption coefficient is set to the value associated with the selected
+scenario or uploaded scenario but can be modified by the user on this
+tab. Any changes to this number will be included as a scenario parameter
+value.</p>
+<p><strong>Noise Mitigation</strong></p>
+<p>This parameter controls the reduction in source level achieved using
+noise abatement systems such as bubble curtains. By default, the
+magnitude of noise attenuation is set to the value associated with the
+selected scenario or uploaded scenario but can be modified by the user
+on this tab. Any changes to this number will be included as a scenario
+parameter value.<br>
+At the bottom of this tab there is a button allowing for values to be
+reset to the default for the scenario. Any user-modified values will be
+reflected in the final R object that will be used in the bioenergetic
+model.</p>
 </div>
 <div class="section level3">
 <h3 id="vessel-traffic">Vessel traffic<a class="anchor" aria-label="anchor" href="#vessel-traffic"></a>
 </h3>
+<p>Ticking the <code>Vessel density</code> checkbox prompts the user to
+choose whether they wish to display a baseline vessel density layer or a
+scenario vessel density layer (relating to the scenario selected on the
+Scenario Selection tab). The user should also select which month they
+wish to visualize. The colour scale goes from yellow (low density)
+through orange to green/blue, with green/blue indicating the highest
+vessel density. The table on this tab allows the user to specify the
+number, speed and number of trips made by each class of vessel that
+should be included in the scenario parameters for the bioenergetic
+model. Values in the table can be changed by clicking on the relevant
+cell. Changes can be saved by clicking the <code>Save Changes</code>
+button at the bottom.</p>
 </div>
 <div class="section level3">
 <h3 id="whale-density">Whale density<a class="anchor" aria-label="anchor" href="#whale-density"></a>
 </h3>
+<p>Ticking the <code>Whale density</code> checkbox overlays whale
+density on the map according to the month that is selected. The colour
+scale goes from dark blue (low density) through green to yellow, with
+yellow indicating the highest whale density areas.</p>
 </div>
 <div class="section level3">
 <h3 id="download">Download<a class="anchor" aria-label="anchor" href="#download"></a>
 </h3>
 <p>Once all changes to scenario parameters have been made, the scenario
-object can be downloaded using the green Download Scenario button
-located on the left.</p>
-<p>The <code><a href="../reference/gantt.html">gantt()</a></code> function in R can be used to check that the
-timing of piling activities has been set up correctly in scenarios
-involving construction. For example:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/gantt.html">gantt</a></span><span class="op">(</span><span class="va">scenario_02</span><span class="op">)</span></span></code></pre></div>
-<p><img src="scenarios_files/figure-html/unnamed-chunk-2-1.png" width="700"><img src="scenarios_files/figure-html/unnamed-chunk-2-2.png" width="700"></p>
+object can be downloaded using the green <code>Download Scenario</code>
+button located on the left. The saved scenario will also be
+automatically loaded into the open R session, for use in the
+bioenergetic model.</p>
+</div>
+<div class="section level3">
+<h3 id="geographical-features">Geographical features<a class="anchor" aria-label="anchor" href="#geographical-features"></a>
+</h3>
+<p>The bottom of the left-hand side-bar consists of a list of check
+boxes that allow different geographical features to be visualized on the
+map. This includes the boundaries of the pre-loaded wind farm sites, the
+vessel routes to these wind energy areas, the turbine locations, as well
+as the location of traffic separation schemes, areas to be avoided (for
+NARW), and NARW speed zones.</p>
 </div>
 </div>
 <div class="section level2 unnumbered">

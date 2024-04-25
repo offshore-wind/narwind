@@ -89,7 +89,7 @@
 Enrico Pirotta, Catriona Harris, Len Thomas</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2024-04-09</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2024-04-25</h4>
       
       
       <div class="hidden name"><code>model_predictions.Rmd</code></div>
@@ -218,8 +218,8 @@ uncertainty.</td>
 <td><code>piling</code></td>
 <td><code>1</code></td>
 <td>Integer. Year of construction. By default, piling occurs on the
-first year of the projection, followed by O&amp;M for the
-remainder.</td>
+first year of the projection, followed by operation and maintenance for
+the remainder.</td>
 </tr>
 <tr class="even">
 <td><code>progress</code></td>
@@ -267,10 +267,10 @@ single projection instead is straightforward, as shown here:</p>
 phase without wind farm activity between 2019 and the current year
 (e.g., 2024), followed by an optional, one-year construction phase, and
 an operational phase that lasts for the remainder of the projection. The
-timing of construction and O&amp;M activities within the time horizon of
-a projection is defined by the scenario <strong>bundle</strong> (i.e.,
-one or more R objects containing the outputs of one or more runs of the
-agent-based model) which is passed to <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>.</p>
+timing of construction and operation and maintenance activities within
+the time horizon of a projection is defined by the ** scenario bundle**
+(i.e., one or more R objects containing the outputs of one or more runs
+of the agent-based model) which is passed to <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>.</p>
 <p>There are several possible options:</p>
 <ul>
 <li>
@@ -287,7 +287,7 @@ previous tutorials:</p>
 activities are considered, however maintenance and servicing operations
 apply throughout the projection. This requires two runs of the
 agent-based model (and therefore, two R objects), corresponding to
-baseline conditions and an O&amp;M scenario (e.g., the third preset
+baseline conditions and an operation scenario (e.g., the third preset
 scenario within the package), respectively. Multiple R objects can be
 given in sequence, separated by commas:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
@@ -302,7 +302,7 @@ projection (i.e., in year 1, the current year), such that the
 <code>piling</code> argument is set to <code>1</code>. Three separate
 runs of the agent-based model are needed in this instance, for baseline
 conditions, a construction scenario (e.g., <code>model_01</code>), and
-an O&amp;M scenario (e.g., <code>model_03</code>) respectively. For
+an operation scenario (e.g., <code>model_03</code>) respectively. For
 example</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">proj_construction</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">model_base</span>, <span class="va">model_01</span>, <span class="va">model_03</span><span class="op">)</span></span></code></pre></div>
@@ -429,7 +429,7 @@ to hide confidence intervals around the trend.</p>
 <p><img src="model_predictions_files/figure-html/unnamed-chunk-8-1.png" width="700"></p>
 <p>Setting the <code>noaa</code> argument to <code>TRUE</code> will
 overlay the population trend estimated by <span class="citation">Runge
-<em>et al.</em> (<a href="#ref-Runge2023">2023</a>)</span>.</p>
+<em>et al.</em> (<a href="#ref-Runge2023" role="doc-biblioref">2023</a>)</span>.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">proj_base</span>, noaa <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="model_predictions_files/figure-html/unnamed-chunk-9-1.png" width="700"></p>
@@ -475,8 +475,7 @@ population as a whole and for each cohort.</p></li>
 health, and fecundity.</p></li>
 <li><p>Estimates of the population’s probability of quasi-extinction,
 i.e., the probability that the number of reproductive females falls
-below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
-<em>et al.</em> 2023</a>)</span>.</p></li>
+below N = 50 <span class="citation">(<a href="#ref-Runge2023" role="doc-biblioref">Runge <em>et al.</em> 2023</a>)</span>.</p></li>
 </ul>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">proj_base</span><span class="op">)</span></span>
@@ -589,7 +588,7 @@ below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
 Runge MC, Linden DW, Hostetler JA, Borggaard DL, Garrison LP, Knowlton
 AR, Lesage V, Williams R, Pace III RM (2023). A management-focused
 population viability analysis for north atlantic right whales. Report.
-DOI: <a href="https://doi.org/n/a" class="external-link">n/a</a>
+DOI: <a href="https://doi.org/10.13140/RG.2.2.26635.05928" class="external-link">10.13140/RG.2.2.26635.05928</a>
 </div>
 </div>
 </div>

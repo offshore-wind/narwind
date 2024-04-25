@@ -89,7 +89,7 @@
 Enrico Pirotta, Catriona Harris, Len Thomas</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2024-04-09</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2024-04-25</h4>
       
       
       <div class="hidden name"><code>model_run.Rmd</code></div>
@@ -145,28 +145,18 @@ below. We detail each of them in subsequent sections.</p>
 <code><a href="../reference/scenario.html">scenario()</a></code> function.</td>
 </tr>
 <tr class="odd">
-<td><code>pair</code></td>
-<td><code>NULL</code></td>
-<td>Simulation outputs, as returned by a previous run of the
-<code><a href="../reference/narw.html">narw()</a></code> function, to which the current simulation must be
-matched. With the exception of wind farm parameters, simulation
-conditions between paired runs are identical; pairing is therefore
-useful to enable comparative assessments of population projections under
-competing offshore wind scenarios.</td>
-</tr>
-<tr class="even">
 <td><code>label</code></td>
 <td><code>""</code></td>
 <td>Character. Text label assigned to the simulation object; used for
 plotting.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>piling.hrs</code></td>
 <td><code>4</code></td>
 <td>Numeric. Length of time (hours) during which whales cease foraging
 following a response to pile-driving noise exposure.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>n.cores</code></td>
 <td><code>NULL</code></td>
 <td>Positive integer. Number of CPU cores to use for parallel
@@ -174,7 +164,7 @@ processing. The default value of <code>NULL</code> detects the processor
 configuration and runs computations on the maximum allowable number of
 available cores.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>cease.nursing</code></td>
 <td><code>c(FALSE, piling.hrs)</code></td>
 <td>Vector of length two. The first element indicates whether
@@ -202,51 +192,16 @@ simulation for 10 individuals only.</p>
 <p>The <code>scenario</code> argument is used to run models that entail
 wind farm construction activities. Scenario objects must be created
 using the <code><a href="../reference/scenario.html">scenario()</a></code> function described in the previous
-tutorial. The code snippet below shows how to run the agent-based model
-for the first of the three preset scenarios that come with the
-package:</p>
+tutorial, but note that three preset scenarios are available in the
+package for demonstration purposes (see Tutorial 2). The code snippet
+below shows how to run the agent-based model for the first of the three
+preset scenarios that come with the package:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_scenario_01</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">1000</span>, scenario <span class="op">=</span> <span class="va">scenario_01</span><span class="op">)</span></span></code></pre></div>
 <p>To save model results, remember that calls to <code><a href="../reference/narw.html">narw()</a></code>
 must be assigned to an R object using the assignment <code>&lt;-</code>
-operator. In the examples above, we stored model outputs in custom
-objects arbitrarily named <code>model_scenario_01</code>.</p>
-</div>
-<div class="section level3">
-<h3 id="pairing-simulations">Pairing simulations<a class="anchor" aria-label="anchor" href="#pairing-simulations"></a>
-</h3>
-<p>It is important to note that the agent-based model is stochastic,
-such that successive runs of the model will return different results
-(e.g., different simulated movement tracks for each agent). However,
-meaningful comparisons of population projections between contrasting
-offshore wind scenario bundles are only possible if simulated conditions
-are maintained between model runs. The <code>pair</code> argument was
-designed to enable this using random seed matching, which allows users
-to supply an existing model object – as returned by <code><a href="../reference/narw.html">narw()</a></code>
-– that can act as a “template” for the current simulation (Figure
-3.1).</p>
-<p>For instance, the code below performs three separate runs of the
-model (with n = 50 simulated agents). The first and second lines are
-repeat simulations under baseline conditions. The third involves piling
-taking place at three sites, as defined in the <code>scenario_01</code>
-object (see previous Tutorial). The third run is paired with the
-baseline scenario stored in <code>model_baseline</code>, using the
-<code>pair</code> argument. With the exception of wind farm-related
-parameters, all simulated conditions are therefore identical between
-<code>model_baseline</code> and <code>model_scenario_01</code>.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model_baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
-<span><span class="va">model_baseline_repeat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
-<span><span class="va">model_scenario_01</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">50</span>, </span>
-<span>                          scenario <span class="op">=</span> <span class="va">scenario_01</span>, </span>
-<span>                          pair <span class="op">=</span> <span class="va">model_scenario_01</span><span class="op">)</span></span></code></pre></div>
-<div style="width:850px">
-<div class="float">
-<img src="simulation_pairing.jpg" alt="Figure 3.1. Comparison of simulated movement trajectories for paired and unpaired runs."><div class="figcaption">
-<strong>Figure 3.1.</strong> Comparison of
-simulated movement trajectories for paired and unpaired runs.</div>
-</div>
-</div>
+operator. In the examples above, we stored model outputs in a custom
+object arbitrarily named <code>model_scenario_01</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="labeling">Labeling<a class="anchor" aria-label="anchor" href="#labeling"></a>
@@ -254,7 +209,7 @@ simulated movement trajectories for paired and unpaired runs.</div>
 <p>Simulation outputs can be labelled using the <code>label</code>
 argument. This is useful for plotting purposes, for example when
 comparing population trends obtained from different wind scenarios.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_example</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">1000</span>, label <span class="op">=</span> <span class="st">"Example"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -266,7 +221,7 @@ defines the duration length of time during which whales will cease
 foraging following a response to pile-driving noise exposure. To
 increase/decrease this duration, set the <code>piling.hrs</code>
 argument to a different value. For instance:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_example</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">1000</span>, piling.hrs <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -281,7 +236,7 @@ computations can be changed via the <code>n.cores</code> argument.
 Setting <code>n.cores</code> to a lower value will reduce impact on
 overall machine performance but will increase the duration of model
 runs.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_example</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">1000</span>, n.cores <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <blockquote>
 <p><strong>Note 3.1:</strong> A simulation of 1000 agents using 6 cores
@@ -317,7 +272,7 @@ lasts.</p></li>
 </ul>
 <p>Those elements need to be specified using the <code><a href="https://rdrr.io/r/base/c.html" class="external-link">c()</a></code>
 function (which stands for ‘concatenate’).</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_example</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">1000</span>, cease.nursing <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">TRUE</span>, <span class="fl">5</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
@@ -327,11 +282,11 @@ function (which stands for ‘concatenate’).</p>
 <p>The code below runs models for each of the three preset offshore wind
 scenarios, as well a baseline scenario. Each run is labelled
 appropriately.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_base</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="fl">1000</span>, label  <span class="op">=</span> <span class="st">"Baseline"</span><span class="op">)</span></span>
-<span><span class="va">model_01</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="fl">1000</span>, scenario <span class="op">=</span> <span class="va">scenario_01</span>, pair <span class="op">=</span> <span class="va">model_base</span>, label <span class="op">=</span> <span class="st">"Scenario 01"</span><span class="op">)</span></span>
-<span><span class="va">model_02</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="fl">1000</span>, scenario <span class="op">=</span> <span class="va">scenario_02</span>, pair <span class="op">=</span> <span class="va">model_base</span>, label <span class="op">=</span> <span class="st">"Scenario 02"</span><span class="op">)</span></span>
-<span><span class="va">model_03</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="fl">1000</span>, scenario <span class="op">=</span> <span class="va">scenario_03</span>, pair <span class="op">=</span> <span class="va">model_base</span>, label <span class="op">=</span> <span class="st">"Scenario 03"</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">model_01</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="fl">1000</span>, scenario <span class="op">=</span> <span class="va">scenario_01</span>, label <span class="op">=</span> <span class="st">"Scenario 01"</span><span class="op">)</span></span>
+<span><span class="va">model_02</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="fl">1000</span>, scenario <span class="op">=</span> <span class="va">scenario_02</span>, label <span class="op">=</span> <span class="st">"Scenario 02"</span><span class="op">)</span></span>
+<span><span class="va">model_03</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span><span class="fl">1000</span>, scenario <span class="op">=</span> <span class="va">scenario_03</span>, label <span class="op">=</span> <span class="st">"Scenario 03"</span><span class="op">)</span></span></code></pre></div>
 </div>
   </div>
 

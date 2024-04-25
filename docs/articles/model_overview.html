@@ -89,7 +89,7 @@
 Enrico Pirotta, Catriona Harris, Len Thomas</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2024-04-09</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2024-04-25</h4>
       
       
       <div class="hidden name"><code>model_overview.Rmd</code></div>
@@ -120,13 +120,12 @@ system of bioenergetic equations that consider NARW behavior and energy
 budgets. The insights gained from that model are then used to
 parameterize a stochastic population model that yields predictions of
 future NARW abundance.</p>
-<div class="float">
-<img src="BOEM_140M0121C0008_figure1.jpg" alt="Figure 1.1. Schematic representation of the structure of the North Atlantic right whale (NARW, Eubalaena glacialis) population consequences of multiple stressors (PCoMS) framework. The trend shown in the right-hand panel is not based on real data and displayed for illustration purposes only."><div class="figcaption">
-<strong>Figure 1.1.</strong> Schematic
-representation of the structure of the North Atlantic right whale (NARW,
-Eubalaena glacialis) population consequences of multiple stressors
-(PCoMS) framework. The trend shown in the right-hand panel is not based
-on real data and displayed for illustration purposes only.</div>
+<div class="figure">
+<img src="../../../../BOEM%20NARW%20bioenergetics/Package/narwind/articles/BOEM_140M0121C0008_figure1.jpg" alt=""><p class="caption"><strong>Figure 1.1.</strong> Schematic representation
+of the structure of the North Atlantic right whale (NARW, <em>Eubalaena
+glacialis</em>) population consequences of multiple stressors (PCoMS)
+framework. The trend shown in the right-hand panel is not based on real
+data and displayed for illustration purposes only.</p>
 </div>
 <div class="section level3">
 <h3 id="agent-based-model">Agent-based model<a class="anchor" aria-label="anchor" href="#agent-based-model"></a>
@@ -148,10 +147,9 @@ migratory corridors) (Figure 1.2). Note that the model excludes a
 vertical (depth) component, as knowledge of NARW diving physiology and
 behavior remains too limited to parameterize a three-dimensional model
 with dive-by-dive resolution.</p>
-<div class="float">
-<img src="BOEM_140M0121C0008_figure2.jpg" alt="Figure 1.2. Spatial domain of the agent-based model"><div class="figcaption">
-<strong>Figure 1.2.</strong> Spatial domain of
-the agent-based model</div>
+<div class="figure">
+<img src="../../../../BOEM%20NARW%20bioenergetics/Package/narwind/articles/BOEM_140M0121C0008_figure2.jpg" alt=""><p class="caption"><strong>Figure 1.2.</strong> Spatial domain of the
+agent-based model.</p>
 </div>
 <p>The agent-based model proceeds in discrete daily time steps.
 Simulations are run for a total of 15 months (i.e., 457 days), starting
@@ -184,10 +182,9 @@ function of their initial body condition (i.e., relative fat mass). The
 resulting relationships underpin inference of future population trends
 obtained under the stochastic population model.</p></li>
 </ul>
-<div class="float">
-<img src="BOEM_140M0121C0008_figure3.jpg" alt="Figure 1.3. Structure and operational flow of the agent-based model"><div class="figcaption">
-<strong>Figure 1.3.</strong> Structure and
-operational flow of the agent-based model</div>
+<div class="figure">
+<img src="../../../../BOEM%20NARW%20bioenergetics/Package/narwind/articles/BOEM_140M0121C0008_figure3.jpg" alt=""><p class="caption"><strong>Figure 1.3.</strong> Structure and
+operational flow of the agent-based model.</p>
 </div>
 <p>Note that, contrary to other agent-based models of marine mammals,
 simulated NARW movements are not conditional on individual health, prey
@@ -214,7 +211,8 @@ is interrupted following the death of a calf.</p>
 several raster surfaces that relate to key model parameters, such as
 prey density or noise levels. These are updated either daily or monthly
 in the simulation, depending on available data (Table 1).</p>
-<p>Table 1. Spatial layers used to define the simulation landscape</p>
+<p><strong>Table 1</strong>. Spatial layers used to define the
+simulation landscape.</p>
 <table class="table">
 <colgroup>
 <col width="22%">
@@ -276,7 +274,7 @@ development scenarios (see Tutorial 2), as well as under baseline
 conditions in the absence of wind farm construction activities.
 <code>narwind</code> allows users to develop their own custom scenarios
 of offshore wind development using an interactive Shiny app (see
-Tutorial 3). However, model parameters (including the raster surfaces
+Tutorial 2). However, model parameters (including the raster surfaces
 listed in Table 1) are not readily accessible to package users. Any
 updates to these require changes to the source code, which is reserved
 for developers.</p>
@@ -318,11 +316,10 @@ the <code>augment()</code> function.</p></li>
 <p>Optionally, the <code>export()</code> method can be used to save data
 on disk for further analysis/reporting.</p>
 <div style="width:550px">
-<div class="float">
-<img src="narwind_workflow.jpg" alt="Figure 1.4. Schematic representation of a typical narwind workflow. Package functions and object classes are indicated in coloured font."><div class="figcaption">
-<strong>Figure 1.4.</strong> Schematic
-representation of a typical narwind workflow. Package functions and
-object classes are indicated in coloured font.</div>
+<div class="figure">
+<img src="../../../../BOEM%20NARW%20bioenergetics/Package/narwind/articles/narwind_workflow.jpg" alt=""><p class="caption"><strong>Figure 1.4.</strong> Schematic representation
+of a typical narwind workflow. Package functions and object classes are
+indicated in coloured font.</p>
 </div>
 </div>
 </div>

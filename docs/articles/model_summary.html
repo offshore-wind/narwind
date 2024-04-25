@@ -89,7 +89,7 @@
 Enrico Pirotta, Catriona Harris, Len Thomas</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2024-04-09</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2024-04-25</h4>
       
       
       <div class="hidden name"><code>model_summary.Rmd</code></div>
@@ -567,7 +567,7 @@ cohort IDs is stored in the left-most column of an object called
 <span><span class="co">#&gt; 7:  6   Adults (female, resting)    Adults ad(f,r) #942F33</span></span></code></pre></div>
 <p>Based on this, the code below prints a complete summary (all
 categories of data listed in the above table) for the cohorts of
-lactating (ID = 5) females</p>
+lactating (ID = 5) females:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Summary for adult females only</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">model_base</span>, cohort <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
@@ -706,29 +706,29 @@ lactating (ID = 5) females</p>
 <pre><code><span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; +++++++++++ Migratory destinations (by cohort) +++++++++++</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    SEUS   reach_not   reach         </span></span>
-<span><span class="co">#&gt; --------  -----  ----------  --------------</span></span>
-<span><span class="co">#&gt; ad(f,l)   0      0.0% (0)    94.6%  (946)  </span></span>
-<span><span class="co">#&gt; ad(f,l)   1      0.0% (0)    100.0% (1000) </span></span>
+<span><span class="co">#&gt; cohort    SEUS   reach_not   reach          </span></span>
+<span><span class="co">#&gt; --------  -----  ----------  ---------------</span></span>
+<span><span class="co">#&gt; ad(f,l)   0      0.0% (0)    94.6%   (946)  </span></span>
+<span><span class="co">#&gt; ad(f,l)   1      0.0% (0)    100.0% (1,000) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort    GSL   reach_not       reach       </span></span>
-<span><span class="co">#&gt; --------  ----  --------------  ------------</span></span>
-<span><span class="co">#&gt; ad(f,l)   0     105.1% (1051)   13.6% (136) </span></span>
-<span><span class="co">#&gt; ad(f,l)   1     4.8%   (48)     71.1% (711) </span></span>
+<span><span class="co">#&gt; cohort    GSL   reach_not        reach       </span></span>
+<span><span class="co">#&gt; --------  ----  ---------------  ------------</span></span>
+<span><span class="co">#&gt; ad(f,l)   0     105.1% (1,051)   13.6% (136) </span></span>
+<span><span class="co">#&gt; ad(f,l)   1     4.8%    (48)     71.1% (711) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; +++++++++++ Migratory destinations (all individuals) +++++++++++</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; SEUS   reach_not   reach         </span></span>
-<span><span class="co">#&gt; -----  ----------  --------------</span></span>
-<span><span class="co">#&gt; 0      0.0% (0)    94.6%  (946)  </span></span>
-<span><span class="co">#&gt; 1      0.0% (0)    100.0% (1000) </span></span>
+<span><span class="co">#&gt; SEUS   reach_not   reach          </span></span>
+<span><span class="co">#&gt; -----  ----------  ---------------</span></span>
+<span><span class="co">#&gt; 0      0.0% (0)    94.6%   (946)  </span></span>
+<span><span class="co">#&gt; 1      0.0% (0)    100.0% (1,000) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; GSL   reach_not       reach       </span></span>
-<span><span class="co">#&gt; ----  --------------  ------------</span></span>
-<span><span class="co">#&gt; 0     105.1% (1051)   13.6% (136) </span></span>
-<span><span class="co">#&gt; 1     4.8%   (48)     71.1% (711) </span></span>
+<span><span class="co">#&gt; GSL   reach_not        reach       </span></span>
+<span><span class="co">#&gt; ----  ---------------  ------------</span></span>
+<span><span class="co">#&gt; 0     105.1% (1,051)   13.6% (136) </span></span>
+<span><span class="co">#&gt; 1     4.8%    (48)     71.1% (711) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; +++++++++++ Step lengths and migration distances +++++++++++</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -740,24 +740,24 @@ lactating (ID = 5) females</p>
 <span><span class="co">#&gt; HABITAT USE</span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; region   ad(f,l)        </span></span>
-<span><span class="co">#&gt; -------  ---------------</span></span>
-<span><span class="co">#&gt; BOF      0.1%    (382)  </span></span>
-<span><span class="co">#&gt; CCB      0.1%    (231)  </span></span>
-<span><span class="co">#&gt; CST      4.7%  (20741)  </span></span>
-<span><span class="co">#&gt; GMAN     0.8%   (3588)  </span></span>
-<span><span class="co">#&gt; GOM      21.4%  (95008) </span></span>
-<span><span class="co">#&gt; GSL      9.3%  (41381)  </span></span>
-<span><span class="co">#&gt; MIDA     8.5%  (37839)  </span></span>
-<span><span class="co">#&gt; SCOS     7.4%  (33052)  </span></span>
-<span><span class="co">#&gt; SEUS     23.6% (104960) </span></span>
-<span><span class="co">#&gt; SNE      24.1% (106925) </span></span>
+<span><span class="co">#&gt; region   ad(f,l)         </span></span>
+<span><span class="co">#&gt; -------  ----------------</span></span>
+<span><span class="co">#&gt; BOF      0.1%     (382)  </span></span>
+<span><span class="co">#&gt; CCB      0.1%     (231)  </span></span>
+<span><span class="co">#&gt; CST      4.7%  (20,741)  </span></span>
+<span><span class="co">#&gt; GMAN     0.8%   (3,588)  </span></span>
+<span><span class="co">#&gt; GOM      21.4%  (95,008) </span></span>
+<span><span class="co">#&gt; GSL      9.3%  (41,381)  </span></span>
+<span><span class="co">#&gt; MIDA     8.5%  (37,839)  </span></span>
+<span><span class="co">#&gt; SCOS     7.4%  (33,052)  </span></span>
+<span><span class="co">#&gt; SEUS     23.6% (104,960) </span></span>
+<span><span class="co">#&gt; SNE      24.1% (106,925) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; country   ad(f,l)        </span></span>
-<span><span class="co">#&gt; --------  ---------------</span></span>
-<span><span class="co">#&gt; Canada    22.3%  (99144) </span></span>
-<span><span class="co">#&gt; U.S.      77.7% (344963) </span></span>
+<span><span class="co">#&gt; country   ad(f,l)         </span></span>
+<span><span class="co">#&gt; --------  ----------------</span></span>
+<span><span class="co">#&gt; Canada    22.3%  (99,144) </span></span>
+<span><span class="co">#&gt; U.S.      77.7% (344,963) </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; +++++++++++ Number of animals visiting each region (N = 1000) +++++++++++</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -867,10 +867,10 @@ lactating (ID = 5) females</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; +++++++++++ Vessel strikes +++++++++++</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; strike   rate          </span></span>
-<span><span class="co">#&gt; -------  --------------</span></span>
-<span><span class="co">#&gt; no       197.0% (1970) </span></span>
-<span><span class="co">#&gt; yes      3.0% (30)     </span></span>
+<span><span class="co">#&gt; strike   rate           </span></span>
+<span><span class="co">#&gt; -------  ---------------</span></span>
+<span><span class="co">#&gt; no       197.0% (1,970) </span></span>
+<span><span class="co">#&gt; yes      3.0% (30)      </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; cohort    not struck    struck    </span></span>
