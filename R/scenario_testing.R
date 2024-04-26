@@ -182,7 +182,7 @@ scenario_testing <- function() {
                                ")
                            )
                          ),
-                         DTOutput("editableTable"),
+                         DT::DTOutput("editableTable"),
                          actionButton("saveBtn", "Save Changes")
                          
                  ),
@@ -262,14 +262,13 @@ scenario_testing <- function() {
                                           vessel.speed = NULL,
                                           speed.limit = NULL,
                                           baseline = TRUE,
-                                          gantt = FALSE,
                                           do.plot = FALSE,
                                           spgdf = FALSE))
     
     # Output Tab Content for Vessel Table -----------------------
     output$tabContent <- renderUI({
       if(input$tabs == "vessel_traffic") {
-        DTOutput("editableTable")
+        DT::DTOutput("editableTable")
       } 
     })
     
@@ -423,8 +422,8 @@ scenario_testing <- function() {
           mutate(date = as.Date(date, format = '%Y-%m-%d'),
                  month = month(date, label = TRUE, abbr = TRUE),
                  buffer = 80) %>%
-          st_as_sf(coords = c('longitude', 'latitude')) %>%
-          st_set_crs(4326)
+          sf::st_as_sf(coords = c('longitude', 'latitude')) %>%
+          sf::st_set_crs(4326)
         
         return(data)
       } else {
@@ -698,7 +697,7 @@ scenario_testing <- function() {
     })
     
     # Render the editable table
-    output$editableTable <- renderDT({
+    output$editableTable <- DT::renderDT({
       currentTable()
     }, editable = TRUE)
 
@@ -711,7 +710,6 @@ scenario_testing <- function() {
                                  vessel.speed = NULL,
                                  speed.limit = c(10,10,10,10,rep(NA,8)),
                                  baseline = TRUE,
-                                 gantt = FALSE,
                                  do.plot = FALSE,
                                  spgdf = FALSE)
       vesselmaps(updatedMaps)
@@ -904,7 +902,7 @@ scenario_testing <- function() {
     user_shp <- reactive({
       req(input$custom_shp)
       Read_Shapefile(input$custom_shp) %>%
-        st_transform(crs = 4326)
+        sf::st_transform(crs = 4326)
     })
     
     # Store a non-reactive copy of the data, updated every time the reactiveValues change
