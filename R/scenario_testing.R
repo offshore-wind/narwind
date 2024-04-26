@@ -14,7 +14,7 @@
 #' @author Rob Schick, Phil J. Bouchet, Enrico Pirotta
 #' @return An object of class \code{narwscenario}.
 
-scenario_test <- function() {
+scenario_testing <- function() {
 
   # UI function ----
   ui <- function() {
