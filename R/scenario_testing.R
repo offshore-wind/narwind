@@ -420,7 +420,7 @@ scenario_testing <- function() {
       if ("locs" %in% names(selectedList()) && nrow(selectedList()[["locs"]]) > 0) {
         data <- selectedList()[["locs"]] %>%
           mutate(date = as.Date(date, format = '%Y-%m-%d'),
-                 month = month(date, label = TRUE, abbr = TRUE),
+                 month = lubridate::month(date, label = TRUE, abbr = TRUE),
                  buffer = 80) %>%
           sf::st_as_sf(coords = c('longitude', 'latitude')) %>%
           sf::st_set_crs(4326)
