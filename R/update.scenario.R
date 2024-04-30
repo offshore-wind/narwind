@@ -9,19 +9,12 @@
 update.narwscenario <- function(obj, 
                                 vessel.tbl){
   
-  # vessel.tbl <- data.frame(
-  #   VesselClass = c("Cable Lay", "Construction/Crane", "Crew Transfer", "Heavy Cargo", "Support Vessels", "Survey", "Tugs"),
-  #   NumberOfVessels = 5,
-  #   SpeedOfVessels = c(rep(99,7)),
-  #   NumberOfTrips = 10
-  # )
-  
   # Convert to data.table and match column names
   vessel.tbl <- data.table::as.data.table(vessel.tbl) |> 
     janitor::clean_names(parsing_option = 0) |> 
-    dplyr::rename(Nvessels = numberofvessels,
-                  speed_knt = speedofvessels,
-                  roundtrips_foundation = numberoftrips)
+    dplyr::rename(Nvessels = nvessels,
+                  speed_knt = speed.knt,
+                  roundtrips_foundation = roundtrips.foundation)
   
   # Update vessel transit data
   obj$vessels[vessel.tbl, on = "vesselclass", Nvessels := i.Nvessels]
