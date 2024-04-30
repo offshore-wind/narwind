@@ -30,7 +30,7 @@ knitr::opts_chunk$set(
 
 ```{r, echo = FALSE}
 downloadthis::download_link(
-  link = "https://raw.githubusercontent.com/offshore-wind/narwind/1240faf44d7afb030838ae2fdcf58a12a2ab9b1e/vignettes/pdf/model_run.pdf",
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/0a45ae03f1938cd5396895b943b8615f28812669/vignettes/pdf/3%20Running%20the%20model.pdf",
   button_label = "Download PDF",
   button_type = "primary",
   has_icon = TRUE,
@@ -53,14 +53,14 @@ model_base <- narw()
 
 Several arguments can be passed to `narw()`, as listed below. We detail each of them in subsequent sections.
 
-| Argument        | Default value          | Description                                                                                                                                                                                                                                                                                                                                                        |
+| Argument        | Default value          | Description                                                                                                                                                                                                                       |
 |-------------------|-------------------|----------------------------------|
-| `nsim`          | `1000`                 | Positive integer. Number of simulated animals.                                                                                                                                                                                                                                                                                                                     |
-| `scenario`      | `NULL`                 | An optional scenario object, as returned by the `scenario()` function.                                                                                                                                                                                                                                                                                             |
-| `label`         | `""`                   | Character. Text label assigned to the simulation object; used for plotting.                                                                                                                                                                                                                                                                                        |
-| `piling.hrs`    | `4`                    | Numeric. Length of time (hours) during which whales cease foraging following a response to pile-driving noise exposure.                                                                                                                                                                                                                                            |
-| `n.cores`       | `NULL`                 | Positive integer. Number of CPU cores to use for parallel processing. The default value of `NULL` detects the processor configuration and runs computations on the maximum allowable number of available cores.                                                                                                                                                    |
-| `cease.nursing` | `c(FALSE, piling.hrs)` | Vector of length two. The first element indicates whether (`TRUE`) or not (`FALSE`) nursing behavior is interrupted in response to pile-driving noise exposure. The second indicates how long the nursing cessation period lasts.                                                                                                                                  |
+| `nsim`          | `1000`                 | Positive integer. Number of simulated animals.                                                                                                                                                                                    |
+| `scenario`      | `NULL`                 | An optional scenario object, as returned by the `scenario()` function.                                                                                                                                                            |
+| `label`         | `""`                   | Character. Text label assigned to the simulation object; used for plotting.                                                                                                                                                       |
+| `piling.hrs`    | `4`                    | Numeric. Length of time (hours) during which whales cease foraging following a response to pile-driving noise exposure.                                                                                                           |
+| `n.cores`       | `NULL`                 | Positive integer. Number of CPU cores to use for parallel processing. The default value of `NULL` detects the processor configuration and runs computations on the maximum allowable number of available cores.                   |
+| `cease.nursing` | `c(FALSE, piling.hrs)` | Vector of length two. The first element indicates whether (`TRUE`) or not (`FALSE`) nursing behavior is interrupted in response to pile-driving noise exposure. The second indicates how long the nursing cessation period lasts. |
 
 ### Number of agents
 
@@ -132,4 +132,3 @@ model_01 <- narw(1000, scenario = scenario_01, label = "Scenario 01")
 model_02 <- narw(1000, scenario = scenario_02, label = "Scenario 02")
 model_03 <- narw(1000, scenario = scenario_03, label = "Scenario 03")
 ```
-

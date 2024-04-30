@@ -38,7 +38,7 @@ load("data/scenarios/boem_scenario03.rda")
 
 ```{r, echo = FALSE}
 downloadthis::download_link(
-  link = "https://raw.githubusercontent.com/offshore-wind/narwind/1240faf44d7afb030838ae2fdcf58a12a2ab9b1e/vignettes/pdf/model_predictions.pdf",
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/0a45ae03f1938cd5396895b943b8615f28812669/vignettes/pdf/5%20Model%20predictions.pdf",
   button_label = "Download PDF",
   button_type = "primary",
   has_icon = TRUE,
@@ -78,12 +78,12 @@ The `predict()` method implements a stochastic population model which allows use
 The table below details the arguments that `predict()` accepts.
 
 | Argument   | Default value | Description                                                                                                                                                                                                              |
-|-----------------|-----------------|--------------------------------------|
+|------------------|------------------|-------------------------------------|
 | `obj`      | `-`           | One or more objects of class `narwsim`, as returned by `narw()`.                                                                                                                                                         |
 | `n`        | `100`         | Integer. Number of replicates projections.                                                                                                                                                                               |
 | `yrs`      | `35`          | Integer. Time horizon, specified either as the desired number of years (from current) or the desired target end year. Defaults to `35`, which is commensurate with the expected average lifespan of a typical wind farm. |
 | `param`    | `TRUE`        | If `TRUE`, prediction variance includes parameter uncertainty.                                                                                                                                                           |
-| `piling`   | `1`           | Integer. Year of construction. By default, piling occurs on the first year of the projection, followed by operation and maintenance for the remainder.                                                                                         |
+| `piling`   | `1`           | Integer. Year of construction. By default, piling occurs on the first year of the projection, followed by operation and maintenance for the remainder.                                                                   |
 | `progress` | `TRUE`        | Logical. If `TRUE`, a progress bar is printed to the R console during execution.                                                                                                                                         |
 
 #### Projection horizon
@@ -109,7 +109,7 @@ preds_n1 <- predict(model_base, n = 1)
 
 #### Schedule of development
 
-Population projections involve three successive phases: a baseline phase without wind farm activity between 2019 and the current year (e.g., 2024), followed by an optional, one-year construction phase, and an operational phase that lasts for the remainder of the projection. The timing of construction and operation and maintenance activities within the time horizon of a projection is defined by the ** scenario bundle** (i.e., one or more R objects containing the outputs of one or more runs of the agent-based model) which is passed to `predict()`.
+Population projections involve three successive phases: a baseline phase without wind farm activity between 2019 and the current year (e.g., 2024), followed by an optional, one-year construction phase, and an operational phase that lasts for the remainder of the projection. The timing of construction and operation and maintenance activities within the time horizon of a projection is defined by the \*\* scenario bundle\*\* (i.e., one or more R objects containing the outputs of one or more runs of the agent-based model) which is passed to `predict()`.
 
 There are several possible options:
 
@@ -138,7 +138,7 @@ There are several possible options:
 Population trends can be visualized using the `plot()` command, which takes the following arguments:
 
 | Argument     | Default value | Description                                                                                                                                                       |
-|-----------------|-----------------|--------------------------------------|
+|------------------|------------------|-------------------------------------|
 | `diff`       | `FALSE`       | Logical. If `TRUE`, returns plots of the differences between pairs of projections. Defaults to `FALSE`.                                                           |
 | `interval`   | `TRUE`        | Logical. If `TRUE`, percentile confidence intervals are shown on the plots.                                                                                       |
 | `shade`      | `TRUE`        | Logical. If `TRUE`, confidence intervals are displayed as colored ribbons. Otherwise, confidence bounds are shown as dotted lines.                                |
