@@ -7,7 +7,8 @@
 #' @author Rob Schick
 
 saveParameters <- function(obj){
-  
-  assign("scenario_01", obj, envir = .GlobalEnv)
+  cat("saveParameters is being called.\n")
+  # print(str(obj))
+  assign("scenario_custom", obj, envir = .GlobalEnv)
   
 }
