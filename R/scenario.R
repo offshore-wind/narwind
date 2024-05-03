@@ -23,9 +23,9 @@ scenario <- function() {
     header <-  shinydashboard::dashboardHeader(title = span("BOEM Offshore Wind Scenario", 
                                                             style = "color: #fff;"), 
                                                tags$li(class = "dropdown")) #,
-                                                       # tags$img(src = 'www/BOEM_logo.png', height = '40px', 
-                                                       #          style = "position: absolute; right: 20px; top: 10px;")))
-                                                        
+    # tags$img(src = 'www/BOEM_logo.png', height = '40px', 
+    #          style = "position: absolute; right: 20px; top: 10px;")))
+    
     # Side bar -----------------
     sidebar <- dashboardSidebar(
       tags$head(
@@ -66,9 +66,9 @@ scenario <- function() {
       div(class = "element-padding",
           helpText("Use these checkboxes to plot different geographic features on the map.")
       ),
-      checkboxInput("windfarm1", label = 'Wind Farm Boundary', value = F),
+      # checkboxInput("windfarm1", label = 'Wind Farm Boundary', value = F),
       uiOutput("dynamicCheckbox"),
-      checkboxInput("wearoute1", label = 'Route(s) to WEA', value = F),
+      # checkboxInput("wearoute1", label = 'Route(s) to WEA', value = F),
       uiOutput("dynamicCheckbox_route"),
       checkboxInput("piles", label = 'Turbine Locations', value = F),
       checkboxInput('tss', label = 'Traffic Separation Schemes', value = F),
@@ -130,7 +130,7 @@ scenario <- function() {
                          helpText("Once all changes to scenario parameters have been made, the scenario object can be downloaded using the green Download Scenario button located on the left. The saved scenario will also be automatically loaded into the open R session, for use in the bioenergetic model once the Shiny app window has been closed. The new scenario object loaded in R will be called “scenario_custom”."),
                          h3('Geographical features'),
                          helpText("The bottom of the left-hand sidebar consists of a list of check boxes that allow different geographical features to be visualized on the map. This includes the boundaries of the pre-defined wind farm sites (not available for custom scenarios), the vessel routes to these wind energy areas (also not available for custom scenarios), the turbine locations, as well as the location of traffic separation schemes, areas to be avoided (for NARW), and NARW speed zones.")
-
+                         
                  ),
                  # data tab ----------------------------------------------------------
                  
@@ -185,6 +185,7 @@ scenario <- function() {
                                                  "May", "Jun", "Jul", "Aug",
                                                  "Sep", "Oct", "Nov", "Dec")),
                          actionButton("saveBtn", "Update Map"),
+                         actionButton("vesselBtn", "Reset Vessel Values"),
                          br(), br(),
                          useShinyjs(),  # Initialize shinyjs
                          tags$head(
@@ -257,6 +258,19 @@ scenario <- function() {
   # Server function -----------
   server <- function(input, output, session) {
     
+    # Greying out the Boundary if they choose a custom scenario
+    output$dynamicCheckbox <- renderUI({
+      if (!is.null(input$scenario) && input$scenario != "Custom Scenario") {
+        checkboxInput("windfarm1", label = 'Wind Farm Boundary', value = FALSE)
+      }
+    })
+    
+    output$dynamicCheckbox_route <- renderUI({
+      if (!is.null(input$scenario) && input$scenario != "Custom Scenario") {
+        checkboxInput("wearoute1", label = 'Route(s) to WEA', value = FALSE)
+      }
+    })
+    
     # Coordinate Reference System 
     brs_crs <- paste("+proj=aea +lat_1=27.33333333333333",
                      "+lat_2=40.66666666666666 +lat_0=34 +lon_0=-78",
@@ -278,21 +292,6 @@ scenario <- function() {
       
     })
     
-    # Reactive expression for vesselmaps --------
-    vesselmaps <- reactive({
-      # Ensure selectedList() is re-evaluated when it changes
-      req(selectedList())  # Use req to handle NULL or not yet available cases
-      map_vessels(obj = selectedList(),
-                  z = "dist",
-                  strike_scalar = 1e-7,
-                  which.month = 1:12,
-                  vessel.speed = NULL,
-                  speed.limit = c(10,10,10,10,rep(NA,8)),
-                  baseline = TRUE,
-                  do.plot = FALSE,
-                  spgdf = FALSE)
-    })
-    
     # Output Tab Content for Vessel Table -----------------------
     output$tabContent <- renderUI({
       if(input$tabs == "vessel_traffic") {
@@ -300,9 +299,22 @@ scenario <- function() {
       } 
     })
     
-    # Reset Values -------- 
+    observeEvent(input$vesselBtn, {
+      currentTable(selectedList()[['vessels']])
+    })
+    
     observeEvent(input$reset_input, {
-      shinyjs::reset(id = "")
+      # Reset each input separately
+      shinyjs::reset("bufferRadius")
+      shinyjs::reset("sl")
+      shinyjs::reset("alpha")
+      shinyjs::reset("abs_coef")
+      shinyjs::reset("bubble")
+      
+      # If you need to reset the date slider, handle it with updateSliderInput as previously discussed
+      updateSliderInput(session, "dates",
+                        value = c(range(turbine_df()$date)[1], 
+                                  range(turbine_df()$date)[2]))
     })
     
     # Shiny Feedback --------  
@@ -332,15 +344,18 @@ scenario <- function() {
     }
     
     # Scenario Selector -------------
-    uploadedDataVal <- reactiveVal()
+    selectedList <- reactiveVal()
     
-    selectedList <- reactive({
+    observe({
       
       if (input$scenario %in% c("Scenario 1", "Scenario 2", "Scenario 3")) {
+        
         # Return the predefined scenario data
-        return(get(paste0("scenario_0", stringr::str_sub(input$scenario, -1))))
+        selectedList(get(paste0("scenario_0", stringr::str_sub(input$scenario, -1))))
+        
       } else {
         
+        # Assemble the custom scenario data from upload
         req(input$custom_vessels, input$custom_piles, input$custom_route)
         file_names <- input$custom_route$name
         file_paths <- input$custom_route$datapath
@@ -366,39 +381,47 @@ scenario <- function() {
           stop("Failed to read shapefile: ", e$message)
         })
         if (any(sf::st_geometry_type(route_data) %in% c("LINESTRING", "MULTILINESTRING"))) {
-          # Convert sf object to SpatialLinesDataFrame
           route_data_sp <- as(route_data, "Spatial")
         } else {
           stop("The geometry type of the route data is not suitable for conversion to SpatialLinesDataFrame.")
         }
-        # 
+        
         # Read CSV files: 1) vessel speed table, 2) piling locations
         vessels_data <- read_csv(input$custom_vessels$datapath)
         piles_data <- read_csv(input$custom_piles$datapath)
         piles_data$windfarm <- as.factor(piles_data$windfarm)
         
         # Compile data into a list
-        data_list <- list(phase = as.numeric(input$custom_phase),
+        selectedList(list(phase = as.numeric(input$custom_phase),
                           locs = data.table::data.table(piles_data),
                           routes = list(route_data_sp),
                           vessels = data.table::data.table(vessels_data),
-                          start.month = c(1, 2, 1),
-                          start.day = c(15, 1, 1),
+                          start.month = 1,
+                          start.day = 1,
                           piles.per.day = 1,
                           ambient = 80,
                           sourceLvL = 220,
                           lowerdB = 0 ,
                           logrange = 15,
-                          absorb = 1.175)
+                          absorb = 1.175))
         
-        return(data_list)
         
       }
     })
     
-    ### Construction & Operation Phase
-    currentPhase <- reactive({
-      as.numeric(selectedList()[["phase"]])
+    
+    ### Construction & Operation Phase -----------------
+    currentPhase <- reactiveVal()
+    
+    observe({
+      currentPhase(selectedList()[["phase"]])
+    })
+    
+    # Initialize currentTable as a reactiveVal ---------------
+    currentTable <- reactiveVal()
+    
+    observe({
+      currentTable(selectedList()[["vessels"]])
     })
     
     # Dynamic Sidebar Tab --------------  
@@ -483,7 +506,11 @@ scenario <- function() {
         # Check for custom scenario using an input like input$scenario
         if (input$scenario %in% c("scenario_03", "Custom Scenario")) {
           # For custom scenario, just return the locations without additional processing
+          data <- data %>%
+            sf::st_as_sf(coords = c('longitude', 'latitude')) %>%
+            sf::st_set_crs(4326)
           return(data)
+          
         } else {
           # Process data for non-custom scenarios
           data <- data %>%
@@ -499,7 +526,6 @@ scenario <- function() {
       }
       
     })
-    
     
     # Update Dates based on Selector --------
     observe({
@@ -518,7 +544,6 @@ scenario <- function() {
       
     })
     
-    
     # Base Map  ---------------------------------------------------------
     initial_lat = 38.2
     initial_lng = -73.7
@@ -532,6 +557,7 @@ scenario <- function() {
         setView(lat = initial_lat, lng = initial_lng, zoom = initial_zoom) %>%
         addMeasure()
     })
+    
     
     
     
@@ -665,8 +691,10 @@ scenario <- function() {
       
       # Handle circle markers separately if needed
       if (input$show_buffer) {
-        scn1_pt <- turbine_df() %>%
-          dplyr::filter(date == as.Date(input$dates))
+        if(!is.null(turbine_df()$date)){
+          scn1_pt <- turbine_df() %>%
+            dplyr::filter(date == as.Date(input$dates))
+        }
         
         leafletProxy("map") %>%
           addCircleMarkers(
@@ -680,16 +708,15 @@ scenario <- function() {
       }
     })
     
-    
+    # Static Map Features
     # WEA Ship Routes Observer-----------------
-    
     observe({
-      req(input$wearoute1)
       # define proxy and remove effort group
       proxy <- leafletProxy("map")
       proxy %>% clearGroup("wearoute1")
       
       # Add Routes to Wind Energy Areas
+      req(input$wearoute1)
       if(input$wearoute1){
         
         proxy %>%
@@ -711,6 +738,10 @@ scenario <- function() {
                        color = "#636363",
                        group = 'wearoute1',
                        label = "WEA - Route 3")
+        
+        # switch to show/hide
+        ifelse(input$wearoute1, showGroup(proxy, 'wearoute1'), hideGroup(proxy, 'wearoute1'))
+        
         
       }
       
@@ -760,64 +791,11 @@ scenario <- function() {
       
     })
     
-    # Initialize currentTable as a reactiveVal
-    currentTable <- reactiveVal()
-    
-    # On start-up or when selectedList() changes, update currentTable
-    observe({
-      currentTable(selectedList()[["vessels"]])
-    })
-    
-    # Update currentTable on each edit
-    observeEvent(input$editableTable_cell_edit, {
-      info <- input$editableTable_cell_edit
-      
-      # Get current table data
-      tableData <- currentTable()
-      
-      # Check if tableData is not NULL
-      if (!is.null(tableData)) {
-        # Update the cell value
-        tableData[info$row, info$col] <- info$value
-        
-        # Update the reactive value
-        currentTable(tableData)
-      }
-    })
-    
-    # Render the editable table
-    output$editableTable <- DT::renderDT({
-      currentTable()
-    }, editable = TRUE)
-    
-    # # TODO: Run/update the vessel maps.
-    values <- reactiveValues(currentScenario = NULL)
-    
-    # Then your observeEvent might look like this:
-    observeEvent(input$saveBtn, {
-      # Update the reactive value to the new scenario
-      values$currentScenario <- map_vessels(
-        obj = updatedScenario(),
-        z = "dist",
-        strike_scalar = 1e-7,
-        which.month = 1:12,
-        vessel.speed = NULL,
-        speed.limit = c(10, 10, 10, 10, rep(NA, 8)),
-        baseline = TRUE,
-        do.plot = FALSE,
-        spgdf = FALSE
-      )
-      
-    })
-    
-    # Adjust vesselmaps to depend on values$currentScenario:
-    vesselmaps <- reactive({
-      req(values$currentScenario)
-      values$currentScenario
-    })
-    
     # Vessel Traffic Density Observer ---------
     observe({
+      
+      traffic_data <- currentTraffic()
+      
       # Define the map proxy
       proxy <- leafletProxy("map")
       
@@ -827,13 +805,13 @@ scenario <- function() {
       
       # Check conditions for adding the raster image
       if (input$vessel_rast_yesno && !is.null(input$vessel_scenario) && length(input$vessel_scenario) > 0) {
-        sel_month <- which(names(traffic) == input$month)
+        sel_month <- which(names(traffic_data) == input$month)
         
         # Select the raster based on the scenario
         if (input$vessel_scenario == 'baseline') {
-          my_raster <- vesselmaps()[[sel_month]][[2]]
+          my_raster <- traffic_data[[sel_month]][[2]]
         } else if (input$vessel_scenario == 'scenario') {
-          my_raster <- vesselmaps()[[sel_month]][[1]]
+          my_raster <- traffic_data[[sel_month]][[1]]
         }
         
         # Set parameters for the raster image
@@ -868,9 +846,7 @@ scenario <- function() {
       }
     })
     
-    
     # tss observer ------------------------------------------------------  
-    
     observe(priority = 4, {
       
       # define proxy
@@ -896,7 +872,6 @@ scenario <- function() {
     })
     
     # area to be avoided observer ------------------------------------------------------  
-    
     observe(priority = 4, {
       
       # define proxy
@@ -922,7 +897,6 @@ scenario <- function() {
     })
     
     # NARW Speed Zones observer ------------------------------------------------------  
-    
     observe(priority = 4, {
       
       # define proxy
@@ -947,7 +921,7 @@ scenario <- function() {
       
     })
     
-    # Uncheck Map Features
+    # Uncheck Map Features ---------------
     observeEvent(input$scenario, {
       
       if (!is.null(input$scenario)) {
@@ -966,66 +940,130 @@ scenario <- function() {
       }
       
     })
+    # End Static Map Features
     
-    # Assemble Parameters -------
-    my_params <- reactive({
-      req(currentTable(), input$bufferRadius, input$sl, input$alpha, 
-          input$abs_coef, input$bubble, input$custom_phase)
+    # Update currentTable on each edit ---------
+    observeEvent(input$editableTable_cell_edit, {
+      info <- input$editableTable_cell_edit
       
-      list(vessels = currentTable(),
-           ambient = input$bufferRadius,
-           sourceLvL = input$sl,
-           logrange = input$alpha,
-           absorb = input$abs_coef,
-           lowerdB = input$bubble,
-           phase = as.numeric(input$custom_phase))
+      # Get current table data
+      tableData <- currentTable()
       
+      # Check if tableData is not NULL
+      if (!is.null(tableData)) {
+        # Update the cell value
+        tableData[info$row, info$col] <- info$value
+        
+        # Update the reactive value
+        currentTable(tableData)
+      }
     })
     
-    # # Update Scenario List Object ----- 
-    # updatedScenario <- reactive({
-    #   # Force evaluation of input$saveBtn to maintain original trigger behavior
-    #   input$saveBtn
-    #   
-    #   # Return the updated list based on the most recent table data
-    #   new_scenario <- update.narwscenario(selectedList(), currentTable())
-    #   class(new_scenario) <- c('narwscenario', 'list')
-    #   return(new_scenario)
-    #   
-    # })
+    # Render the editable table ----------
+    output$editableTable <- DT::renderDT({
+      currentTable()
+    }, editable = TRUE)
     
-    updatedScenario <- reactive({
-      # Log for debugging
+    # Run & update the vessel maps ----------
+    # Update the Vessel Table (currentTable()) ----------------
+    updatedScenario <- eventReactive(input$saveBtn, {
       cat("Button Pressed at:", Sys.time(), "\n")
-      
-      # Force evaluation of input$saveBtn to maintain original trigger behavior
-      input$saveBtn
-      
-      # Return the updated list based on the most recent table data
       new_scenario <- update.narwscenario(selectedList(), currentTable())
-      
-      # Debug output
-      # if (is.list(new_scenario)) {
-      #   cat("new_scenario is a list.\n")
-      # } else {
-      #   cat("new_scenario is not a list. It is a", class(new_scenario), "\n")
-      # }
-      
-      # Set class
       class(new_scenario) <- c('narwscenario', 'list')
-      # cat("new_scenario is a", class(new_scenario), "\n")
-      
-      # Return with the new class
       return(new_scenario)
     })
     
-    updatedList <- reactive({
-      # print("updatedList executed")
-      req(updatedScenario())
-      req(my_params())
-      modifyList(updatedScenario(), my_params())
+    # Initialize the traffic raster
+    currentTraffic <- reactiveVal(traffic)
+    
+    observeEvent(input$saveBtn, {
+      
+      new_scenario <- updatedScenario()
+      
+      my_values <- map_vessels(
+        obj = new_scenario,
+        z = "dist",
+        strike_scalar = 1e-7,
+        which.month = 1:12,
+        vessel.speed = NULL,
+        speed.limit = c(10, 10, 10, 10, rep(NA, 8)),
+        baseline = TRUE,
+        do.plot = FALSE,
+        spgdf = FALSE
+      )
+      
+      currentTraffic(my_values)
       
     })
+    
+    
+    # Assemble Parameters -------
+    my_params <- reactive({
+      req(currentTable())
+      if(input$scenario == "Scenario 3" | input$custom_phase == 2){
+        
+        list(vessels = currentTable(),
+             phase = as.numeric(2))
+        
+      } else if (input$scenario == "Custom Scenario" & input$custom_phase == 1) {
+        
+        req(input$bufferRadius, input$sl, input$alpha,
+            input$abs_coef, input$bubble)
+        
+        list(vessels = currentTable(),
+             ambient = input$bufferRadius,
+             sourceLvL = input$sl,
+             logrange = input$alpha,
+             absorb = input$abs_coef,
+             lowerdB = input$bubble,
+             phase = as.numeric(1))
+        
+        
+      } else if (input$scenario == "Custom Scenario" & input$custom_phase == 2) {
+        
+        list(vessels = currentTable(),
+             phase = as.numeric(2))
+        
+      } else {
+        
+        req(input$bufferRadius, input$sl, input$alpha,
+            input$abs_coef, input$bubble)
+        
+        list(vessels = currentTable(),
+             ambient = input$bufferRadius,
+             sourceLvL = input$sl,
+             logrange = input$alpha,
+             absorb = input$abs_coef,
+             lowerdB = input$bubble,
+             phase = as.numeric(currentPhase()))
+        
+      }
+      
+    })
+    
+    # Initialize the reactive value with default FALSE (button not clicked)
+    buttonClicked <- reactiveVal(FALSE)
+    
+    observeEvent(input$saveBtn, {
+      buttonClicked(TRUE)  # Set to TRUE when button is clicked
+    })
+    
+    # Update List for Exiting -----
+    updatedList <- reactive({
+      print("updatedList executed")
+      
+      # Check the flag to decide which source to use
+      if (buttonClicked()) {
+        req(updatedScenario())  # Make sure updatedScenario is ready
+        scenario_data <- updatedScenario()
+      } else {
+        scenario_data <- selectedList()  # Default to selectedList if button not clicked
+      }
+      
+      req(my_params())  # Ensure my_params is ready
+      modifyList(scenario_data, my_params())  # Modify the list based on the source
+    })
+    
     
     
     output$download <- downloadHandler(
@@ -1065,8 +1103,8 @@ scenario <- function() {
       
       # Check if latest_data is non-null
       if (!is.null(latest_data)) {
-        # cat("Structure of latestData:\n")
-        # str(latest_data)
+        cat("Structure of latestData:\n")
+        str(latest_data, max.level = 1)
         saveParameters(latest_data)
       }
       
@@ -1078,7 +1116,6 @@ scenario <- function() {
     })
     
   }
-  
   # Launch Shiny app----
   shinyApp(ui = ui,
            server = server,
