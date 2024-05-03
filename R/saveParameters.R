@@ -8,6 +8,7 @@
 
 saveParameters <- function(obj){
   cat("saveParameters is being called.\n")
+  class(obj) <- c("narwscenario", "list")
   # print(str(obj))
   assign("scenario_custom", obj, envir = .GlobalEnv)
   
