@@ -387,8 +387,8 @@ scenario <- function() {
         }
         
         # Read CSV files: 1) vessel speed table, 2) piling locations
-        vessels_data <- read_csv(input$custom_vessels$datapath)
-        piles_data <- read_csv(input$custom_piles$datapath)
+        vessels_data <- readr::read_csv(input$custom_vessels$datapath)
+        piles_data <- readr::read_csv(input$custom_piles$datapath)
         piles_data$windfarm <- as.factor(piles_data$windfarm)
         
         # Compile data into a list
