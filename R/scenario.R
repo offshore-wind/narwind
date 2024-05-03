@@ -137,7 +137,7 @@ scenario <- function() {
                  # Select Data    
                  tabItem(tabName = 'map',
                          h4('Warning'),
-                         helpText("When exploring multiple scenarios within the same run of the App, please make sure the “Show Noise Footprint” checkbox in the “Piling Noise” tab is not checked before selecting an operation scenario."),
+                         helpText("When exploring multiple scenarios within the same run of the App, please make sure the “Show Noise Footprint” checkbox in the “Piling Noise” tab is not checked before selecting an operation scenario (i.e., Scenario 3 or a Custom Operation Scenario). In general, when returning to a pre-defined scenario after uploading custom files, the App may freeze; if that happens, please close the App and restart it to restore all functionalities."),
                          hr(),
                          selectInput("scenario", label = "Offshore Wind Scenario", 
                                      choices = c("Scenario 1", 
