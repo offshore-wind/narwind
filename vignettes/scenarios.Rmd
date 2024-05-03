@@ -169,11 +169,11 @@ We explain how to do this in the sections below.
 
 ### Scenario set up
 
-First, start by clicking on the `Scenario Seletion` tab. The central text area will change to reveal several drop-down menus (Figure 2.6).
+First, start by clicking on the `Scenario Selection` tab. The central text area will change to reveal several drop-down menus (Figure 2.6).
 
 To adapt one of the pre-defined scenarios, choose either `Scenario 1`, `Scenario 2`, or `Scenario 3` as appropriate. The parameters associated with the selected scenario will be populated throughout the rest of the app. The scenario can then be viewed, and the default scenario parameters can be modified using the controls found in the `Piling Noise` and `Vessel Traffic` tabs. Modifications to scenario parameters will feed through to an R object that can be used directly in the bioenergetic model upon closing the app window.
 
-To define a custom scenario, choose `Custom Scenario`. Three new fields will appear, allowing the user to upload files for the piling locations and timings, the vessel routes, and the vessel information table that underpin the scenario they wish to explore. An additional drop-down menu will also be available to indicate whether the custom scenario relates to construction or operation activities. This is important, as it ensures that the scenario object is correctly labeled. The custom scenario can then be viewed in the same way as the pre-defined scenarios, and scenario parameters can be modified using the controls found in the `Piling Noise` and `Vessel Traffic` tabs. As with the pre-defined scenarios, modifications made to scenario parameters within the app tabs can be saved into an R object that will be used in the bioenergetic model.
+To define a custom scenario, choose `Custom Scenario`. Three new fields will appear, allowing the user to upload files for the piling locations and timings, the vessel routes, and the vessel information table that underpin the scenario they wish to explore. Please note that uploading custom vessel routes requires the selection of all files that comprise a shapefile (usually four). An additional drop-down menu will also be available to indicate whether the custom scenario relates to construction or operation activities. This is important, as it ensures that the scenario object is correctly labeled. The custom scenario can then be viewed in the same way as the pre-defined scenarios, and scenario parameters can be modified using the controls found in the `Piling Noise` and `Vessel Traffic` tabs. As with the pre-defined scenarios, modifications made to scenario parameters within the app tabs can be saved into an R object that will be used in the bioenergetic model.
 
 ![**Figure 2.6.** Scenario set up tab.](shiny_setup.jpg)
 
@@ -185,7 +185,10 @@ Similarly, vessel routes to each wind farm site must be provided as a `.shp` fil
 
 Finally, the user should provide a `.csv` file with all vessel information for each class of vessels associated with each wind farm site and route. This should include columns `phase` (indicating whether the scenario involves `Construction` or `Operation` activities), `vesselclass` (the class of vessels), `site` (a site ID), `windfarm` (a sequential integer ID number for each wind farm site), `route` (a sequential integer ID number for each route associated with each wind farm site), `speed_knt` (the speed in knots for vessels in that class), `Nvessels` (the number of vessels in that class), `roundtrips_foundation` (the number of round trips per foundation) and `routeID` (reporting two values separated by a dash: the wind farm number and the route number therein; e.g. 1-2 for route 2 for wind farm 1).
 
-### Piling noise
+> **Note 2.3:** When exploring multiple scenarios within the same run of the App, please make sure the `Show Noise Footprint` checkbox in the `Piling Noise` tab is not checked before selecting an operation scenario (i.e., Scenario 3 or a Custom Operation Scenario). In general, when returning to a pre-defined scenario after uploading custom files, the App may freeze; if that happens, please close the App and restart it to restore all functionalities.
+
+
+### Piling Noise
 
 The acoustic footprint of pile-driving can be visualized as a circular buffer centered on a given piling location. Buffer boundaries mark the distance at which noise levels have decreased to a target value, under the assumption that transmission loss (TL) depends on log-range (log10R) and frequency-specific absorption. If the selected scenario relates to the construction phase, then ticking the `Show noise footprint` checkbox will add buffers to the map and activate additional controls. If the scenario relates to the operational phase of a wind farm site, then there are no changes to be made on this tab. When the scenario involves a construction phase, then the following can be viewed and modified by the user:
 
@@ -215,13 +218,13 @@ This parameter controls the reduction in source level achieved using noise abate
 
 At the bottom of this tab there is a button allowing for values to be reset to the default for the scenario. Any user-modified values will be reflected in the final R object that will be used in the bioenergetic model.
 
-### Vessel traffic
+### Vessel Traffic
 
 The vessel traffic tab allows the user to visualize and modify the vessel strike risk surface that is used in the bioenergetics model. Vessel strike risk is evaluated using a simple metric, Total PLETH, which accounts for both the effect of vessel speed on lethality and for the cumulative exposure of whales to all vessels traversing each grid cell. Total PLETH is scaled to obtain daily strike probabilities for use in the agent-based bioenergetics model. Further details on the calculation of this metric can be found in the accompanying project report.
 
-Ticking the `Vessel strike risk` checkbox prompts the user to choose whether they wish to display a baseline vessel strike risk layer or a scenario vessel strike risk layer (relating to the scenario selected on the Scenario Selection tab). The user should also select which month they wish to visualize. The `Update map` button should be clicked to display the selected vessel strike risk surface.
+Ticking the `Vessel Strike Risk` checkbox prompts the user to choose whether they wish to display a baseline vessel strike risk layer or a scenario vessel strike risk layer (relating to the scenario selected on the Scenario Selection tab). The user should also select which month they wish to visualize.
 
-The table on this tab can be fully visualized by minimizing the map. The table allows the user to specify the number of vessels (Nvessels), speed in knots (speed_knt) and number of round trips per foundation (roundtrips_foundation) for each class of vessels (vesselclass) associated with each windfarm site and; please note that other columns in this table should not be modified. Values in the table can be changed by clicking on the relevant cell. Changes can be visualized on the map by clicking the `Update map` button at the bottom.
+The table on this tab can be fully visualized by minimizing the map. The table allows the user to specify the number of vessels (Nvessels), speed in knots (speed_knt) and number of round trips per foundation (roundtrips_foundation) for each class of vessels (vesselclass) associated with each windfarm site and; please note that other columns in this table should not be modified. Values in the table can be changed by clicking on the relevant cell. Changes can be visualized on the map by clicking the `Update Map` button at the bottom.
 
 ### Whale Density
 
