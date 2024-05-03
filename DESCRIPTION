@@ -63,6 +63,7 @@ Imports:
     purrr,
     raster,
     Rdpack,
+    readr,
     rlang,
     rgeoda,
     scales,
