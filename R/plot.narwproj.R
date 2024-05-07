@@ -71,7 +71,7 @@ plot.narwproj <- function(...,
     if ("colour" %in% names(args)) {
       colour <- args[["colour"]]
     } else {
-      colour <- c("#0098A0", "#E0B200", "#289DE0", "#BF0B98", "#FF9B19FA", "#E6124B")
+      colour <- c("#BF0B98", "#E0B200", "#289DE0", "#0098A0", "#FF9B19FA", "#E6124B")
     }
     
     if (length(obj) > length(colour)) colour <- c(colour, 1:(length(obj) - length(colour)))
