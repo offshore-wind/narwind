@@ -34,7 +34,7 @@ devtools::load_all()
 
 ```{r, echo = FALSE}
 downloadthis::download_link(
-  link = "https://raw.githubusercontent.com/offshore-wind/narwind/0a45ae03f1938cd5396895b943b8615f28812669/vignettes/pdf/2%20Defining%20scenarios.pdf",
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/a0b0430d55392769c170a83000f6f56704c018e9/vignettes/pdf/2%20Defining%20scenarios.pdf",
   button_label = "Download PDF",
   button_type = "primary",
   has_icon = TRUE,
@@ -186,7 +186,6 @@ Similarly, vessel routes to each wind farm site must be provided as a `.shp` fil
 Finally, the user should provide a `.csv` file with all vessel information for each class of vessels associated with each wind farm site and route. This should include columns `phase` (indicating whether the scenario involves `Construction` or `Operation` activities), `vesselclass` (the class of vessels), `site` (a site ID), `windfarm` (a sequential integer ID number for each wind farm site), `route` (a sequential integer ID number for each route associated with each wind farm site), `speed_knt` (the speed in knots for vessels in that class), `Nvessels` (the number of vessels in that class), `roundtrips_foundation` (the number of round trips per foundation) and `routeID` (reporting two values separated by a dash: the wind farm number and the route number therein; e.g. 1-2 for route 2 for wind farm 1).
 
 > **Note 2.3:** When exploring multiple scenarios within the same run of the App, please make sure the `Show Noise Footprint` checkbox in the `Piling Noise` tab is not checked before selecting an operation scenario (i.e., Scenario 3 or a Custom Operation Scenario). In general, when returning to a pre-defined scenario after uploading custom files, the App may freeze; if that happens, please close the App and restart it to restore all functionalities.
-
 
 ### Piling Noise
 
