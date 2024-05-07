@@ -89,7 +89,7 @@
 Rob Schick, Enrico Pirotta, Catriona Harris, Len Thomas</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2024-04-30</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2024-05-07</h4>
       
       
       <div class="hidden name"><code>scenarios.Rmd</code></div>
@@ -292,8 +292,7 @@ is an abridged representation of the structure of
 <span><span class="co">#&gt;   .. ..   route = <span style="color: #00BB00;">col_integer()</span>,</span></span>
 <span><span class="co">#&gt;   .. ..   speed_knt = <span style="color: #00BB00;">col_integer()</span>,</span></span>
 <span><span class="co">#&gt;   .. ..   Nvessels = <span style="color: #00BB00;">col_integer()</span>,</span></span>
-<span><span class="co">#&gt;   .. ..   roundtrips_foundation = <span style="color: #00BB00;">col_double()</span>,</span></span>
-<span><span class="co">#&gt;   .. ..   .delim = ","</span></span>
+<span><span class="co">#&gt;   .. ..   roundtrips_foundation = <span style="color: #00BB00;">col_double()</span></span></span>
 <span><span class="co">#&gt;   .. .. )</span></span>
 <span><span class="co">#&gt;   ..- attr(*, "problems")=&lt;externalptr&gt; </span></span>
 <span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
@@ -402,7 +401,7 @@ package</p></li>
 <div class="section level3">
 <h3 id="scenario-set-up">Scenario set up<a class="anchor" aria-label="anchor" href="#scenario-set-up"></a>
 </h3>
-<p>First, start by clicking on the <code>Scenario Seletion</code> tab.
+<p>First, start by clicking on the <code>Scenario Selection</code> tab.
 The central text area will change to reveal several drop-down menus
 (Figure 2.6).</p>
 <p>To adapt one of the pre-defined scenarios, choose either
@@ -417,9 +416,11 @@ the bioenergetic model upon closing the app window.</p>
 <p>To define a custom scenario, choose <code>Custom Scenario</code>.
 Three new fields will appear, allowing the user to upload files for the
 piling locations and timings, the vessel routes, and the vessel
-information table that underpin the scenario they wish to explore. An
-additional drop-down menu will also be available to indicate whether the
-custom scenario relates to construction or operation activities. This is
+information table that underpin the scenario they wish to explore.
+Please note that uploading custom vessel routes requires the selection
+of all files that comprise a shapefile (usually four). An additional
+drop-down menu will also be available to indicate whether the custom
+scenario relates to construction or operation activities. This is
 important, as it ensures that the scenario object is correctly labeled.
 The custom scenario can then be viewed in the same way as the
 pre-defined scenarios, and scenario parameters can be modified using the
@@ -463,9 +464,19 @@ of vessels in that class), <code>roundtrips_foundation</code> (the
 number of round trips per foundation) and <code>routeID</code>
 (reporting two values separated by a dash: the wind farm number and the
 route number therein; e.g. 1-2 for route 2 for wind farm 1).</p>
+<blockquote>
+<p><strong>Note 2.3:</strong> When exploring multiple scenarios within
+the same run of the App, please make sure the
+<code>Show Noise Footprint</code> checkbox in the
+<code>Piling Noise</code> tab is not checked before selecting an
+operation scenario (i.e., Scenario 3 or a Custom Operation Scenario). In
+general, when returning to a pre-defined scenario after uploading custom
+files, the App may freeze; if that happens, please close the App and
+restart it to restore all functionalities.</p>
+</blockquote>
 </div>
 <div class="section level3">
-<h3 id="piling-noise">Piling noise<a class="anchor" aria-label="anchor" href="#piling-noise"></a>
+<h3 id="piling-noise">Piling Noise<a class="anchor" aria-label="anchor" href="#piling-noise"></a>
 </h3>
 <p>The acoustic footprint of pile-driving can be visualized as a
 circular buffer centered on a given piling location. Buffer boundaries
@@ -527,7 +538,7 @@ reflected in the final R object that will be used in the bioenergetic
 model.</p>
 </div>
 <div class="section level3">
-<h3 id="vessel-traffic">Vessel traffic<a class="anchor" aria-label="anchor" href="#vessel-traffic"></a>
+<h3 id="vessel-traffic">Vessel Traffic<a class="anchor" aria-label="anchor" href="#vessel-traffic"></a>
 </h3>
 <p>The vessel traffic tab allows the user to visualize and modify the
 vessel strike risk surface that is used in the bioenergetics model.
@@ -538,13 +549,11 @@ cell. Total PLETH is scaled to obtain daily strike probabilities for use
 in the agent-based bioenergetics model. Further details on the
 calculation of this metric can be found in the accompanying project
 report.</p>
-<p>Ticking the <code>Vessel strike risk</code> checkbox prompts the user
+<p>Ticking the <code>Vessel Strike Risk</code> checkbox prompts the user
 to choose whether they wish to display a baseline vessel strike risk
 layer or a scenario vessel strike risk layer (relating to the scenario
 selected on the Scenario Selection tab). The user should also select
-which month they wish to visualize. The <code>Update map</code> button
-should be clicked to display the selected vessel strike risk
-surface.</p>
+which month they wish to visualize.</p>
 <p>The table on this tab can be fully visualized by minimizing the map.
 The table allows the user to specify the number of vessels (Nvessels),
 speed in knots (speed_knt) and number of round trips per foundation
@@ -552,7 +561,7 @@ speed in knots (speed_knt) and number of round trips per foundation
 associated with each windfarm site and; please note that other columns
 in this table should not be modified. Values in the table can be changed
 by clicking on the relevant cell. Changes can be visualized on the map
-by clicking the <code>Update map</code> button at the bottom.</p>
+by clicking the <code>Update Map</code> button at the bottom.</p>
 </div>
 <div class="section level3">
 <h3 id="whale-density">Whale Density<a class="anchor" aria-label="anchor" href="#whale-density"></a>
