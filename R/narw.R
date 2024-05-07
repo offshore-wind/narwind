@@ -187,11 +187,11 @@ narw <- function(nsim = 1e3,
     cat("––– Piling activities:\n\n")
     purrr::walk(.x = unique(scenario$locs$windfarm),
                 .f = ~{
-                  cat("+ Wind farm", .x, ": ", 
+                  cat("+ Wind farm ", .x, ": ", 
                       paste0(as.character(format(as.Date(min(scenario$locs[windfarm == .x, ]$date)), "%b-%d")),
-                      " (start) ---->", 
+                      " (start) ----> ", 
                       as.character(format(as.Date(max(scenario$locs[windfarm == .x, ]$date)), "%b-%d")),
-                      " (end) @", scenario$piles.per.day, "[pile(s) / day]\n"), sep = "")
+                      " (end) @", scenario$piles.per.day, " [pile(s) / day]\n"), sep = "")
                 })
     cat("\n")
     cat("––– Piling noise:\n\n")
@@ -346,6 +346,8 @@ narw <- function(nsim = 1e3,
     }) |> purrr::set_names(nm = month.abb) # Monthly
   }
   
+  vesselmaps.spdf <- vesselmaps
+  
   map_limits_vessels <- get_limits(vesselmaps[[1]])
   map_resolution_vessels <- vesselmaps[[1]]@grid@cellsize
   vesselmaps <- lapply(vesselmaps[layerIDs], raster::as.matrix)
@@ -364,6 +366,8 @@ narw <- function(nsim = 1e3,
     noisemaps <- lapply(date_seq, FUN = function(x) ambient.r)
     names(noisemaps) <- date_seq
   }
+  
+  noisemaps.spdf <- noisemaps
   
   map_limits_noise <- map_limits
   map_resolution_noise <- map_resolution
@@ -899,6 +903,9 @@ narw <- function(nsim = 1e3,
                        # step = step.size,
                        n.prop = n.prop,
                        ambient.dB = ambient.dB)
+  
+  outsim$stressors <- list(strike = vesselmaps.spdf,
+                           noise = noisemaps.spdf)
   
   outsim$init <- list(month = init.month, 
                       xy = init.inds, 
