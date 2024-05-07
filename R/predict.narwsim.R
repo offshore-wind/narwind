@@ -885,7 +885,7 @@ predict.narwsim <- function(...,
   }) |> do.call(what = rbind)
   
   # Abortions ----
- abort.df <- as.data.frame.table(abortions[2:nrow(abortions), ], responseName = "value") |>
+ abort.df <- as.data.frame.table(abortions[2:nrow(abortions), , drop = FALSE], responseName = "value") |>
    dplyr::rename(year = Var1, prj = Var2, n_abort = value) |>
    dplyr::mutate(
      year = gsub(pattern = "yr ", replacement = "", year),
@@ -895,7 +895,7 @@ predict.narwsim <- function(...,
    dplyr::mutate(year = 2019 + as.numeric(gsub("yr ", "", year)))
   
  # Pregnant females ----
- preg.fem <- as.data.frame.table(narw.pop[, , cohorts.proj[id == 4, name]]) |>
+ preg.fem <- as.data.frame.table(narw.pop[, , cohorts.proj[id == 4, name], drop = FALSE]) |>
    dplyr::rename(year = Var2, prj = Var1, n_pregfem = Freq) |>
    dplyr::mutate(
      year = gsub(pattern = "yr ", replacement = "", year),
@@ -1007,7 +1007,7 @@ predict.narwsim <- function(...,
     return(out)
   }
   
-  quasi.females <- quasi_ext(rowSums(narw.pop[,,cohorts.proj[id >= 4, name]], dims = 2), qr)
+  quasi.females <- quasi_ext(rowSums(narw.pop[,,cohorts.proj[id >= 4, name], drop = FALSE], dims = 2), qr)
   quasi.females <- data.table::data.table(year = 0:yrs, quasi = quasi.females) |> 
     dplyr::mutate(year = 2019 + year)
   
@@ -1025,13 +1025,17 @@ predict.narwsim <- function(...,
   }
   
   # Label projections
-  
+  if(length(obj) == 1){
+    out.label <- obj[[1]]$param$label
+  } else if(length(obj)>1) {
+    out.label <- obj[[2]]$param$label
+  }
   
   # Output list ----
   
   outproj <- list(
    param = list(
-     label = obj[[1]]$param$label,
+     label = out.label,
      start.year = current.yr,
      yrs = yrs - burn.in,
      burn = burn.in,
