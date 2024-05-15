@@ -47,7 +47,7 @@ This tutorial provides a brief description of the bioenergetic model. For full t
 
 The North Atlantic right whale bioenergetic model implemented in `narwind` combines an agent-based model with a stochastic population model (Figure 1.1). The former is used to understand how anthropogenic stressors affect NARW survival and health, as defined by a system of bioenergetic equations that consider NARW behavior and energy budgets. The insights gained from that model are then used to parameterize a stochastic population model that yields predictions of future NARW abundance.
 
-![**Figure 1.1.** Schematic representation of the structure of the North Atlantic right whale (NARW, *Eubalaena glacialis*) population consequences of multiple stressors (PCoMS) framework. The trend shown in the right-hand panel is not based on real data and displayed for illustration purposes only.](BOEM_140M0121C0008_figure1.jpg)
+![**Figure 1.1.** Schematic representation of the structure of the North Atlantic right whale (NARW, *Eubalaena glacialis*) population consequences of multiple stressors (PCoMS) framework. The trends shown in the right-hand panel are not based on real data and are displayed for illustration purposes only.](BOEM_140M0121C0008_figure1.jpg)
 
 ### Agent-based model
 
