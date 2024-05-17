@@ -80,7 +80,7 @@ The table below details the arguments that `predict()` accepts.
 | Argument   | Default value | Description                                                                                                                                                                                                              |
 |------------------|------------------|-------------------------------------|
 | `obj`      | `-`           | One or more objects of class `narwsim`, as returned by `narw()`.                                                                                                                                                         |
-| `n`        | `100`         | Integer. Number of replicates projections.                                                                                                                                                                               |
+| `n`        | `500`         | Integer. Number of replicates projections.                                                                                                                                                                               |
 | `yrs`      | `35`          | Integer. Time horizon, specified either as the desired number of years (from current) or the desired target end year. Defaults to `35`, which is commensurate with the expected average lifespan of a typical wind farm. |
 | `param`    | `TRUE`        | If `TRUE`, prediction variance includes parameter uncertainty.                                                                                                                                                           |
 | `piling`   | `1`           | Integer. Year of construction. By default, piling occurs on the first year of the projection, followed by operation and maintenance for the remainder.                                                                   |
@@ -101,7 +101,7 @@ preds_50years <- predict(model_base, yrs = 2074)
 
 In `narwind`, prediction uncertainty is estimated from both process variance (i.e., repeat projections) and parameter uncertainty (i.e., statistical uncertainty in the relationships between individual body condition and health/survival, respectively). The latter is considered only if replicate coefficients have been sampled from the posteriors of the fitted survival and body condition GAMs using the `augment()` function (see previous section).
 
-The `n` argument controls the number of replicate projections and is set to `100` by default. Generating a single projection instead is straightforward, as shown here:
+The `n` argument controls the number of replicate projections and is set to `500` by default. Generating a single projection instead is straightforward, as shown here:
 
 ```{r, eval = FALSE}
 preds_n1 <- predict(model_base, n = 1)
