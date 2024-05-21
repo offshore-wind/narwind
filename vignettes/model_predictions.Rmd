@@ -109,7 +109,7 @@ preds_n1 <- predict(model_base, n = 1)
 
 #### Schedule of development
 
-Population projections involve three successive phases: a baseline phase without wind farm activity between 2019 and the current year (e.g., 2024), followed by an optional, one-year construction phase, and an operational phase that lasts for the remainder of the projection. The timing of construction and operation and maintenance activities within the time horizon of a projection is defined by the \*\* scenario bundle\*\* (i.e., one or more R objects containing the outputs of one or more runs of the agent-based model) which is passed to `predict()`.
+Population projections involve three successive phases: a baseline phase without wind farm activity between 2019 and the current year (e.g., 2024), followed by an optional, one-year construction phase, and an operational phase that lasts for the remainder of the projection. The timing of construction and operation and maintenance activities within the time horizon of a projection is defined by the **scenario bundle** (i.e., one or more R objects containing the outputs of one or more runs of the agent-based model) which is passed to `predict()`.
 
 There are several possible options:
 
@@ -131,7 +131,7 @@ There are several possible options:
     proj_construction <- predict(model_base, model_01, model_03)
     ```
 
-> **Note 5.2:** `predict()` cannot process more than one scenario **bundle** at a time. Therefore, separate calls to `predict()` must be made to compare population projections for multiple, alternative scenarios such as those involving different schedules of piling, different wind farm sites etc.
+> **Note 5.2:** `predict()` cannot process more than one **scenario bundle** at a time. Therefore, separate calls to `predict()` must be made to compare population projections for multiple, alternative scenarios such as those involving different schedules of piling, different wind farm sites etc.
 
 ## Plotting projections
 
@@ -200,7 +200,7 @@ proj_01 <- label(proj_01, "Scenario 01")
 
 If predicted trends are similar, the resulting plot can be difficult to interpret. An alternative way of comparing trends is to compute the difference in predicted abundance between each pair of replicate projections. This can be done by setting the `diff` argument to `TRUE`. There is no evidence for a difference between projections if the resulting confidence interval overlaps zero.
 
-```{r, fig.width=8}
+```{r, fig.width=8,fig.height=10,echo=FALSE,warning=FALSE, message=FALSE}
 plot(proj_base, proj_01, proj_02, proj_03, diff = TRUE)
 ```
 
@@ -214,7 +214,7 @@ The `summary()` method also works on projections and returns useful information 
 
 -   Estimates of the population's probability of quasi-extinction, i.e., the probability that the number of reproductive females falls below N = 50 [@Runge2023].
 
-```{r}
+```{r, fig.width=8,fig.height=10,echo=FALSE}
 summary(proj_base)
 ```
 
