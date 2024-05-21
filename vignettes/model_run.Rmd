@@ -55,7 +55,7 @@ Several arguments can be passed to `narw()`, as listed below. We detail each of 
 
 | Argument        | Default value          | Description                                                                                                                                                                                                                       |
 |-------------------|-------------------|----------------------------------|
-| `nsim`          | `1000`                 | Positive integer. Number of simulated animals.                                                                                                                                                                                    |
+| `nsim`          | `1000`                 | Positive integer. Number of simulated animals per cohort.                                                                                                                                                                                    |
 | `scenario`      | `NULL`                 | An optional scenario object, as returned by the `scenario()` function.                                                                                                                                                            |
 | `label`         | `""`                   | Character. Text label assigned to the simulation object; used for plotting.                                                                                                                                                       |
 | `piling.hrs`    | `4`                    | Numeric. Length of time (hours) during which whales cease foraging following a response to pile-driving noise exposure.                                                                                                           |
@@ -64,7 +64,7 @@ Several arguments can be passed to `narw()`, as listed below. We detail each of 
 
 ### Number of agents
 
-The `nsim` argument controls the number of simulated animals and is set to `1,000` by default. Users can override this setting, however we recommend against using values of `nsim < 1000` as this is the minimum number of virtual agents required for reliable inference. Below is an example of a smaller simulation for 10 individuals only.
+The `nsim` argument controls the number of simulated animals per demographic cohort and is set to `1,000` by default. Users can override this setting, however we recommend against using values of `nsim < 1000` as this is the minimum number of virtual agents required for reliable inference. Below is an example of a smaller simulation for 10 individuals only.
 
 ```{r basemodel10, eval = FALSE}
 model_base_10 <- narw(nsim = 10)
