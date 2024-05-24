@@ -89,7 +89,7 @@
 Enrico Pirotta, Catriona Harris, Len Thomas</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2024-04-30</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2024-05-24</h4>
       
       
       <div class="hidden name"><code>model_run.Rmd</code></div>
@@ -136,7 +136,7 @@ below. We detail each of them in subsequent sections.</p>
 <tr class="odd">
 <td><code>nsim</code></td>
 <td><code>1000</code></td>
-<td>Positive integer. Number of simulated animals.</td>
+<td>Positive integer. Number of simulated animals per cohort.</td>
 </tr>
 <tr class="even">
 <td><code>scenario</code></td>
@@ -178,11 +178,11 @@ indicates how long the nursing cessation period lasts.</td>
 <h3 id="number-of-agents">Number of agents<a class="anchor" aria-label="anchor" href="#number-of-agents"></a>
 </h3>
 <p>The <code>nsim</code> argument controls the number of simulated
-animals and is set to <code>1,000</code> by default. Users can override
-this setting, however we recommend against using values of
-<code>nsim &lt; 1000</code> as this is the minimum number of virtual
-agents required for reliable inference. Below is an example of a smaller
-simulation for 10 individuals only.</p>
+animals per demographic cohort and is set to <code>1,000</code> by
+default. Users can override this setting, however we recommend against
+using values of <code>nsim &lt; 1000</code> as this is the minimum
+number of virtual agents required for reliable inference. Below is an
+example of a smaller simulation for 10 individuals only.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">model_base_10</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/narw.html">narw</a></span><span class="op">(</span>nsim <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span></code></pre></div>
 </div>

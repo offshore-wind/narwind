@@ -89,7 +89,7 @@
 Enrico Pirotta, Catriona Harris, Len Thomas</h4>
             <address class="author_afil">
       Centre for Research into Ecological &amp; Environmental Modelling,
-University of St Andrews<br><h4 data-toc-skip class="date">2024-04-30</h4>
+University of St Andrews<br><h4 data-toc-skip class="date">2024-05-24</h4>
       
       
       <div class="hidden name"><code>model_predictions.Rmd</code></div>
@@ -145,29 +145,25 @@ component (called <code>post</code>, as shown below), which stores the
 posterior draws of the model coefficients.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">model_base</span>, <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="co">#&gt; List of 10</span></span>
-<span><span class="co">#&gt;  $ sim     :List of 6</span></span>
-<span><span class="co">#&gt;  $ gam     :List of 2</span></span>
-<span><span class="co">#&gt;  $ dead    :Classes 'data.table' and 'data.frame':   610 obs. of  25 variables:</span></span>
+<span><span class="co">#&gt; List of 11</span></span>
+<span><span class="co">#&gt;  $ sim      :List of 6</span></span>
+<span><span class="co">#&gt;  $ gam      :List of 2</span></span>
+<span><span class="co">#&gt;  $ dead     :Classes 'data.table' and 'data.frame':  597 obs. of  25 variables:</span></span>
 <span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
-<span><span class="co">#&gt;   ..- attr(*, "index")= int(0) </span></span>
-<span><span class="co">#&gt;   .. ..- attr(*, "__whale")= int [1:610] 146 319 441 118 39 442 1 320 194 195 ...</span></span>
-<span><span class="co">#&gt;  $ birth   :Classes 'data.table' and 'data.frame':   1000 obs. of  25 variables:</span></span>
+<span><span class="co">#&gt;  $ birth    :Classes 'data.table' and 'data.frame':  1000 obs. of  25 variables:</span></span>
 <span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
 <span><span class="co">#&gt;   ..- attr(*, "sorted")= chr "cohort"</span></span>
-<span><span class="co">#&gt;   ..- attr(*, "index")= int(0) </span></span>
-<span><span class="co">#&gt;   .. ..- attr(*, "__cohort__whale")= int(0) </span></span>
-<span><span class="co">#&gt;  $ abort   :Classes 'data.table' and 'data.frame':   1000 obs. of  2 variables:</span></span>
+<span><span class="co">#&gt;  $ abort    :Classes 'data.table' and 'data.frame':  1000 obs. of  2 variables:</span></span>
 <span><span class="co">#&gt;   ..- attr(*, ".internal.selfref")=&lt;externalptr&gt; </span></span>
-<span><span class="co">#&gt;  $ param   :List of 11</span></span>
-<span><span class="co">#&gt;  $ init    :List of 3</span></span>
-<span><span class="co">#&gt;  $ run     : 'hms' num 01:33:14</span></span>
+<span><span class="co">#&gt;  $ param    :List of 11</span></span>
+<span><span class="co">#&gt;  $ stressors:List of 2</span></span>
+<span><span class="co">#&gt;  $ init     :List of 3</span></span>
+<span><span class="co">#&gt;  $ run      : 'hms' num 01:29:11</span></span>
 <span><span class="co">#&gt;   ..- attr(*, "units")= chr "secs"</span></span>
-<span><span class="co">#&gt;  $ scenario:List of 12</span></span>
+<span><span class="co">#&gt;  $ scenario :List of 12</span></span>
 <span><span class="co">#&gt;   ..- attr(*, "class")= chr [1:2] "narwscenario" "list"</span></span>
-<span><span class="co">#&gt;  $ post    :List of 7</span></span>
-<span><span class="co">#&gt;  - attr(*, "class")= chr [1:2] "narwsim" "list"</span></span>
-<span><span class="co">#&gt;  - attr(*, "seed")= int 9443</span></span></code></pre></div>
+<span><span class="co">#&gt;  $ post     :List of 7</span></span>
+<span><span class="co">#&gt;  - attr(*, "class")= chr [1:2] "narwsim" "list"</span></span></code></pre></div>
 </div>
 <div class="section level2" data-link="Exporting data">
 <h2 id="predicting-abundance">Predicting abundance<a class="anchor" aria-label="anchor" href="#predicting-abundance"></a>
@@ -179,8 +175,8 @@ abundance over a time horizon of interest.</p>
 accepts.</p>
 <table class="table">
 <colgroup>
-<col width="24%">
-<col width="24%">
+<col width="25%">
+<col width="25%">
 <col width="50%">
 </colgroup>
 <thead><tr class="header">
@@ -197,7 +193,7 @@ accepts.</p>
 </tr>
 <tr class="even">
 <td><code>n</code></td>
-<td><code>100</code></td>
+<td><code>500</code></td>
 <td>Integer. Number of replicates projections.</td>
 </tr>
 <tr class="odd">
@@ -255,7 +251,7 @@ is considered only if replicate coefficients have been sampled from the
 posteriors of the fitted survival and body condition GAMs using the
 <code>augment()</code> function (see previous section).</p>
 <p>The <code>n</code> argument controls the number of replicate
-projections and is set to <code>100</code> by default. Generating a
+projections and is set to <code>500</code> by default. Generating a
 single projection instead is straightforward, as shown here:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">preds_n1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">model_base</span>, n <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
@@ -268,9 +264,10 @@ phase without wind farm activity between 2019 and the current year
 (e.g., 2024), followed by an optional, one-year construction phase, and
 an operational phase that lasts for the remainder of the projection. The
 timing of construction and operation and maintenance activities within
-the time horizon of a projection is defined by the ** scenario bundle**
-(i.e., one or more R objects containing the outputs of one or more runs
-of the agent-based model) which is passed to <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>.</p>
+the time horizon of a projection is defined by the <strong>scenario
+bundle</strong> (i.e., one or more R objects containing the outputs of
+one or more runs of the agent-based model) which is passed to
+<code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>.</p>
 <p>There are several possible options:</p>
 <ul>
 <li>
@@ -310,7 +307,7 @@ example</p>
 </ul>
 <blockquote>
 <p><strong>Note 5.2:</strong> <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> cannot process more
-than one scenario <strong>bundle</strong> at a time. Therefore, separate
+than one <strong>scenario bundle</strong> at a time. Therefore, separate
 calls to <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> must be made to compare population
 projections for multiple, alternative scenarios such as those involving
 different schedules of piling, different wind farm sites etc.</p>
@@ -324,8 +321,8 @@ different schedules of piling, different wind farm sites etc.</p>
 command, which takes the following arguments:</p>
 <table class="table">
 <colgroup>
-<col width="24%">
-<col width="24%">
+<col width="25%">
+<col width="25%">
 <col width="50%">
 </colgroup>
 <thead><tr class="header">
@@ -451,17 +448,6 @@ assign the output back to the original projection object to overwrite
 the previous label. For example:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">proj_01</span> <span class="op">&lt;-</span> <span class="fu">label</span><span class="op">(</span><span class="va">proj_01</span>, <span class="st">"Scenario 01"</span><span class="op">)</span></span></code></pre></div>
-<p>If predicted trends are similar, the resulting plot can be difficult
-to interpret. An alternative way of comparing trends is to compute the
-difference in predicted abundance between each pair of replicate
-projections. This can be done by setting the <code>diff</code> argument
-to <code>TRUE</code>. There is no evidence for a difference between
-projections if the resulting confidence interval overlaps zero.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">proj_base</span>, <span class="va">proj_01</span>, <span class="va">proj_02</span>, <span class="va">proj_03</span>, diff <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Scale for <span style="color: #00BB00;">y</span> is already present.</span></span>
-<span><span class="co">#&gt; Adding another scale for <span style="color: #00BB00;">y</span>, which will replace the existing scale.</span></span></code></pre></div>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-12-1.png" width="768"></p>
 </div>
 <div class="section level2">
 <h2 id="summarizing-projections">Summarizing projections<a class="anchor" aria-label="anchor" href="#summarizing-projections"></a>
@@ -478,9 +464,7 @@ i.e., the probability that the number of reproductive females falls
 below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
 <em>et al.</em> 2023</a>)</span>.</p></li>
 </ul>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">proj_base</span><span class="op">)</span></span>
-<span><span class="co">#&gt; -------------------------------------------------------------</span></span>
+<pre><code><span><span class="co">#&gt; -------------------------------------------------------------</span></span>
 <span><span class="co">#&gt; -------------------------------------------------------------</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;      NORTH ATLANTIC RIGHT WHALE (Eubalaena glacialis)</span></span>
@@ -490,7 +474,7 @@ below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
 <span><span class="co">#&gt; -------------------------------------------------------------</span></span>
 <span><span class="co">#&gt; -------------------------------------------------------------</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Replicates: N = 100 </span></span>
+<span><span class="co">#&gt; Replicates: N = 500 </span></span>
 <span><span class="co">#&gt; Projection horizon: 35 years</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Timeline:</span></span>
@@ -516,32 +500,32 @@ below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
 <span><span class="co">#&gt; Total                         356</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Final population size:</span></span>
-<span><span class="co">#&gt; N = 153 (95% CI: 118 – 181)</span></span>
+<span><span class="co">#&gt; N = 176 (95% CI: 151 – 208)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; cohort                       N                     </span></span>
-<span><span class="co">#&gt; ---------------------------  ----------------------</span></span>
-<span><span class="co">#&gt; Calves (male)                2 (95% CI: 0 – 5)     </span></span>
-<span><span class="co">#&gt; Juveniles (male)             10 (95% CI: 4 – 17)   </span></span>
-<span><span class="co">#&gt; Adults (male)                85 (95% CI: 68 – 103) </span></span>
-<span><span class="co">#&gt; Calves (female)              1 (95% CI: 0 – 4)     </span></span>
-<span><span class="co">#&gt; Juveniles (female)           10 (95% CI: 4 – 16)   </span></span>
-<span><span class="co">#&gt; Adults (female, pregnant)    3 (95% CI: 1 – 7)     </span></span>
-<span><span class="co">#&gt; Adults (female, lactating)   3 (95% CI: 0 – 7)     </span></span>
-<span><span class="co">#&gt; Adults (female, resting)     37 (95% CI: 23 – 48)  </span></span>
+<span><span class="co">#&gt; cohort                       N                      </span></span>
+<span><span class="co">#&gt; ---------------------------  -----------------------</span></span>
+<span><span class="co">#&gt; Calves (male)                2 (95% CI: 0 – 5)      </span></span>
+<span><span class="co">#&gt; Juveniles (male)             11 (95% CI: 5 – 18)    </span></span>
+<span><span class="co">#&gt; Adults (male)                110 (95% CI: 93 – 129) </span></span>
+<span><span class="co">#&gt; Calves (female)              1 (95% CI: 0 – 4)      </span></span>
+<span><span class="co">#&gt; Juveniles (female)           9 (95% CI: 4 – 15)     </span></span>
+<span><span class="co">#&gt; Adults (female, pregnant)    3 (95% CI: 0 – 8)      </span></span>
+<span><span class="co">#&gt; Adults (female, lactating)   3 (95% CI: 0 – 7)      </span></span>
+<span><span class="co">#&gt; Adults (female, resting)     36 (95% CI: 24 – 49)   </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; HEALTH &amp; MORTALITY</span></span>
-<span><span class="co">#&gt; =============================================================</span></span></code></pre></div>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-13-1.png" width="700"></p>
+<span><span class="co">#&gt; =============================================================</span></span></code></pre>
+<p><img src="model_predictions_files/figure-html/unnamed-chunk-12-1.png" width="768"></p>
 <pre><code><span><span class="co">#&gt; cohort    survival                  body condition            min condition (gestation)</span></span>
-<span><span class="co">#&gt; --------  ------------------------  ------------------------  ---------------------------</span></span>
-<span><span class="co">#&gt; c(m,f)    0.722 ± 0.233 [0–1]       0.29 ± 0.186 [0–0.613]    -</span></span>
-<span><span class="co">#&gt; jv(ml)    0.976 ± 0.04 [0.714–1]    0.287 ± 0.073 [0–0.581]   -</span></span>
-<span><span class="co">#&gt; jv(fml)   0.979 ± 0.038 [0.714–1]   0.293 ± 0.07 [0–0.637]    -</span></span>
-<span><span class="co">#&gt; ad(ml)    0.966 ± 0.017 [0.893–1]   0.36 ± 0.087 [0–0.665]    -</span></span>
-<span><span class="co">#&gt; ad(f,p)   0.972 ± 0.082 [0–1]       0.398 ± 0.104 [0–0.665]   -</span></span>
-<span><span class="co">#&gt; ad(f,l)   0.907 ± 0.155 [0–1]       0.097 ± 0.047 [0–0.36]    -</span></span>
-<span><span class="co">#&gt; ad(f,r)   0.955 ± 0.029 [0.8–1]     0.348 ± 0.095 [0–0.665]   0.496 ± 0.06 [0.161–0.713]</span></span>
+<span><span class="co">#&gt; --------  ------------------------  ------------------------  ----------------------------</span></span>
+<span><span class="co">#&gt; c(m,f)    0.711 ± 0.226 [0–1]       0.292 ± 0.192 [0–0.665]   -</span></span>
+<span><span class="co">#&gt; jv(ml)    0.974 ± 0.04 [0.625–1]    0.289 ± 0.075 [0–0.622]   -</span></span>
+<span><span class="co">#&gt; jv(fml)   0.971 ± 0.047 [0–1]       0.29 ± 0.076 [0–0.654]    -</span></span>
+<span><span class="co">#&gt; ad(ml)    0.974 ± 0.013 [0.914–1]   0.365 ± 0.081 [0–0.665]   -</span></span>
+<span><span class="co">#&gt; ad(f,p)   0.953 ± 0.106 [0–1]       0.394 ± 0.117 [0–0.665]   -</span></span>
+<span><span class="co">#&gt; ad(f,l)   0.916 ± 0.145 [0–1]       0.099 ± 0.048 [0–0.454]   -</span></span>
+<span><span class="co">#&gt; ad(f,r)   0.957 ± 0.029 [0.75–1]    0.35 ± 0.095 [0–0.665]    0.495 ± 0.061 [0.154–0.727]</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; FECUNDITY</span></span>
@@ -549,20 +533,20 @@ below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Calving events</span></span>
 <span><span class="co">#&gt; ----------------------------------</span></span>
-<span><span class="co">#&gt; Per year: N = 4.8 ± 2.46 [0–17]</span></span>
-<span><span class="co">#&gt; Per female: N = 0.38 ± 0.91 [0–8]</span></span>
+<span><span class="co">#&gt; Per year: N = 5.11 ± 2.52 [0–17]</span></span>
+<span><span class="co">#&gt; Per female: N = 0.39 ± 0.93 [0–7]</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Resting phase</span></span>
 <span><span class="co">#&gt; -----------------------------</span></span>
-<span><span class="co">#&gt; t(rest): 5 ± 5 [1–39]</span></span>
-<span><span class="co">#&gt; t(inter-birth): 8 ± 4 [2–40]</span></span>
+<span><span class="co">#&gt; t(rest): 5 ± 5 [1–41]</span></span>
+<span><span class="co">#&gt; t(inter-birth): 8 ± 4 [2–37]</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Non-reproductive females:</span></span>
-<span><span class="co">#&gt; 4.28 (±1.02) [0–8] %</span></span>
+<span><span class="co">#&gt; 4.35 (±1.01) [0–9.52] %</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Abortion    Simulation (%)  Projection (%)</span></span>
-<span><span class="co">#&gt; ---------  ---------------  ---------------------</span></span>
-<span><span class="co">#&gt; Baseline               2.3  2.8 (±10.28) [0–100]</span></span>
+<span><span class="co">#&gt; ---------  ---------------  ----------------------</span></span>
+<span><span class="co">#&gt; Baseline               3.3  4.09 (±12.97) [0–300]</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; =============================================================</span></span>
@@ -571,15 +555,15 @@ below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; year   p(quasi-extinct)</span></span>
 <span><span class="co">#&gt; -----  -----------------</span></span>
-<span><span class="co">#&gt; 2024               0.00</span></span>
-<span><span class="co">#&gt; 2029               0.00</span></span>
-<span><span class="co">#&gt; 2034               0.00</span></span>
-<span><span class="co">#&gt; 2039               0.01</span></span>
-<span><span class="co">#&gt; 2044               0.18</span></span>
-<span><span class="co">#&gt; 2049               0.47</span></span>
-<span><span class="co">#&gt; 2054               0.73</span></span>
-<span><span class="co">#&gt; 2059               0.87</span></span></code></pre>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-13-2.png" width="700"></p>
+<span><span class="co">#&gt; 2024              0.000</span></span>
+<span><span class="co">#&gt; 2029              0.000</span></span>
+<span><span class="co">#&gt; 2034              0.000</span></span>
+<span><span class="co">#&gt; 2039              0.034</span></span>
+<span><span class="co">#&gt; 2044              0.204</span></span>
+<span><span class="co">#&gt; 2049              0.502</span></span>
+<span><span class="co">#&gt; 2054              0.752</span></span>
+<span><span class="co">#&gt; 2059              0.878</span></span></code></pre>
+<p><img src="model_predictions_files/figure-html/unnamed-chunk-12-2.png" width="768"></p>
 </div>
 <div class="section level2 unnumbered">
 <h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
