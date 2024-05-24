@@ -3,7 +3,8 @@
 #' Takes one or more \code{narwproj} object(s) and creates plots of the estimated population trajectories.
 #'
 #' @param ... One or more objects of class \code{narwproj}, as returned by \link{predict.narwsim}.
-#' @param diff Logical. If \code{TRUE}, returns plots of the average differences between projections. Defaults to \code{FALSE}.
+#' @param diff Logical. If \code{TRUE}, returns plots of the differences between pairs of projections. Defaults to \code{FALSE}.
+#' @param diff.avg Logical. If \code{TRUE}, returns plots of the average differences between projections. Defaults to \code{FALSE}.
 #' @param all.diff Logical. Whether the plots returned by \code{diff} should include individual differences between replicate projections.
 #' @param cohen Logical. If \code{TRUE}, assesses the magnitude of differences using Cohen's D, where small (d = 0.2), medium (d = 0.5), and large (d ≥ 0.8).
 #' @param interval Logical. If \code{TRUE}, percentile confidence intervals are shown on the plots. Defaults to \code{TRUE}.
@@ -32,6 +33,7 @@
 #' }
 plot.narwproj <- function(...,
                           diff = FALSE,
+                          diff.avg = FALSE,
                           all.diff = FALSE,
                           cohen = FALSE,
                           interval = TRUE,
@@ -50,6 +52,8 @@ plot.narwproj <- function(...,
   
   # Function ellipsis –– optional arguments
   args <- list(...)
+  
+  if(diff & diff.avg) stop("Cannot set both <diff> and <diff.avg> to TRUE")
   
   if(cohort) timeline <- FALSE
   if(noaa) full <- TRUE
@@ -85,7 +89,7 @@ plot.narwproj <- function(...,
   # Define years for the x-axis
   if(!full){
     start.year <- obj[[1]]$param$start.year
-    if(diff) start.year <- start.year - obj[[1]]$param$burn
+    if(diff.avg) start.year <- start.year - obj[[1]]$param$burn
   } else {
     start.year <- 2000
   }
@@ -97,6 +101,50 @@ plot.narwproj <- function(...,
   
   # Calculate difference between projections, if desired
   if(diff){
+    
+    n <- obj[[1]]$param$n
+    allcombs <- combn(seq_along(obj), m = 2)
+    
+    # For all combinations
+    difftbl <- purrr::map(.x = 1:ncol(allcombs), .f = ~{
+      
+      # All combinations of individual projections
+      ndiff <- unique(expand.grid(1:n, 1:n))
+      
+      diffproj <- matrix(data = NA, nrow = nrow(ndiff), ncol = end.year-start.year + 1)
+      
+      pb <- progress::progress_bar$new(total = nrow(ndiff), width = 80, format = "Calculating differences [:bar] :percent eta: :eta", clear = TRUE)
+      
+      for(i in seq_len(nrow(ndiff))){
+        pb$tick()
+        diffproj[i, ] <- obj[[allcombs[1,.x]]]$proj$tbl[year >= start.year & cohort == "North Atlantic right whales" & prj == ndiff[i,1], N] -
+          obj[[allcombs[2,.x]]]$proj$tbl[year >= start.year &  cohort == "North Atlantic right whales" & prj == ndiff[i,2], N]
+      }
+      
+      data.table::data.table(year = seq(start.year, end.year),
+                             mean = colMeans(diffproj),
+                             lwr = apply(X = diffproj, MARGIN = 2, FUN = function(x) quantile(x, 0.025)),
+                             uppr = apply(X = diffproj, MARGIN = 2, FUN = function(x) quantile(x, 0.975)),
+                             label = paste0("[",proj.labels[allcombs[1,.x]], "] vs. [", proj.labels[allcombs[2,.x]], "]"))
+      
+    }) |> data.table::rbindlist()
+    
+    p <- ggplot2::ggplot() +
+      {if (interval) ggplot2::geom_ribbon(data = difftbl, 
+                                          aes(x = year, y = mean, ymin = lwr, ymax = uppr), alpha = 0.15)} +
+      ggplot2::geom_line(data = difftbl, aes(x = year, y = mean), linetype = "solid", linewidth = 0.8) +
+      ggplot2::scale_y_continuous(limits = c(min(0, min(difftbl$lwr)), max(0, max(difftbl$uppr)))) +
+      ggplot2::geom_abline(intercept = 0, slope = 0, linetype = "dotted") +
+      xlab("") + ylab ("Difference in predicted NARW abundance") +
+      ggplot2::facet_wrap(~label, scales = scales, ncol = ncol) +
+      ggplot2::scale_x_continuous(breaks = pretty(c(start.year, end.year), n = 10)) +
+      ggplot2::scale_y_continuous(breaks = pretty(c(min(0, min(difftbl$lwr)), max(0, max(difftbl$uppr))), n = 10)) +
+      theme_narw()
+    
+    suppressWarnings(print(p))
+    
+    
+  } else if(diff.avg){
     
     alpha_level <- 0.05
     
@@ -338,6 +386,6 @@ plot.narwproj <- function(...,
       suppressWarnings(print(p))
     }
     
-  } # End diff
+  } # End 
   
 }

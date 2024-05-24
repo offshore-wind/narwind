@@ -450,11 +450,12 @@ the previous label. For example:</p>
 <code class="sourceCode R"><span><span class="va">proj_01</span> <span class="op">&lt;-</span> <span class="fu">label</span><span class="op">(</span><span class="va">proj_01</span>, <span class="st">"Scenario 01"</span><span class="op">)</span></span></code></pre></div>
 <p>If predicted trends are similar, the resulting plot can be difficult
 to interpret. An alternative way of comparing trends is to compute the
-difference in mean predicted abundance between scenarios. This can be
-done by setting the <code>diff</code> argument to <code>TRUE</code>.
-There is no evidence for a difference between projections if the
-resulting confidence interval overlaps zero.</p>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-12-1.png" width="768"></p>
+difference in predicted abundance between pairs of replicate
+projections. This can be done by setting the <code>diff</code> argument
+to <code>TRUE</code>. There is no evidence for a difference between
+projections if the resulting pointwise confidence interval overlaps
+zero.</p>
+<p><img src="proj_diffs.png"></p>
 </div>
 <div class="section level2">
 <h2 id="summarizing-projections">Summarizing projections<a class="anchor" aria-label="anchor" href="#summarizing-projections"></a>
@@ -523,7 +524,7 @@ below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
 <span><span class="co">#&gt; =============================================================</span></span>
 <span><span class="co">#&gt; HEALTH &amp; MORTALITY</span></span>
 <span><span class="co">#&gt; =============================================================</span></span></code></pre>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-13-1.png" width="768"></p>
+<p><img src="model_predictions_files/figure-html/unnamed-chunk-12-1.png" width="768"></p>
 <pre><code><span><span class="co">#&gt; cohort    survival                  body condition            min condition (gestation)</span></span>
 <span><span class="co">#&gt; --------  ------------------------  ------------------------  ----------------------------</span></span>
 <span><span class="co">#&gt; c(m,f)    0.711 ± 0.226 [0–1]       0.292 ± 0.192 [0–0.665]   -</span></span>
@@ -570,7 +571,7 @@ below N = 50 <span class="citation">(<a href="#ref-Runge2023">Runge
 <span><span class="co">#&gt; 2049              0.502</span></span>
 <span><span class="co">#&gt; 2054              0.752</span></span>
 <span><span class="co">#&gt; 2059              0.878</span></span></code></pre>
-<p><img src="model_predictions_files/figure-html/unnamed-chunk-13-2.png" width="768"></p>
+<p><img src="model_predictions_files/figure-html/unnamed-chunk-12-2.png" width="768"></p>
 </div>
 <div class="section level2 unnumbered">
 <h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
