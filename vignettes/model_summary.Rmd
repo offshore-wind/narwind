@@ -35,7 +35,7 @@ load("data/scenarios/final_report/boem_baseline.rda")
 
 ```{r, echo = FALSE}
 downloadthis::download_link(
-  link = "https://raw.githubusercontent.com/offshore-wind/narwind/98ad9169dd09dfad682d0dc4f5c32c9ad02aeef1/vignettes/pdf/4_Summary%20and%20diagnostics.pdf",
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/4b37f5aaa25ff5be9f2e175a98796a840e7237b4/vignettes/pdf/4%20Summary%20and%20diagnostics.pdf",
   button_label = "Download PDF",
   button_type = "primary",
   has_icon = TRUE,
@@ -61,7 +61,7 @@ model_base
 Optional arguments allow users to override these default settings and display data for specific days, animals, and/or cohorts, as needed. The `print()` method has the following arguments:
 
 | Argument | Default value | Description                                                                                                                                                                                                                                                 |
-|------------------|------------------|------------------------------------|
+|-------------------|-------------------|------------------------------------|
 | `obj`    | `-`           | Input model object returned by `narw()`.                                                                                                                                                                                                                    |
 | `rowID`  | `1:5`         | Positive integer or vector of positive integers indicating which days of the simulation should be displayed. Defaults to the first first days.                                                                                                              |
 | `whale`  | `1`           | Positive integer indicating the individual for which data should be extracted. Only the first individual is included by default.                                                                                                                            |
@@ -82,7 +82,7 @@ The `summary()` method provides a range of diagnostics that are helpful for asse
 The function takes the following arguments:
 
 | Argument   | Default value | Description                                                                                                                                                                                                                                                                                 |
-|------------------|------------------|------------------------------------|
+|-------------------|-------------------|------------------------------------|
 | `obj`      | `-`           | Model object of class `narwsim`, as returned by `narw()`.                                                                                                                                                                                                                                   |
 | `what`     | `"all"`       | Character string indicating which component(s) of the summary to display. Can be one of: `"health"`, `"movements"`, `"habitat"`, `"behavior"`, `"stressors"`, `"strike"`, `"gear"`, `"noise"`, `"other"`, or `"energy"`. See below for details. Defaults to `"all"` for a complete summary. |
 | `relative` | `FALSE`       | Logical. If `TRUE`, percentages are calculated relative to class totals. Defaults to `FALSE`.                                                                                                                                                                                               |
@@ -94,7 +94,7 @@ The function takes the following arguments:
 As summaries tend to be long and dense, the `what` argument can be used to select subsets of data to show in the R console. The table below lists the information returned for each possible value of `what`.
 
 | Category    | Component                            | Plots | Details                                                                                                                                                                                                                                       |
-|-----------------|-----------------|-----------------|----------------------|
+|-----------------|-----------------|-----------------|---------------------|
 | `health`    | Mortality                            | No    | Whale mortality by region, cohort, and cause of death (i.e., starvation vs. vessel strike) .                                                                                                                                                  |
 |             | Pregnancy                            | No    | Observed abortion rate in females that started the simulation in a pregnant state.                                                                                                                                                            |
 |             | Births                               | No    | Mean (range) date of calving events.                                                                                                                                                                                                          |
@@ -131,7 +131,7 @@ summary(model_base, cohort = 5)
 Several plots can be obtained from the outputs of the agent-based model -- all are produced using the `plot()` method, which takes the following arguments:
 
 | Argument | Default value | Description                                                                                                                                                                                                                                                                                                          |
-|------------------|------------------|------------------------------------|
+|-------------------|-------------------|------------------------------------|
 | `obj`    | `-`           | Model object of class `narwsim`, as returned by `narw()`.                                                                                                                                                                                                                                                            |
 | `what`   | `"map"`       | Character string indicating which plots to return.                                                                                                                                                                                                                                                                   |
 | `whale`  | `1:nsim`      | Positive integer or vector of integers indicating the individual(s) for which data should be extracted. By default, the function plots tracks for all `nsim` simulated animals.                                                                                                                                      |

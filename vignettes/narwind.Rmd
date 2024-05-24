@@ -23,7 +23,7 @@ editor_options:
 
 ```{r, echo = FALSE}
 downloadthis::download_link(
-  link = "https://raw.githubusercontent.com/offshore-wind/narwind/98ad9169dd09dfad682d0dc4f5c32c9ad02aeef1/vignettes/pdf/0_Getting%20started%20with%20narwind.pdf",
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/4b37f5aaa25ff5be9f2e175a98796a840e7237b4/vignettes/pdf/0%20Getting%20started%20with%20narwind.pdf",
   button_label = "Download PDF",
   button_type = "primary",
   has_icon = TRUE,
