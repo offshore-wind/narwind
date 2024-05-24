@@ -962,24 +962,31 @@ Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month =
     // Calves
     if(cohort[i] == 0){ 
       
-      bc[i] = rtnorm(0.35884621, 0.07788818, lower, upper);
+      bc[i] = R::runif(lower, upper);
+      // bc[i] = rtnorm(0.35884621, 0.07788818, lower, upper);
       
       // Juveniles (males and females)
     } else if(cohort[i] == 1 | cohort[i] == 2){
       
+      bc[i] = R::runif(lower, upper);
+      
       // bc[i] = rtnorm(0.28574784, 0.02027885, 0.05, 0.665289);
-      bc[i] = rtnorm(0.2904040, 0.0681619, lower, upper);
+      // bc[i] = rtnorm(0.2904040, 0.0681619, lower, upper);
       
       // Adult males, resting females, pregnant females
     } else if(cohort[i] == 3 | cohort[i] == 4 | cohort[i] == 6) {
       
+      bc[i] = R::runif(lower, upper);
+      
       // bc[i] = rtnorm(0.25940715, 0.01519702, 0.05, 0.665289);
-      bc[i] = rtnorm(0.27617455, 0.06969136, lower, upper);
+      // bc[i] = rtnorm(0.27617455, 0.06969136, lower, upper);
       
       // Lactating females, which start simulation as late pregnant
     } else if(cohort[i] == 5){ 
       
-      bc[i] = rtnorm(0.4462601, 0.1026832, 0.4, upper);
+      bc[i] = R::runif(0.4, upper);
+      
+      // bc[i] = rtnorm(0.4462601, 0.1026832, 0.4, upper);
       
     }
     
