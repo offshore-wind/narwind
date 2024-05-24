@@ -207,7 +207,7 @@ predict.narwsim <- function(...,
   
   # Define initial population vector
   # Adjust predictions from NOAA model to reflect a more stable age/stage structure
-  # This is achieved by running adjust_popvec() to a test projection (noaa = TRUE)
+  # This is achieved by running adjust_popvec() on a test projection (noaa = TRUE)
   if(noaa){
     # Note that the sum of cohort abundances in N_0 differs slightly
     # from the median population size under NOAA's most recent PVA
@@ -330,7 +330,7 @@ predict.narwsim <- function(...,
     mass <- length2mass_vec(lengths)
     narw.indiv[1, "lean_mass", ] <- mass
     
-    # Initial body condition - from Christiansen et al. (2022)
+    # Initial body condition - from Christiansen et al. (2020) and (2022)
     # Values obtained using the init_bc() function
     bc_dist <- data.table::data.table(
       cohort = unique(obj[[schedule.phases[1]]]$gam$dat$cohort),
@@ -1032,7 +1032,8 @@ predict.narwsim <- function(...,
      abort = abort.rate,
      nonrep = nonrep,
      phases = phase.names,
-     schedule = schedule
+     schedule = schedule,
+     run = run_time
    ),
    init = list(
      N_0 = N_0,
