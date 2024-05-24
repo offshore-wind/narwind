@@ -30,7 +30,7 @@ knitr::opts_chunk$set(
 
 ```{r, echo = FALSE}
 downloadthis::download_link(
-  link = "https://raw.githubusercontent.com/offshore-wind/narwind/0a45ae03f1938cd5396895b943b8615f28812669/vignettes/pdf/3%20Running%20the%20model.pdf",
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/98ad9169dd09dfad682d0dc4f5c32c9ad02aeef1/vignettes/pdf/3_Running%20the%20model.pdf",
   button_label = "Download PDF",
   button_type = "primary",
   has_icon = TRUE,
@@ -55,7 +55,7 @@ Several arguments can be passed to `narw()`, as listed below. We detail each of 
 
 | Argument        | Default value          | Description                                                                                                                                                                                                                       |
 |-------------------|-------------------|----------------------------------|
-| `nsim`          | `1000`                 | Positive integer. Number of simulated animals per cohort.                                                                                                                                                                                    |
+| `nsim`          | `1000`                 | Positive integer. Number of simulated animals per cohort.                                                                                                                                                                         |
 | `scenario`      | `NULL`                 | An optional scenario object, as returned by the `scenario()` function.                                                                                                                                                            |
 | `label`         | `""`                   | Character. Text label assigned to the simulation object; used for plotting.                                                                                                                                                       |
 | `piling.hrs`    | `4`                    | Numeric. Length of time (hours) during which whales cease foraging following a response to pile-driving noise exposure.                                                                                                           |

@@ -34,7 +34,7 @@ devtools::load_all()
 
 ```{r, echo = FALSE}
 downloadthis::download_link(
-  link = "https://raw.githubusercontent.com/offshore-wind/narwind/a0b0430d55392769c170a83000f6f56704c018e9/vignettes/pdf/2%20Defining%20scenarios.pdf",
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/98ad9169dd09dfad682d0dc4f5c32c9ad02aeef1/vignettes/pdf/2_Defining%20scenarios.pdf",
   button_label = "Download PDF",
   button_type = "primary",
   has_icon = TRUE,
