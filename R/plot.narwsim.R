@@ -160,10 +160,10 @@ plot.narwsim <- function(obj,
             {if(.x == "surv") ggplot2::scale_y_continuous(limits = c(0,1))} +
             {if(.x == "bc") ggplot2::scale_y_continuous(limits = c(0, find_maxBC()))} +
             theme_narw(bbox = bbox) +
-            xlab("Starting body condition (relative reserve mass)") +
+            xlab("Starting body condition (relative reserve mass, %)") +
             ylab(dplyr::case_when(
               .x == "surv" ~ "p(survival)",
-              .x == "bc" ~ "Final body condition (relative reserve mass)",
+              .x == "bc" ~ "Final body condition (relative reserve mass, %)",
               .default = ""
             ))
         }
