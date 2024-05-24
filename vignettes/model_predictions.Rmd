@@ -39,7 +39,7 @@ load("data/scenarios/final_report/boem_projections.rda")
 
 ```{r, echo = FALSE}
 downloadthis::download_link(
-  link = "https://raw.githubusercontent.com/offshore-wind/narwind/4b37f5aaa25ff5be9f2e175a98796a840e7237b4/vignettes/pdf/5%20Model%20predictions.pdf",
+  link = "https://raw.githubusercontent.com/offshore-wind/narwind/38ca24a24f307b3b71a80d33b1b4c1818c27d471/vignettes/pdf/5%20Model%20predictions.pdf",
   button_label = "Download PDF",
   button_type = "primary",
   has_icon = TRUE,
