@@ -965,9 +965,10 @@ colour_breaks <- function(dat){
 
 # UTILITIES ------------------------------------------------------
 
-compareSim <- function(...){
+compareSim <- function(..., perc = FALSE){
 
    args <- list(...)
+   nind <- args[[1]]$param$nsim
   
    allcombs <- combn(seq_along(args), 2)
 
@@ -976,10 +977,22 @@ compareSim <- function(...){
      purrr::map2(.x = args[[allcombs[1,x]]]$sim,
                  .y = args[[allcombs[2,x]]]$sim,
                  .f = ~{
-                  out <- data.table:::all.equal.data.table(target = .x[, list(easting, northing)], 
-                                                     current = .y[, list(easting, northing)], tolerance = 1e-3)
-                  if(is.character(out)) FALSE else out
-                     
+                  
+                   if(perc){
+                  equal.n <- numeric(length = nind)
+                  for(i in seq_len(nind)){
+                    out <- data.table:::all.equal.data.table(target = .x[whale == i, list(easting, northing)], 
+                                                      current = .y[whale == i, list(easting, northing)], tolerance = 1e-3)
+                    if(!is.character(out)) equal.n[i] <- 1
+                  }
+                  sum(equal.n)/nind*100
+                   } else {
+                     out <- data.table:::all.equal.data.table(target = .x[, list(easting, northing)],
+                                                              current = .y[, list(easting, northing)], tolerance = 1e-3)
+                     if(is.character(out)) FALSE else out
+                   }
+
+
                  }) |> do.call(what = c)
      })
    
