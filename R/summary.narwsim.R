@@ -4,7 +4,7 @@
 #'
 #' @param obj An object of class \code{narwsim}, as returned by \code{\link{narw}}.
 #' @param what Character, or character vector, defining which data to summarize. The default (\code{"all"}) returns a full summary of all model components. See Details for further information.
-#' @param relative Logical. If \code{TRUE}, percentages are calculated relative to class totals. Defaults to \code{FALSE}.
+#' @param relative Logical. If \code{TRUE}, percentages are calculated relative to class totals. Defaults to \code{TRUE}.
 #' @param quintile Logical. If \code{TRUE}, body condition plots (under the "health" section) are based on quintiles of the data.
 #' @param plot Logical. If \code{TRUE}, additional plots are produced.
 #' @param ... Optional arguments for subsetting.
@@ -86,7 +86,7 @@
 
 summary.narwsim <- function(obj, 
                             what = "all", 
-                            relative = FALSE,
+                            relative = TRUE,
                             quintile = FALSE,
                             plot = TRUE,
                             ...){
