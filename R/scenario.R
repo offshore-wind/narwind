@@ -157,7 +157,7 @@ scenario <- function() {
                                                     multiple = TRUE),
                                           selectInput("custom_phase", label = 'Development Phase',
                                                       choices = c('Construction' = 1, 
-                                                                  'Operation and Management' = 2))
+                                                                  'Operation and maintenance' = 2))
                          )
                          
                          
