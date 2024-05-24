@@ -32,20 +32,8 @@ narw <- function(nsim = 1e3,
   
   
   # pair: An object of class \code{narwsim}, to which the current simulation must be matched. With the exception of wind farm parameters, simulation conditions between paired runs are identical; pairing is therefore useful for comparative assessments of competing offshore wind scenarios.
-  # pair = NULL
-  
-  # Match random seed if pairing scenario is provided
-  # if(!is.null(attr(pair,"seed"))){
-  #   assign(".Random.seed",  attr(pair, "seed"), .GlobalEnv)
-  # }
-  
-  # if(!is.null(attr(pair,"seed"))){
-  #   rdseed <- attr(pair,"seed")
-  # } else {
-  #   rdseed <- sample(1:10000, size = 1)
-  # }
-  # 
-  # set.seed(rdseed)
+
+  args.names <- substitute(...())
   
   # Function ellipsis –– optional arguments
   args <- list(...)
@@ -83,9 +71,7 @@ narw <- function(nsim = 1e3,
       }
     }
   }
-  
-  # if(!is.null(pair) & !inherits(pair, "narwsim")) stop("Input to <pair> must be an object of class <narwsim>")
-  
+
   if(piling.hrs < 0 | piling.hrs > 24) stop("<piling.hrs> must be between 0 and 24.")
   
   ##'...............................
@@ -111,13 +97,28 @@ narw <- function(nsim = 1e3,
   if("stressors" %in% names(args)) stressors <- args[["stressors"]] else stressors <- TRUE
   if("growth" %in% names(args)) growth <- args[["growth"]] else growth <- TRUE
   if("pkgdev" %in% names(args)) pkgdev <- args[["pkgdev"]] else pkgdev <- FALSE
+  if("prey.scalar" %in% names(args)) prey.scalar <- args[["prey.scalar"]] else prey.scalar <- 29
+  
+  # if("pair" %in% names(args)) pair <- args[["pair"]] else pair <- NULL
+  # 
+  # if(!is.null(pair) & !inherits(pair, "narwsim")) stop("Input to <pair> must be an object of class <narwsim>")
+  
+  # Match random seed if pairing scenario is provided
+  # if(!is.null(attr(pair,"seed"))){
+  #   assign(".Random.seed",  attr(pair, "seed"), .GlobalEnv)
+  # }
+  
+  # if(!is.null(attr(pair,"seed"))){
+  #   rdseed <- attr(pair,"seed")
+  # } else {
+  #   rdseed <- sample(1:10000, size = 1)
+  # }
+  # 
+  # set.seed(rdseed)
   
   # Vessel strike risk scalar.
   # Factor by which vessel strike risk rasters are multiplied to scale to strike probabilities.
   strike.scalar <- 1e-07
-  
-  # Scalar for prey surfaces
-  prey.scalar <- 29
   
   # Mortality parameters
   starvation.death <- 0.005
@@ -168,7 +169,8 @@ narw <- function(nsim = 1e3,
   
   cat("+ Animats: N =", formatC(nsim, big.mark = ","), "[individual(s) / cohort]\n")
   cat("+ Label:", ifelse(!label == "", label, "None"), "\n")
-  # cat("+ Pairing:", ifelse(is.null(pair), "None", ifelse(pair$param$label == "", deparse(substitute(pair)), pair$param$label)), "\n\n")
+
+#   cat("+ Pairing:", ifelse(is.null(pair), "None", ifelse(pair$param$label == "", args.names[["pair"]], pair$param$label)), "\n\n")
   
   cat("+ Cohorts: \n\n")
   for (h in cohort) cat(cohorts[id==h, abb], ": ", cohorts[id==h, name], "\n", sep = "")
@@ -480,7 +482,7 @@ narw <- function(nsim = 1e3,
     cl <- snow::makeSOCKcluster(n.cores)
     doSNOW::registerDoSNOW(cl)
     on.exit(snow::stopCluster(cl))
-    # parallel::clusterSetRNGStream(cl, rdseed)
+    # parallel::clusterSetRNGStream(cl = cl, iseed = rdseed)
     
     console(msg = paste0("Initializing parallel computing (", n.cores, " cores)"), suffix = tickmark())
     
@@ -891,6 +893,7 @@ narw <- function(nsim = 1e3,
   
   outsim$param <- list(nsim = nsim,
                        label = label,
+                       # pair = args.names[["pair"]],
                        cohort = cohort,
                        cohorts = cohorts,
                        date_seq = date_seq,
