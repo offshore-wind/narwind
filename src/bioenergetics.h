@@ -15,291 +15,411 @@ using namespace std;
 // [[Rcpp::plugins(cpp11)]]
 
 /// Truncated Normal RNG ----------------------------
-// Functions taken from the RcppTN package
-// https://github.com/olmjo/RcppTN/tree/master
 
-inline bool CheckSimple(const double low, ///< lower bound of distribution
-                        const double high ///< upper bound of distribution
-) {
-  // Init Values Used in Inequality of Interest
-  double val1 = (2 * sqrt(exp(1.0))) / (low + sqrt(pow(low, 2.0) + 4));
-  double val2 = exp((pow(low, 2.0) - low * sqrt(pow(low, 2.0) + 4)) / (4)) ;
-  //
-  
-  // Test if Simple is Preferred
-  if (high > low + val1 * val2) {
-    return true ;
-  } else {
-    return false ;
-  }
-}
+// // Functions taken from the RcppTN package
+// // https://github.com/olmjo/RcppTN/tree/master
+// 
+// inline bool CheckSimple(const double low, ///< lower bound of distribution
+//                         const double high ///< upper bound of distribution
+// ) {
+//   // Init Values Used in Inequality of Interest
+//   double val1 = (2 * sqrt(exp(1.0))) / (low + sqrt(pow(low, 2.0) + 4));
+//   double val2 = exp((pow(low, 2.0) - low * sqrt(pow(low, 2.0) + 4)) / (4)) ;
+//   //
+//   
+//   // Test if Simple is Preferred
+//   if (high > low + val1 * val2) {
+//     return true ;
+//   } else {
+//     return false ;
+//   }
+// }
+// 
+// 
+// /// Draw using algorithm 1.
+// 
+// /// 
+// /// Naive Accept-Reject algorithm.
+// /// 
+// inline double UseAlg1(const double low, ///< lower bound of distribution
+//                       const double high ///< upper bound of distribution
+// ) {
+//   // Init Valid Flag
+//   int valid = 0 ;
+//   //
+//   
+//   // Init Draw Storage
+//   double z = 0.0 ;
+//   //
+//   
+//   // Loop Until Valid Draw
+//   while (valid == 0) {
+//     z = Rf_rnorm(0.0, 1.0) ;
+//     
+//     if (z <= high && z >= low) {
+//       valid = 1 ;
+//     }
+//   }
+//   //
+//   
+//   // Returns
+//   return z ;
+//   //
+// }
+// 
+// /// Draw using algorithm 2.
+// 
+// /// 
+// ///  Accept-Reject Algorithm
+// ///
+// 
+// inline double UseAlg2(const double low ///< lower bound of distribution
+// ) {
+//   // Init Values
+//   const double alphastar = (low + sqrt(pow(low, 2.0) + 4.0)) / (2.0) ;
+//   const double alpha = alphastar ;
+//   double e = 0 ;
+//   double z = 0 ;
+//   double rho = 0 ;
+//   double u = 0 ;
+//   //
+//   
+//   // Init Valid Flag
+//   int valid = 0 ;
+//   //
+//   
+//   // Loop Until Valid Draw
+//   while (valid == 0) {
+//     e = Rf_rexp(1.0) ;
+//     z = low + e / alpha ;
+//     
+//     rho = exp(-pow(alpha - z, 2.0) / 2) ;
+//     u = Rf_runif(0, 1) ;
+//     if (u <= rho) {
+//       // Keep Successes
+//       valid = 1 ;
+//     }
+//   }
+//   //
+//   
+//   // Returns
+//   return z ;
+//   //
+// }
+// 
+// /// Draw using algorithm 3.
+// 
+// /// 
+// /// Accept-Reject Algorithm
+// /// 
+// 
+// inline double UseAlg3(const double low, ///< lower bound of distribution
+//                       const double high ///< upper bound of distribution
+// ) {
+//   // Init Valid Flag
+//   int valid = 0 ;
+//   //
+//   
+//   // Declare Qtys
+//   double rho = 0 ;
+//   double z = 0 ;
+//   double u = 0 ;
+//   //
+//   
+//   // Loop Until Valid Draw
+//   while (valid == 0) {
+//     z = Rf_runif(low, high) ;
+//     if (0 < low) {
+//       rho = exp((pow(low, 2.0) - pow(z, 2.0)) / 2) ;
+//     } else if (high < 0) {
+//       rho = exp((pow(high, 2.0) - pow(z, 2.0)) / 2) ;
+//     } else if (0 < high && low < 0) {
+//       rho = exp(- pow(z, 2.0) / 2) ;
+//     }
+//     
+//     u = Rf_runif(0, 1) ;
+//     if (u <= rho) {
+//       valid = 1 ;
+//     }
+//   }
+//   //
+//   
+//   // Returns
+//   return z ;
+//   //
+// }
+// 
+// /// Draw using algorithm 2.
+// 
+// /// 
+// ///  Accept-Reject Algorithm
+// ///
+// 
+// inline double Use_Alg2(const double low ///< lower bound of distribution
+// ) {
+//   // Init Values
+//   const double alphastar = (low + sqrt(pow(low, 2.0) + 4.0)) / (2.0) ;
+//   const double alpha = alphastar ;
+//   double e = 0 ;
+//   double z = 0 ;
+//   double rho = 0 ;
+//   double u = 0 ;
+//   // //
+//   // 
+//   // // Init Valid Flag
+//   int valid = 0 ;
+//   // //
+//   
+//   // Loop Until Valid Draw
+//   while (valid == 0) {
+//     e = Rf_rexp(1.0) ;
+//     z = low + e / alpha ;
+//     rho = exp(-pow(alpha - z, 2.0) / 2) ;
+//     u = Rf_runif(0, 1) ;
+//     if (u <= rho) {
+//       // Keep Successes
+//       valid = 1 ;
+//     }
+//   }
+//   //
+//   
+//   // Returns
+//   return z ;
+//   //
+// }
+// 
+// inline double MyAlg2(const double low ///< lower bound of distribution
+// ) {
+//   // Init Values
+//   const double alpha = (low + sqrt(pow(low, 2.0) + 4.0)) / (2.0) ;
+//   
+//   int n = 100;
+//   Rcpp::NumericVector v(n);
+//   Rcpp::NumericVector zz(n);
+//   Rcpp::NumericVector ee(n);
+//   Rcpp::NumericVector r(n);
+//   Rcpp::NumericVector out(n);
+//   for(int i = 0; i<n; i++){
+//     ee(i) = Rf_rexp(1.0);
+//     v(i) = Rf_runif(0, 1);
+//     zz(i) = low + ee(i) / alpha;
+//     r(i) = exp(-pow(alpha - zz(i), 2.0) / 2);
+//     if(v(i) <= r(i)) out(i) = 1;
+//   }
+// 
+//   // Returns
+//   return zz(Rcpp::which_max(out));
+//   //
+// }
 
-
-/// Draw using algorithm 1.
-
-/// 
-/// Naive Accept-Reject algorithm.
-/// 
-inline double UseAlg1(const double low, ///< lower bound of distribution
-                      const double high ///< upper bound of distribution
-) {
-  // Init Valid Flag
-  int valid = 0 ;
-  //
-  
-  // Init Draw Storage
-  double z = 0.0 ;
-  //
-  
-  // Loop Until Valid Draw
-  while (valid == 0) {
-    z = Rf_rnorm(0.0, 1.0) ;
-    
-    if (z <= high && z >= low) {
-      valid = 1 ;
-    }
-  }
-  //
-  
-  // Returns
-  return z ;
-  //
-}
-
-/// Draw using algorithm 2.
-
-/// 
-///  Accept-Reject Algorithm
-///
-
-inline double UseAlg2(const double low ///< lower bound of distribution
-) {
-  // Init Values
-  const double alphastar = (low +
-                            sqrt(pow(low, 2.0) + 4.0)
-  ) / (2.0) ;
-  const double alpha = alphastar ;
-  double e = 0 ;
-  double z = 0 ;
-  double rho = 0 ;
-  double u = 0 ;
-  //
-  
-  // Init Valid Flag
-  int valid = 0 ;
-  //
-  
-  // Loop Until Valid Draw
-  while (valid == 0) {
-    e = Rf_rexp(1.0) ;
-    z = low + e / alpha ;
-    
-    rho = exp(-pow(alpha - z, 2.0) / 2) ;
-    u = Rf_runif(0, 1) ;
-    if (u <= rho) {
-      // Keep Successes
-      valid = 1 ;
-    }
-  }
-  //
-  
-  // Returns
-  return z ;
-  //
-}
-
-/// Draw using algorithm 3.
-
-/// 
-/// Accept-Reject Algorithm
-/// 
-
-inline double UseAlg3(const double low, ///< lower bound of distribution
-                      const double high ///< upper bound of distribution
-) {
-  // Init Valid Flag
-  int valid = 0 ;
-  //
-  
-  // Declare Qtys
-  double rho = 0 ;
-  double z = 0 ;
-  double u = 0 ;
-  //
-  
-  // Loop Until Valid Draw
-  while (valid == 0) {
-    z = Rf_runif(low, high) ;
-    if (0 < low) {
-      rho = exp((pow(low, 2.0) - pow(z, 2.0)) / 2) ;
-    } else if (high < 0) {
-      rho = exp((pow(high, 2.0) - pow(z, 2.0)) / 2) ;
-    } else if (0 < high && low < 0) {
-      rho = exp(- pow(z, 2.0) / 2) ;
-    }
-    
-    u = Rf_runif(0, 1) ;
-    if (u <= rho) {
-      valid = 1 ;
-    }
-  }
-  //
-  
-  // Returns
-  return z ;
-  //
-}
-
-
+// // NOTE! This formulation does not work for some combinations of L, U, location and scales
 // //' Random deviate from a truncated Normal distribution
-// //' 
+// //'
 // //' @param location Location parameter
 // //' @param scale Scale parameter
 // //' @param L Lower bound
 // //' @param U Upper bound
 // // [[Rcpp::export]]
-// double rtnorm(double location,
+// double rt_norm(double location,
 //                double scale,
 //                double L,
 //                double U) {
-//    
+// 
 //    double tot = R::pnorm(L, location, scale, TRUE, FALSE) + R::runif(0,1) * (R::pnorm(U, location, scale, TRUE, FALSE) - R::pnorm(L, location, scale, TRUE, FALSE));
 //    double out = location + scale * R::qnorm(tot, 0, 1, TRUE, FALSE);
 //    return out;
 // }
 
+// [[Rcpp::export]]
+double rtnorm(double location,
+                  double scale,
+                  double low,
+                  double high) {
+  
+  // https://www.rdatagen.net/post/generating-data-from-a-truncated-distribution/
+  double Fa = R::pnorm5(low, location, scale, TRUE, FALSE);
+  double Fb = R::pnorm5(high, location, scale, TRUE, FALSE);
+  double u = R::runif(Fa, Fb);
+  double out = R::qnorm5(u, location, scale, TRUE, FALSE);
+  return(out);
+    
+}
+
 /// Draw from an arbitrary truncated normal distribution.
 
-///
-/// See Robert (1995): <br />
-/// Reference Type: Journal Article <br />
-/// Author: Robert, Christian P. <br />
-/// Primary Title: Simulation of truncated normal variables <br />
-/// Journal Name: Statistics and Computing <br />
-/// Cover Date: 1995-06-01 <br />
-/// Publisher: Springer Netherlands <br />
-/// Issn: 0960-3174 <br />
-/// Subject: Mathematics and Statistics <br />
+// /
+// / See Robert (1995): <br />
+// / Reference Type: Journal Article <br />
+// / Author: Robert, Christian P. <br />
+// / Primary Title: Simulation of truncated normal variables <br />
+// / Journal Name: Statistics and Computing <br />
+// / Cover Date: 1995-06-01 <br />
+// / Publisher: Springer Netherlands <br />
+// / Issn: 0960-3174 <br />
+// / Subject: Mathematics and Statistics <br />
 // Start Page: 121 <br />
 // End Page: 125 <br />
-/// Volume: 5 <br />
-/// Issue: 2 <br />
-/// Url: http://dx.doi.org/10.1007/BF00143942 <br />
-/// Doi: 10.1007/BF00143942 <br />
-///
-// [[Rcpp::export]]
-double rtnorm(const double mean,
-              const double sd,
-              const double low,
-              const double high
-) {
-  // Namespace
-  using namespace Rcpp ;
-  //
-
-  // Init Useful Values
-  double draw = 0;
-  int type = 0 ;
-  int valid = 0 ; // used only when switching to a simplified version
-  // of Alg 2 within Type 4 instead of the less
-  // efficient Alg 3
-  //
-
-  // Set Current Distributional Parameters
-  const double c_mean = mean ;
-  double c_sd = sd ;
-  const double c_low = low ;
-  const double c_high = high ;
-  double c_stdlow = (c_low - c_mean) / c_sd ;
-  double c_stdhigh = (c_high - c_mean) / c_sd ; // bounds are standardized
-  //
-
-  // Map Conceptual Cases to Algorithm Cases
-  // Case 1 (Simple Deterministic AR)
-  // mu \in [low, high]
-  if (0 <= c_stdhigh &&
-      0 >= c_stdlow
-  ) {
-    type = 1 ;
-  }
-
-  // Case 2 (Robert 2009 AR)
-  // mu < low, high = Inf
-  if (0 < c_stdlow &&
-      c_stdhigh == INFINITY
-  ) {
-    type = 2 ;
-  }
-
-  // Case 3 (Robert 2009 AR)
-  // high < mu, low = -Inf
-  if (0 > c_stdhigh &&
-      c_stdlow == -INFINITY
-  ) {
-    type = 3 ;
-  }
-
-  // Case 4 (Robert 2009 AR)
-  // mu -\in [low, high] & (abs(low) =\= Inf =\= high)
-  if ((0 > c_stdhigh || 0 < c_stdlow) &&
-      !(c_stdhigh == INFINITY || c_stdlow == -INFINITY)
-  ) {
-    type = 4 ;
-  }
-
-  ////////////
-  // Type 1 //
-  ////////////
-  if (type == 1) {
-    draw = UseAlg1(c_stdlow, c_stdhigh) ;
-  }
-
-  ////////////
-  // Type 3 //
-  ////////////
-  if (type == 3) {
-    c_stdlow = -1 * c_stdhigh ;
-    c_stdhigh = INFINITY ;
-    c_sd = -1 * c_sd ; // hack to get two negative signs to cancel out
-
-    // Use Algorithm #2 Post-Adjustments
-    type = 2 ;
-  }
-
-  ////////////
-  // Type 2 //
-  ////////////
-  if (type == 2) {
-    draw = UseAlg2(c_stdlow) ;
-  }
-
-  ////////////
-  // Type 4 //
-  ////////////
-  if (type == 4) {
-    if (CheckSimple(c_stdlow, c_stdhigh)) {
-      while (valid == 0) {
-        draw = UseAlg2(c_stdlow) ;
-        // use the simple
-        // algorithm if it is more
-        // efficient
-        if (draw <= c_stdhigh) {
-          valid = 1 ;
-        }
-      }
-    } else {
-      draw = UseAlg3(c_stdlow, c_stdhigh) ; // use the complex
-      // algorithm if the simple
-      // is less efficient
-    }
-  }
-
-
-
-  // Returns
-  return  c_mean + c_sd * draw ;
-  //
-}
+// / Volume: 5 <br />
+// / Issue: 2 <br />
+// / Url: http://dx.doi.org/10.1007/BF00143942 <br />
+// / Doi: 10.1007/BF00143942 <br />
+// /
+// // [[Rcpp::export]]
+// double rtnorm(const double mean,
+//               const double sd,
+//               const double low,
+//               const double high
+// ) {
+//   // Namespace
+//   using namespace Rcpp ;
+//   //
+// 
+//   // Init Useful Values
+//   double draw = 0;
+//   int type = 0 ;
+//   int valid = 0 ; // used only when switching to a simplified version
+//   // of Alg 2 within Type 4 instead of the less
+//   // efficient Alg 3
+//   //
+// 
+//   // Set Current Distributional Parameters
+//   const double c_mean = mean ;
+//   double c_sd = sd ;
+//   const double c_low = low ;
+//   const double c_high = high ;
+//   double c_stdlow = (c_low - c_mean) / c_sd ;
+//   double c_stdhigh = (c_high - c_mean) / c_sd ; // bounds are standardized
+//   //
+// 
+//   // Map Conceptual Cases to Algorithm Cases
+//   // Case 1 (Simple Deterministic AR)
+//   // mu \in [low, high]
+//   if (0 <= c_stdhigh &&
+//       0 >= c_stdlow
+//   ) {
+//     type = 1 ;
+//   }
+// 
+//   // Case 2 (Robert 2009 AR)
+//   // mu < low, high = Inf
+//   if (0 < c_stdlow &&
+//       c_stdhigh == INFINITY
+//   ) {
+//     type = 2 ;
+//   }
+// 
+//   // Case 3 (Robert 2009 AR)
+//   // high < mu, low = -Inf
+//   if (0 > c_stdhigh &&
+//       c_stdlow == -INFINITY
+//   ) {
+//     type = 3 ;
+//   }
+// 
+//   // Case 4 (Robert 2009 AR)
+//   // mu -\in [low, high] & (abs(low) =\= Inf =\= high)
+//   if ((0 > c_stdhigh || 0 < c_stdlow) &&
+//       !(c_stdhigh == INFINITY || c_stdlow == -INFINITY)
+//   ) {
+//     type = 4 ;
+//   }
+// 
+//   ////////////
+//   // Type 1 //
+//   ////////////
+//   if (type == 1) {
+//     draw = UseAlg1(c_stdlow, c_stdhigh) ;
+//   }
+// 
+//   ////////////
+//   // Type 3 //
+//   ////////////
+//   if (type == 3) {
+//     c_stdlow = -1 * c_stdhigh ;
+//     c_stdhigh = INFINITY ;
+//     c_sd = -1 * c_sd ; // hack to get two negative signs to cancel out
+// 
+//     // Use Algorithm #2 Post-Adjustments
+//     type = 2 ;
+//   }
+// 
+//   ////////////
+//   // Type 2 //
+//   ////////////
+//   if (type == 2) {
+//     draw = UseAlg2(c_stdlow) ;
+//   }
+// 
+//   ////////////
+//   // Type 4 //
+//   ////////////
+//   if (type == 4) {
+//     if (CheckSimple(c_stdlow, c_stdhigh)) {
+//       while (valid == 0) {
+//         draw = UseAlg2(c_stdlow) ;
+//         // use the simple
+//         // algorithm if it is more
+//         // efficient
+//         if (draw <= c_stdhigh) {
+//           valid = 1 ;
+//         }
+//       }
+//     } else {
+//       draw = UseAlg3(c_stdlow, c_stdhigh) ; // use the complex
+//       // algorithm if the simple
+//       // is less efficient
+//     }
+//   }
+// 
+// 
+// 
+//   // Returns
+//   return  c_mean + c_sd * draw ;
+//   //
+// }
+// 
+// // [[Rcpp::export]]
+// double rtnorm_modified(const double mean,
+//               const double sd,
+//               const double low,
+//               const double high
+// ) {
+//   // Namespace
+//   using namespace Rcpp ;
+//   //
+//   
+//   // Init Useful Values
+//   double draw = 0;
+//   
+//   // Bounds are standardized
+//   double c_stdlow = (low - mean) / sd ;
+//   double c_stdhigh = (high - mean) / sd ; 
+//   
+//   draw = Use_Alg2(c_stdlow) ;
+//   return  mean + sd * draw ;
+// }
+// 
+// 
+// // [[Rcpp::export]]
+// double myrtnorm(const double mean,
+//                 const double sd,
+//                 const double low,
+//                 const double high
+// ) {
+//   // Namespace
+//   using namespace Rcpp ;
+//   //
+//   
+//   // Init Useful Values
+//   double draw = 0;
+//   
+//   // Bounds are standardized
+//   double c_stdlow = (low - mean) / sd ;
+//   double c_stdhigh = (high - mean) / sd ; 
+//   
+//   draw = MyAlg2(c_stdlow) ;
+//   return  mean + sd * draw ;
+// }
 
 // // [[Rcpp::export]]
 // Rcpp::NumericVector estBetaParams(double mu, double std) {
@@ -919,6 +1039,10 @@ long double start_bcondition(double cohort){
   // Calves
   if(cohort == 0){
     
+    // Calves are very slender at birth, then fatten up a lot during the first month (Christiansen, pers. comm.)
+    // Here, initialise calves between 0.15 and 0.45 BC - to be broadly consistent with the range of calf BC index 
+    // values reported by Christiansen et al. (2022, J. Physiol) for calves at Peninsula Valdes at mean
+    // relative birth length (Figure 3). 
     bc = R::runif(lower, upper);
     
     // Juveniles (males and females)
@@ -962,7 +1086,7 @@ Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month =
     // Calves
     if(cohort[i] == 0){ 
       
-      bc[i] = R::runif(lower, upper);
+      bc[i] = R::runif(0.15, 0.45);
       // bc[i] = rtnorm(0.35884621, 0.07788818, lower, upper);
       
       // Juveniles (males and females)
@@ -984,7 +1108,7 @@ Rcpp::NumericVector start_bcondition_vec(Rcpp::NumericVector cohort, int month =
       // Lactating females, which start simulation as late pregnant
     } else if(cohort[i] == 5){ 
       
-      bc[i] = R::runif(0.4, upper);
+      bc[i] = R::runif(0.35, upper);
       
       // bc[i] = rtnorm(0.4462601, 0.1026832, 0.4, upper);
       
@@ -2196,11 +2320,57 @@ double growth_cost(double leanmass_increment,
 // newind[year,"birth",] <- 0
 // newind[year,"p_surv",] <- 1
 
+// // [[Rcpp::export]]
+// Rcpp::NumericMatrix add_calf(int n, 
+//                              Rcpp::StringVector attr, 
+//                              Rcpp::NumericVector sex,
+//                              Rcpp::NumericVector nonreprod){
+//   
+//   int nattr = attr.size();
+//   Rcpp::NumericMatrix out(nattr,n);
+//   
+//   // Alive vs. dead
+//   Rcpp::NumericMatrix::Row alive = out.row(0);
+//   alive = alive + 1;
+//   
+//   // Sex (male, female)
+//   out(2,Rcpp::_) = sex;
+// 
+//   // Body length
+//   Rcpp::NumericVector L = age2length_vec(out.row(3));
+//   out(4,Rcpp::_) = L;
+//   
+//   // Lean_mass
+//   Rcpp::NumericVector M = length2mass_vec(L);
+//   out(6,Rcpp::_) = M;
+//   
+//   // Body condition
+//   Rcpp::NumericVector BC = start_bcondition_vec(out(3,Rcpp::_));
+//   out(7,Rcpp::_) = BC;
+//   
+//   // Total mass
+//   out(5,Rcpp::_) = M / (1-BC);
+//   
+//   // Probability of survival
+//   Rcpp::NumericMatrix::Row psurv = out.row(8);
+//   psurv = psurv + 1;
+//   
+//   // Sterility
+//   out(12,Rcpp::_) = nonreprod;
+//   // out(12,Rcpp::_) = Rcpp::rbinom(n, 1, 1-nonreprod);
+//   
+//   Rcpp::rownames(out) = attr;
+//   
+//   return(out);
+// }
+
 // [[Rcpp::export]]
 Rcpp::NumericMatrix add_calf(int n, 
                              Rcpp::StringVector attr, 
                              Rcpp::NumericVector sex,
-                             Rcpp::NumericVector nonreprod){
+                             Rcpp::NumericVector nonreprod,
+                             Rcpp::NumericVector BC,
+                             Rcpp::NumericVector psurv){
   
   int nattr = attr.size();
   Rcpp::NumericMatrix out(nattr,n);
@@ -2211,7 +2381,7 @@ Rcpp::NumericMatrix add_calf(int n,
   
   // Sex (male, female)
   out(2,Rcpp::_) = sex;
-
+  
   // Body length
   Rcpp::NumericVector L = age2length_vec(out.row(3));
   out(4,Rcpp::_) = L;
@@ -2221,15 +2391,13 @@ Rcpp::NumericMatrix add_calf(int n,
   out(6,Rcpp::_) = M;
   
   // Body condition
-  Rcpp::NumericVector BC = start_bcondition_vec(out(3,Rcpp::_));
   out(7,Rcpp::_) = BC;
   
   // Total mass
   out(5,Rcpp::_) = M / (1-BC);
   
   // Probability of survival
-  Rcpp::NumericMatrix::Row psurv = out.row(8);
-  psurv = psurv + 1;
+  out(8,Rcpp::_) = psurv;
   
   // Sterility
   out(12,Rcpp::_) = nonreprod;
