@@ -39,6 +39,7 @@ Imports:
     abind,
     data.table,
     dplyr,
+    doRNG,
     doSNOW,
     DT,
     fasterize,
