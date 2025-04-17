@@ -8,6 +8,10 @@ animate <- function (x, ...) UseMethod("animate", x)
 
 # PACKAGE DEVELOPMENT ------------------------------------------------------
 
+# get_seed <- function() {
+#   sample.int(.Machine$integer.max, 1)
+# }
+
 # ++ [FUNCTION] Load all non-essential internal functions [used only for package development]
 load_functions <- function(){
   functions.files <- list.files("inst/functions", full.names = TRUE)
@@ -451,6 +455,7 @@ adjust_popvec <- function(obj){
 init_bc <- function(pop = FALSE,
                     obj = NULL,
                     calves = c(-0.61, 14.64272),
+                    # calves = c(-5.11, 8.277999),
                     juveniles = c(-13.1, 11.6),
                     adults = c(-16.7, 12.49),
                     lactating = c(-9.4, 11.75755)){
@@ -488,16 +493,15 @@ init_bc <- function(pop = FALSE,
         X = 1:100000,
         FUN = function(x) {
           rtnorm(
-            mean = v[1] / 100,
-            sd = v[2] / 100, 
+            location = v[1] / 100,
+            scale = v[2] / 100, 
             low = -0.3,
             high = 0.6
           )}) |> bc_index()
       return(c(mean(out), sd(out)))
     }
     
-    out <- purrr::map(.x = list(calves, juveniles, adults, lactating),
-                      .f = ~get_bc(.x)) |> 
+    out <- purrr::map(.x = list(calves, juveniles, adults, lactating), .f = ~get_bc(.x)) |> 
       purrr::set_names(nm = "Calves", "Juveniles", "Adults", "Females (lactating)")
     
   }
@@ -965,39 +969,63 @@ colour_breaks <- function(dat){
 
 # UTILITIES ------------------------------------------------------
 
-compareSim <- function(..., perc = FALSE){
-
-   args <- list(...)
-   nind <- args[[1]]$param$nsim
+compareSim <- function(...){
   
-   allcombs <- combn(seq_along(args), 2)
+  args <- list(...)
+  
+  # Number of simulated individuals
+  nind <- args[[1]]$param$nsim
+  ncoh <- length(args[[1]]$sim)
+  
+  # If more than two models
+  allcombs <- combn(seq_along(args), 2)
+  
+  pb <- progress::progress_bar$new(
+    format = "[:bar] :percent eta: :eta",
+    total = ncoh, clear = FALSE, width= 80)
+  
+  match.test <- lapply(X = 1:ncol(allcombs), FUN = function(x) {
+    purrr::map2(
+      .x = args[[allcombs[1, x]]]$sim,
+      .y = args[[allcombs[2, x]]]$sim,
+      .f = ~ {
 
-   match.test <- lapply(X = 1:ncol(allcombs), FUN = function(x){
-     
-     purrr::map2(.x = args[[allcombs[1,x]]]$sim,
-                 .y = args[[allcombs[2,x]]]$sim,
-                 .f = ~{
-                  
-                   if(perc){
-                  equal.n <- numeric(length = nind)
-                  for(i in seq_len(nind)){
-                    out <- data.table:::all.equal.data.table(target = .x[whale == i, list(easting, northing)], 
-                                                      current = .y[whale == i, list(easting, northing)], tolerance = 1e-3)
-                    if(!is.character(out)) equal.n[i] <- 1
-                  }
-                  sum(equal.n)/nind*100
-                   } else {
-                     out <- data.table:::all.equal.data.table(target = .x[, list(easting, northing)],
-                                                              current = .y[, list(easting, northing)], tolerance = 1e-3)
-                     if(is.character(out)) FALSE else out
-                   }
+        pb$tick()
+        
+        # if (perc) {
+          
+          equal.n <- numeric(length = nind)
 
-
-                 }) |> do.call(what = c)
-     })
-   
-   do.match <- do.call(match.test, what = c)
-   return(do.match)
+          for (i in seq_len(nind)) {
+            
+            # Identify portions of track where animals are alive in both cases
+            alive.days <- which(.x[whale == i, alive] - .y[whale == i, alive] == 0)
+            
+            out <- data.table:::all.equal.data.table(
+              target = .x[whale == i & day %in% alive.days, list(easting, northing)],
+              current = .y[whale == i & day %in% alive.days, list(easting, northing)], tolerance = 1e-3
+            )
+            
+            if (!is.character(out)) equal.n[i] <- 1
+            
+          }
+          
+          sum(equal.n) / nind * 100
+          
+        # } else {
+        #   
+        #   out <- data.table:::all.equal.data.table(
+        #     target = .x[& day %in% alive.days, list(easting, northing)],
+        #     current = .y[, list(easting, northing)], tolerance = 1e-3
+        #   )
+        #   if (is.character(out)) FALSE else out
+        # }
+      }
+    ) |> do.call(what = c)
+  })
+  
+  do.match <- do.call(match.test, what = c)
+  return(do.match)
    
     # match.test <- purrr::set_names(x = cohorts[id %in% cohort, abb]) |>
     #   purrr::map(.f = ~{
@@ -1207,13 +1235,13 @@ inspect <- function(obj, cohort = "ad(f,l)", whaleID = 1, calf = FALSE){
   pdf(file = "allplots.pdf")
   par(mfrow = c(3,3))
   if(calf){
-    nn <- names(m$sim[[1]])[7:112][grepl(pattern = "calf", names(m$sim[[1]])[7:112])]
+    nn <- names(obj$sim[[cohort]])[7:112][grepl(pattern = "calf", names(obj$sim[[cohort]])[7:112])]
   } else {
-    nn <- names(m$sim[[1]])[7:112]
+    nn <- names(obj$sim[[cohort]])[7:112]
   }
   for(i in nn){
     dat <- obj[["sim"]][[cohort]][whale == whaleID, c("day", i), with = FALSE]
-    plot(dat, xlab = "Day", ylab = "", main = i, type = "l")
+    plot(dat, xlab = "Day", ylab = "", main = i, type = "l", ylim = range(dat[,2]))
   }
   par(mfrow = c(1,1))
   dev.off()
