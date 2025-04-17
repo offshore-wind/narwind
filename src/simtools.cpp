@@ -552,9 +552,13 @@ Rcpp::List movesim(
   
   double gear_risk = 0.0L;
   double strike_risk = 0.0L;
+  int is_struck = 0;
+  int is_struck_calf = 0;
   double dB = 0.0L;
   double p_surv = 1.0L;
   double p_surv_calf = 1.0L;
+  int has_died = 0;
+  int has_died_calf = 0;
   
   // Activity budgets +++
   
@@ -1076,7 +1080,7 @@ Rcpp::List movesim(
       }
       
       // Mark departure from calving grounds
-      if(animal->region != 9 && animal->calvgrounds == 1){
+      if(animal->region != 9 && animal->calvgrounds){
         animal->calvgrounds = 0;
         depart_SEUS = current_day;
       }
@@ -1084,7 +1088,7 @@ Rcpp::List movesim(
       if(animal->alive == 0) animal->calvgrounds = 0;
       
       // Reset northward pull after 20 days
-      if(animal->north == 1 && current_day == (depart_SEUS + 20)) animal->north = 0;
+      // if(animal->north && current_day == (depart_SEUS + 20)) animal->north = 0;
       
       // Stop second migration to SEUS
       if(current_day > 365 && cohortID == 5){
@@ -1112,12 +1116,11 @@ Rcpp::List movesim(
         target_bc[1] = 0;
         
       // Lactating mothers and their calves
-      } else if(animal->cohortID == 5 && current_day >= start_simulation && born[current_animal] == 1){ 
+      } else if(animal->cohortID == 5 && current_day >= start_simulation && born[current_animal]){ 
           
           target_bc[0] = 0.3674076;
-          // target_bc[0] = 0.665289;
           
-          if(calves[current_animal].alive == 1){
+          if(calves[current_animal].alive){
             
             target_bc[1] = 0.6;
             
@@ -1131,7 +1134,6 @@ Rcpp::List movesim(
       } else { 
         
         target_bc[0] = 0.3674076;
-        // target_bc[0] = 0.41718;
         target_bc[1] = 0;
         
       }
@@ -1147,20 +1149,23 @@ Rcpp::List movesim(
       
       if(current_day > 0){
         
+        // Retrieve the seed for the current animal
+        int currentseed = doseresp_seed(current_animal, cohortID - 1);
+        
         // ------------------------------------------------------------
         // STRESSORS
         // ------------------------------------------------------------
         
-        if(animal->alive){
+        // if(animal->alive){
+        
+        if(stressors){
           
-          if(stressors){
-            
-            // ------------------------------------------------------------
-            // STARVATION MORTALITY
-            // ------------------------------------------------------------
-
-            // No mortality during burn-in
-            if(current_day >= start_simulation){
+          // ------------------------------------------------------------
+          // STARVATION MORTALITY
+          // ------------------------------------------------------------
+          
+          // No mortality during burn-in
+          if(current_day >= start_simulation){
             
             // Body condition-dependent mortality, similar to Hin et al. (2019)
             // Probability of the animal starving given its health
@@ -1168,30 +1173,30 @@ Rcpp::List movesim(
             p_starve = starvation_mortality(animal->bc, starvation_coefs, starvation_death, starvation_onset);
             p_starve = 1-(std::pow(1-p_starve, 1.0L/365.0L));
             has_starved = R::rbinom(1, p_starve);
-            
+
             // p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_onset, starvation, starvation_scalar);
             p_starve_calf = starvation_mortality(calves[current_animal].bc, starvation_coefs, starvation_death, starvation_onset);
             p_starve_calf = 1-(std::pow(1-p_starve_calf, 1.0L/365.0L));
             has_starved_calf = R::rbinom(1, p_starve_calf);
             
-            if(has_starved){
+            if(has_starved && animal->alive){
               
               animal->alive = 0;
               animal->starve = 1;
               date_death[current_animal] = current_day;
               
-              if(calves[current_animal].alive == 1){
+              if(calves[current_animal].alive){
                 calves[current_animal].alive = 0;
                 date_death_calf[current_animal] = current_day;
               }
             }
             
-            if(calves[current_animal].alive == 1 && born[current_animal] == 1) {
+            if(calves[current_animal].alive && born[current_animal]) {
               if(has_starved_calf){
                 calves[current_animal].alive = 0;
                 calves[current_animal].starve = 1;
                 date_death_calf[current_animal] = current_day;
-                animal->north = 1;
+                // animal->north = 1;
               }
             }
             
@@ -1210,7 +1215,7 @@ Rcpp::List movesim(
               animal->entangled = entanglement_event(gear_risk);
               
               // Start and end dates of entanglement event
-              if(animal->entangled(0) == 1){
+              if(animal->entangled(0)){
                 animal->entangled(5) = current_day;
                 animal->entangled(6) = current_day + animal->entangled(4);
               }
@@ -1227,123 +1232,143 @@ Rcpp::List movesim(
             
             // ++++ Calves ++++
             
-            if(calves[current_animal].alive == 1){
-              
-              // If the calf is not carrying gear
-              if(calves[current_animal].entangled(0) == 0){
-                
-                calves[current_animal].entangled = entanglement_event(gear_risk);
-                
-                if(calves[current_animal].entangled(0) == 1){
-                  calves[current_animal].entangled(5) = current_day;
-                  calves[current_animal].entangled(6) = current_day + calves[current_animal].entangled(4);
-                }
-                
-              } else {
-                
-                // Terminate entanglement event
-                if(current_day == calves[current_animal].entangled(6)){
-                  calves[current_animal].entangled = entanglement_event(0); // Reset entanglement state
-                }
-                
-              } 
-            } // End if calves entangled
+            // if(calves[current_animal].alive){
             
+            // If the calf is not carrying gear
+            if(calves[current_animal].entangled(0) == 0){
               
-              // ===================================
-              // VESSEL STRIKES
-              // ===================================
+              calves[current_animal].entangled = entanglement_event(gear_risk);
               
-              // Vessel strike risk
-              strike_risk = layers[current_day](current_x, current_y, 'V');
-              
-              // Incidence of a vessel strike -- (d.u.)
-              if(animal->strike == 0) animal->strike = R::rbinom(1, strike_risk);
-              
-              // ++++ Mortality from vessel strikes ++++
-              
-              if(animal->strike){
-                
-                animal->alive = 0;
-                date_death[current_animal] = current_day;
-                
-                if(calves[current_animal].alive == 1){
-                  calves[current_animal].alive = 0;
-                  date_death_calf[current_animal] = current_day;
-                  
-                }
-                
-              } else if(animal->strike == 0){
-                
-                if(calves[current_animal].alive & calves[current_animal].strike == 0) 
-                  calves[current_animal].strike = R::rbinom(1, strike_risk);
-                
-                if(calves[current_animal].alive && calves[current_animal].strike){
-                  calves[current_animal].alive = 0;
-                  date_death_calf[current_animal] = current_day;
-                  animal->north = 1;
-                }
-                
+              if(calves[current_animal].entangled(0)){
+                calves[current_animal].entangled(5) = current_day;
+                calves[current_animal].entangled(6) = current_day + calves[current_animal].entangled(4);
               }
               
-              // ===================================
-              // AGE-DEPENDENT MORTALITY
-              // ===================================
+            } else {
               
-              // Annual survival probability based on Linden (2023) – converted to daily probability
-              p_surv = std::pow(survival(animal->age, 0, animal->sex), 1.0L/365);
-              p_surv_calf = std::pow(survival(calves[current_animal].age, 0, calves[current_animal].sex), 1.0L/365);
-              
-              // If the animal is entangled, add the initial effect ("hit") of entanglement on survival
-              // on the first day of entanglement.
-              // This requires converting to a 3-month survival probability (taken to be 90 days),
-              // then adding the gear effect on the complementary log-log scale
-              if(animal->entangled(0) == 1 && current_day == animal->entangled(5)){
-                p_surv = entanglement_effect(p_surv, animal->entangled(1), 90, entgl_pcoms);
+              // Terminate entanglement event
+              if(current_day == calves[current_animal].entangled(6)){
+                calves[current_animal].entangled = entanglement_event(0); // Reset entanglement state
               }
+            } 
+            // } // End if calves entangled
+            
+            
+            // ===================================
+            // VESSEL STRIKES
+            // ===================================
+            
+            // Vessel strike risk
+            strike_risk = layers[current_day](current_x, current_y, 'V');
+            
+            // Incidence of a vessel strike -- (d.u.)
+            // if(animal->strike == 0)
+            is_struck = R::rbinom(1, strike_risk);
+            is_struck_calf = R::rbinom(1, strike_risk);
+            
+            // animal->strike = R::rbinom(1, abs(animal->strike - animal->alive*strike_risk));
+            // calves[current_animal].strike = R::rbinom(1, abs(calves[current_animal].strike - calves[current_animal].alive*strike_risk));
+
+            // animal->strike = 0;
+            // calves[current_animal].strike = 0;
+            
+            // ++++ Mortality from vessel strikes ++++
+            
+            if(is_struck && animal->alive){
               
-              if(calves[current_animal].entangled(0) == 1 && current_day == calves[current_animal].entangled(5)){
-                p_surv_calf = entanglement_effect(p_surv_calf, calves[current_animal].entangled(1), 90, entgl_pcoms);
-              }
+              animal->alive = 0;
+              animal->strike = 1;
+              date_death[current_animal] = current_day;
               
-              // Run Bernoulli trials
-              if(animal->mort == 0) animal->mort = R::rbinom(1, 1-p_surv);
-              if(calves[current_animal].mort==0) calves[current_animal].mort = R::rbinom(1, 1-p_surv_calf);
-              
-              if(animal->alive == 1 && animal->mort == 1){
-                
-                // Record death and date
-                animal->alive = 0;
-                date_death[current_animal] = current_day;
-                
-                if(calves[current_animal].alive == 1){
-                  // Kill the calf
-                  calves[current_animal].alive = 0;
-                  date_death_calf[current_animal] = current_day;
-                }
-                
-              }
-              
-              if(calves[current_animal].alive == 1 && calves[current_animal].mort == 1){
-                
-                // Record death and date
+              if(calves[current_animal].alive){
                 calves[current_animal].alive = 0;
                 date_death_calf[current_animal] = current_day;
                 
-                // Ensure mother leaves calving grounds
-                animal->north = 1;
+              }
+            }
+            
+            if(calves[current_animal].alive && is_struck_calf){
+              calves[current_animal].alive = 0;
+              calves[current_animal].strike = 1;
+              date_death_calf[current_animal] = current_day;
+              // animal->north = 1;
+            }
+              
+            
+            // ===================================
+            // AGE-DEPENDENT MORTALITY
+            // ===================================
+            
+            // Annual survival probability based on Linden (2023) – converted to daily probability
+            p_surv = std::pow(survival(animal->age, 0, animal->sex), 1.0L/365);
+            p_surv_calf = std::pow(survival(calves[current_animal].age, 0, calves[current_animal].sex), 1.0L/365);
+            
+            // If the animal is entangled, add the initial effect ("hit") of entanglement on survival
+            // on the first day of entanglement.
+            // This requires converting to a 3-month survival probability (taken to be 90 days),
+            // then adding the gear effect on the complementary log-log scale
+            if(animal->entangled(0) && current_day == animal->entangled(5)){
+              p_surv = entanglement_effect(p_surv, animal->entangled(1), 90, entgl_pcoms);
+            }
+            
+            if(calves[current_animal].entangled(0) && current_day == calves[current_animal].entangled(5)){
+              p_surv_calf = entanglement_effect(p_surv_calf, calves[current_animal].entangled(1), 90, entgl_pcoms);
+            }
+            
+            // Run Bernoulli trials
+            has_died = R::rbinom(1, 1-p_surv);
+            has_died_calf = R::rbinom(1, 1-p_surv_calf);
+            // animal->mort = R::rbinom(1, (1 - ((1 - animal->mort) * p_surv)));
+            // calves[current_animal].mort = R::rbinom(1, (1 - ((1 - calves[current_animal].mort) * p_surv_calf)));
+            
+            if(has_died && animal->alive){
+              
+              // Record death and date
+              animal->alive = 0;
+              animal->mort = 1;
+              date_death[current_animal] = current_day;
+              
+              if(calves[current_animal].alive){
+                // Kill the calf also
+                calves[current_animal].alive = 0;
+                date_death_calf[current_animal] = current_day;
               }
               
-            } // End no mortality during burn-in
+            }
             
-          } // End if stressors
+            if(calves[current_animal].alive && has_died_calf){
+              
+              // Record death and date
+              calves[current_animal].alive = 0;
+              calves[current_animal].mort = 1;
+              date_death_calf[current_animal] = current_day;
+              
+              // Ensure mother leaves calving grounds
+              // animal->north = 1;
+            }
+            
+            // ===================================
+            // NOISE EXPOSURE & BEHAVIORAL RESPONSES
+            // ===================================
+            
+            animal->respnoise = 0; // Reset daily
+            
+            // Noise levels +++
+            dB = layers[current_day](current_x, current_y, 'N');
+            
+            // Response threshold (dB)
+            response_dB = response_threshold(doseresp, current_day, t, currentseed);
+            
+            // Behavioral response to pile-driving noise exposure -- (d.u.)
+            if(dB >= response_dB) animal->respnoise = 1;
+
+          } // End no mortality during burn-in
           
-        } // End if alive
+        } // End if stressors
         
-        if(animal->alive){
-          
-          // Retrieve the seed for the current animal
-          int currentseed = doseresp_seed(current_animal, cohortID - 1);
+        // } // End if alive
+        
+        // if(animal->alive){
           
           // ------------------------------------------------------------
           // MOVEMENT
@@ -1356,29 +1381,15 @@ Rcpp::List movesim(
                    resolution, resolution_regions, resolution_prey, 
                    resolution_fishing, resolution_vessels, resolution_noise);
           
+          // The movement model needs to be run for each individual on each day regardless of conditions
+          // to avoid throwing off the RNG. Therefore, we need to re-instate last coords if the animal is dead.
+          animal->x = (animal->x * animal->alive) + current_x * (1-animal->alive);
+          animal->y = (animal->y * animal->alive) + current_y * (1-animal->alive);
+          
           // If pregnant females, resting females, or lactating females in their
           // last trimester move past Cape Hatteras, make them turn around and head north again
           if(cohortID == 6 | cohortID == 4 | (cohortID == 5 && current_day > 365)){
-            if(animal->y <= 220) animal->north = 1;
-          }
-         
-          // ------------------------------------------------------------
-          // NOISE EXPOSURE & BEHAVIORAL RESPONSES
-          // ------------------------------------------------------------
-          
-          animal->respnoise = 0; // Reset daily
-          
-          if(current_day >= start_simulation){
-          
-          // Noise levels +++
-          dB = layers[current_day](current_x, current_y, 'N');
-          
-          // Response threshold (dB)
-          response_dB = response_threshold(doseresp, current_day, t, currentseed);
-          
-          // Behavioral response to pile-driving noise exposure -- (d.u.)
-          if(dB >= response_dB) animal->respnoise = 1;
-          
+            if(animal->y <= 220) animal->north = animal->alive * 1;
           }
           
           // ------------------------------------------------------------
@@ -1392,21 +1403,11 @@ Rcpp::List movesim(
             dob[current_animal] = current_day;
           }
           
-          // if(cohortID == 5 && animal->region == 9 && born[current_animal] == 0){
-          //   prob_birth = pbirth(current_day, enter_SEUS, 30);
-          //   calves[current_animal].alive = R::rbinom(1, prob_birth);
-          // }
-          
-          // if(calves[current_animal].alive == 1 && born[current_animal] == 0){
-          //   born[current_animal] = 1;
-          //   dob[current_animal] = current_day;
-          // }
-          
           // ------------------------------------------------------------
           // Distance traveled
           // ------------------------------------------------------------
 
-          travel_dist = std::sqrt(std::pow(current_x - animal->x, 2) + std::pow(current_y - animal->y, 2));
+          travel_dist = animal->alive * (std::sqrt(std::pow(current_x - animal->x, 2) + std::pow(current_y - animal->y, 2)));
           
           // ------------------------------------------------------------
           // PREY
@@ -1416,7 +1417,7 @@ Rcpp::List movesim(
           D_cop = prey_scale * layers[current_day](current_x, current_y, 'P');
           
           // Feeding response
-          is_feeding = feeding_threshold(min_calanus, D_cop);
+          is_feeding = animal->alive * feeding_threshold(min_calanus, D_cop);
           
           // ------------------------------------------------------------
           // ACTIVITY BUDGET
@@ -1453,6 +1454,7 @@ Rcpp::List movesim(
           // Time spent traveling per day -- (hr)
           // Calculated based on distance covered that day and swimming speed
           travel_time = (travel_dist * 1000) / (swim_speed * 3600); // m per hour
+          swim_speed = animal->alive * swim_speed;
           
           // Behavioral modes include: traveling, feeding, and resting/nursing
           
@@ -1482,7 +1484,7 @@ Rcpp::List movesim(
             if(feeding_time < 0) feeding_time = 0;
           }
 
-          resting_nursing_time = 24 - (travel_time + feeding_time);
+          resting_nursing_time = animal->alive * (24 - (travel_time + feeding_time));
           
           // ------------------------------------------------------------
           // ENERGY INTAKE - FORAGING
@@ -1496,16 +1498,16 @@ Rcpp::List movesim(
             
             // Values for 5-parameter logistic curve obtained through optimization using target BC passed to optim_feeding
             // feeding_nursing_effort[0] = scale_effort(animal->bc, 1, 0, logis_slope(1), logis_location(1), logis_asymmetry(1));
-            feeding_nursing_effort[0] = feeding_effort(eta(1), target_bc[0], animal->bc);
+            feeding_nursing_effort[0] = animal->alive * feeding_effort(eta(1), target_bc[0], animal->bc);
             
-          } else if(animal->cohortID == 5 && born[current_animal] == 1){ // Lactating mothers and their calves
+          } else if(animal->cohortID == 5 && born[current_animal]){ // Lactating mothers and their calves
             
-            feeding_nursing_effort[0] = feeding_effort(eta(0), target_bc[0], animal->bc);
-            feeding_nursing_effort[1] = feeding_effort(eta(1), target_bc[1], calves[current_animal].bc);
+            feeding_nursing_effort[0] = animal->alive * feeding_effort(eta(0), target_bc[0], animal->bc);
+            feeding_nursing_effort[1] = calves[current_animal].alive * feeding_effort(eta(1), target_bc[1], calves[current_animal].bc);
             
           } else { // All other cohorts
             
-            feeding_nursing_effort[0] = feeding_effort(eta(0), target_bc[0], animal->bc);
+            feeding_nursing_effort[0] = animal->alive * feeding_effort(eta(0), target_bc[0], animal->bc);
             
           }
           
@@ -1514,7 +1516,7 @@ Rcpp::List movesim(
           E_calanus = (1-water_content) * cop_kJ * digestive_efficiency * urinary_efficiency * metabolizing_efficiency[meta];
           
           // ENERGY INTAKE (MJ)
-          E_in = is_feeding * D_cop * animal->gape * (1 - animal->entangled(3)) *
+          E_in = animal->alive * is_feeding * D_cop * animal->gape * (1 - animal->entangled(3)) *
             swim_speed * capture_efficiency * (feeding_time * 3600) * feeding_nursing_effort[0] *
             E_calanus;
           
@@ -1554,22 +1556,23 @@ Rcpp::List movesim(
               
               // Milk assimilation -- (d.u.)
               // Varies with calf age
-              milk_assim = (calves[current_animal].alive == 1) * 
+              milk_assim = calves[current_animal].alive * 
                 milk_assimilation(current_day-start_simulation+1, T_lac, milk_decrease, eta_milk);
               
               // Milk provisioning -- (d.u.)
-              // Varies with mother's body condition
-              milk_provisioning = (calves[current_animal].alive == 1) * 
+              // Varies with the mother's body condition
+              milk_provisioning = calves[current_animal].alive * 
                 milk_supply(starvation_onset, target_bc[0], animal->tot_mass, animal->fat_mass, zeta);
               
               // Total mass of mammary glands -- (kg)
-              mammary_M = mammary_mass(animal->tot_mass);
+              mammary_M = animal->alive * mammary_mass(animal->tot_mass);
               
               // Milk production rate by the mother -- (kg per day)
               milk_production_rate = milk_production(mammary_M);
               
               // Time spent nursing/suckling per day -- (hours to sec)
-              // Meta:: No filter on time spent nursing, time spent suckling during nursing bouts filtered by species (value for E. australis)
+              // Meta:: No filter on time spent nursing, time spent suckling 
+              // during nursing bouts filtered by species (value for E. australis)
               // t_suckling = rtnorm(0, 3.688672, 0, nursing_time) * 3600;
               // t_suckling = 10*3600;
               
@@ -1579,24 +1582,20 @@ Rcpp::List movesim(
               // is combined with time spent resting
               if(animal->respnoise){
                 if(nursing_cessation(0)){
-                  feeding_nursing_effort[1] *= ((24-nursing_cessation(1))/24);
+                  feeding_nursing_effort[1] *= ((24-nursing_cessation(1))/24); // x *= a is equivalent to x = x * a
                   if(feeding_nursing_effort[1] < 0) feeding_nursing_effort[1] = 0;
                 }
               }
               
-              E_lac = (calves[current_animal].alive == 1) * 
-                milk_provisioning * milk_production_rate * 
-                feeding_nursing_effort[1] * milk_assim * 
-                (milk_lipids * ED_lipids + milk_protein * ED_protein);
+              E_lac = calves[current_animal].alive * milk_provisioning * milk_production_rate * 
+                feeding_nursing_effort[1] * milk_assim * (milk_lipids * ED_lipids + milk_protein * ED_protein);
               
               // Calves start independently foraging only once milk consumption begins to decrease
               if(current_day >= start_simulation + milk_decrease){
 
-                calf_foraging = (calves[current_animal].alive == 1) * is_feeding * 
-                  D_cop * calves[current_animal].gape * 
-                  (1 - calves[current_animal].entangled(3)) * swim_speed * capture_efficiency * 
-                  feeding_nursing_effort[1] * (feeding_time * 3600) * (1-milk_assim) *
-                  E_calanus;
+                calf_foraging = calves[current_animal].alive * is_feeding * 
+                  D_cop * calves[current_animal].gape * (1 - calves[current_animal].entangled(3)) * swim_speed *
+                  capture_efficiency * feeding_nursing_effort[1] * (feeding_time * 3600) * (1-milk_assim) * E_calanus;
                 
               }
               
@@ -1616,8 +1615,8 @@ Rcpp::List movesim(
           
           // Resting metabolic rate -- (MJ)
           // Calculated based on lean mass as blubber is more or less metabolically inert (George et al. 2021)
-          resting_metab = RMR(animal->lean_mass);
-          if(cohortID == 5 && calves[current_animal].alive == 1) resting_metab_calves = RMR(calves[current_animal].lean_mass); 
+          resting_metab = animal->alive * RMR(animal->lean_mass);
+          if(cohortID == 5) resting_metab_calves = calves[current_animal].alive * RMR(calves[current_animal].lean_mass); 
           
           // Stroke rate during routine swimming -- (d.u.)
           stroke_rate_foraging = rtnorm(0.1650784, 0.003930294, 0, INFINITY);
@@ -1649,7 +1648,7 @@ Rcpp::List movesim(
           // Lactating mothers with calf swimming in echelon position
           } else if(cohortID == 5 && current_day >= start_simulation){
             
-            if(calves[current_animal].alive == 1 && calves[current_animal].age <= 30/365.0L){
+            if(calves[current_animal].alive && calves[current_animal].age <= 30/365.0L){
               
               scalar_LC = 1.17;
               scalar_LC_calf = 0.83;
@@ -1667,7 +1666,7 @@ Rcpp::List movesim(
             scalar_LC = 1.0L;
           }
           
-          LC_tot = locomotor_costs(animal->tot_mass, 
+          LC_tot = animal->alive * locomotor_costs(animal->tot_mass, 
                                    travel_dist*1000,
                                    stroke_rate, 
                                    stroke_rate_foraging, 
@@ -1677,8 +1676,8 @@ Rcpp::List movesim(
                                    travel_time * 3600, 
                                    scalar_LC);
           
-          if(cohortID == 5 && calves[current_animal].alive == 1){
-            LC_tot_calves = locomotor_costs(calves[current_animal].tot_mass,
+          if(cohortID == 5){
+            LC_tot_calves = calves[current_animal].alive * locomotor_costs(calves[current_animal].tot_mass,
                                             travel_dist*1000,
                                             stroke_rate, 
                                             stroke_rate_foraging, 
@@ -1701,7 +1700,7 @@ Rcpp::List movesim(
             // (5) Pregnant females on very last day (birth) 
             // (6) Lactating females after burn-in
 
-            if(cohortID < 4 | cohortID == 6 | animal->abort == 1 |
+            if(cohortID < 4 | cohortID == 6 | animal->abort |
                (cohortID == 4 && current_day < start_simulation) |
                (cohortID == 4 && current_day == densitySeq.size()) |
                (cohortID == 5 && current_day > start_simulation))
@@ -1796,14 +1795,11 @@ Rcpp::List movesim(
           // ------------------------------------------------------------
           
           // Cost of growth (adults and juveniles) -- (MJ)
-          length_nextday = age2length(animal->age + 1.0L/365.0L, animal->lengthatage);
+          length_nextday = age2length(animal->age + (animal->alive * 1.0L/365.0L), animal->lengthatage);
           lean_mass_nextday = length2mass(length_nextday, animal->massatlength);
           lean_mass_increment = (lean_mass_nextday - animal->lean_mass);
           
-          // double sumprop = animal->bc + prop_muscle + prop_viscera + prop_bones;
-          // bc_diff = (1 - sumprop)/3;
-          
-          E_growth = growth_cost(lean_mass_increment, 
+          E_growth = animal->alive * growth_cost(lean_mass_increment, 
                                  ED_lipids, 
                                  ED_protein, 
                                  prop_lipids_in_muscle,
@@ -1816,13 +1812,13 @@ Rcpp::List movesim(
                                  prop_viscera,
                                  prop_bones);
           
-          if(cohortID == 5 && calves[current_animal].alive == 1){
+          if(cohortID == 5){
             
-            length_nextday_calves = age2length(calves[current_animal].age + 1.0L/365.0L, calves[current_animal].lengthatage);
+            length_nextday_calves = age2length(calves[current_animal].age + (calves[current_animal].alive * 1.0L/365.0L), calves[current_animal].lengthatage);
             lean_mass_nextday_calves = length2mass(length_nextday_calves, calves[current_animal].massatlength);
             lean_mass_increment_calves = (lean_mass_nextday_calves - calves[current_animal].lean_mass);
             
-            E_growth_calves = growth_cost(lean_mass_increment_calves,
+            E_growth_calves = calves[current_animal].alive * growth_cost(lean_mass_increment_calves,
                                                ED_lipids,
                                                ED_protein,
                                                prop_lipids_in_muscle,
@@ -1842,99 +1838,93 @@ Rcpp::List movesim(
           // ------------------------------------------------------------
           
           // Adults and juveniles -- (MJ)
-          E_out = (resting_metab + LC_tot + E_gest + E_lac + E_growth);
-          if(animal->entangled(0) == 1) E_out = E_out + entanglement_cost;
+          E_out = animal->alive * ((resting_metab + LC_tot + E_gest + E_lac + E_growth) + (animal->entangled(0) * entanglement_cost));
           
           // Calves -- (MJ)
-          if(cohortID == 5 && calves[current_animal].alive == 1){
-            E_out_calves = (resting_metab_calves + LC_tot_calves + E_growth_calves);
-            if(calves[current_animal].entangled(0) == 1) E_out_calves = E_out_calves + entanglement_cost;
+          if(cohortID == 5){
+            E_out_calves = calves[current_animal].alive * ((resting_metab_calves + LC_tot_calves + E_growth_calves) + (calves[current_animal].entangled(0) * entanglement_cost));
           }
           
           // ------------------------------------------------------------
           // ENERGY ALLOCATION
           // ------------------------------------------------------------
+            
+          // Age (+ 1 day) -- Long double precision required here
+          animal->age = animal->age + (animal->alive * 1.0L/365.0L);
           
-          if(animal->alive == 1){
+          // Body length
+          animal->length = age2length(animal->age, animal->lengthatage);
+          
+          // Mouth width
+          animal->mouth_width = animal->length * animal->mouth_ratio;
+          
+          // Mouth gape area -- (m^2)
+          animal->gape = gape_size(animal->length, animal->mouth_width, animal->mouth_angle);
+          
+          // Lean mass
+          animal->lean_mass = lean_mass_nextday;
+          
+          // E_balance = 0 (false) when gains exceed costs (-> anabolism)
+          // E_balance = 1 (true) when costs exceed gains (-> catabolism)
+          E_balance = E_in < E_out;
+          
+          // Lipid growth or breakdown
+          delta_blubber = animal->alive * (E_in - E_out) * anabolism_efficiency[E_balance] / (ED_lipids * catabolism_efficiency[E_balance]);
+          
+          // // Costs of fat metabolism
+          // double E_fat = fatdeposition_cost(delta_blubber,
+          //                                   ED_lipids, 
+          //                                   ED_protein,
+          //                                   prop_lipids_in_blubber,
+          //                                   prop_protein_in_blubber);
+          // 
+          // E_out = E_out + E_fat;
+          // 
+          // // E_balance = 0 (false) when gains exceed costs (-> anabolism)
+          // // E_balance = 1 (true) when costs exceed gains (-> catabolism)
+          // E_balance = E_in < E_out;
+          // 
+          // // Lipid growth or breakdown
+          // delta_blubber = (E_in - E_out) * anabolism_efficiency[E_balance] / (ED_lipids * catabolism_efficiency[E_balance]);
+          
+          if(growth){
+            // Use std::max to ensure that fat_mass never becomes negative
+            animal->fat_mass = std::max(0.0L, animal->fat_mass + delta_blubber);
+            animal->tot_mass = animal->fat_mass + animal->lean_mass;
+            animal->bc = animal->fat_mass / animal->tot_mass;
+          }
+          
+          // Same for calves
+          if(cohortID == 5){
             
-            // Age (+ 1 day) -- Long double precision required here
-            animal->age = animal->age + 1.0L/365.0L;
+            E_balance_calves = E_in_calves < E_out_calves;
             
-            // Body length
-            animal->length = age2length(animal->age, animal->lengthatage);
+            calves[current_animal].age = calves[current_animal].age + (calves[current_animal].alive * 1.0L/365.0L);
+            calves[current_animal].length = age2length(calves[current_animal].age, calves[current_animal].lengthatage);
+            calves[current_animal].lean_mass = lean_mass_nextday_calves;
             
-            // Mouth width
-            animal->mouth_width = animal->length * animal->mouth_ratio;
+            // Update mouth ratio and mouth width for calves > 1 month of age
+            if(current_day == start_simulation + 30){
+              calves[current_animal].mouth_ratio = start_mouth(0,31.0L/365.0L);
+            }
             
-            // Mouth gape area -- (m^2)
-            animal->gape = gape_size(animal->length, animal->mouth_width, animal->mouth_angle);
-              
-            // Lean mass
-            animal->lean_mass = lean_mass_nextday;
+            calves[current_animal].mouth_width = calves[current_animal].mouth_ratio*calves[current_animal].length;
             
-            // E_balance = 0 (false) when gains exceed costs (-> anabolism)
-            // E_balance = 1 (true) when costs exceed gains (-> catabolism)
-            E_balance = E_in < E_out;
+            calves[current_animal].gape = gape_size(calves[current_animal].length,
+                                                    calves[current_animal].mouth_width, 
+                                                    calves[current_animal].mouth_angle);
             
             // Lipid growth or breakdown
-            delta_blubber = (E_in - E_out) * anabolism_efficiency[E_balance] / (ED_lipids * catabolism_efficiency[E_balance]);
-            
-            // // Costs of fat metabolism
-            // double E_fat = fatdeposition_cost(delta_blubber,
-            //                                   ED_lipids, 
-            //                                   ED_protein,
-            //                                   prop_lipids_in_blubber,
-            //                                   prop_protein_in_blubber);
-            // 
-            // E_out = E_out + E_fat;
-            // 
-            // // E_balance = 0 (false) when gains exceed costs (-> anabolism)
-            // // E_balance = 1 (true) when costs exceed gains (-> catabolism)
-            // E_balance = E_in < E_out;
-            // 
-            // // Lipid growth or breakdown
-            // delta_blubber = (E_in - E_out) * anabolism_efficiency[E_balance] / (ED_lipids * catabolism_efficiency[E_balance]);
+            delta_blubber_calves = calves[current_animal].alive * (E_in_calves - E_out_calves) * anabolism_efficiency[E_balance_calves] / (ED_lipids * catabolism_efficiency[E_balance_calves]);
+            // delta_blubber_calves = lipid_anacat_calves[E_balance_calves] * (E_in_calves - E_out_calves) / ED_lipids;
             
             if(growth){
-              // Use std::max to ensure that fat_mass never becomes negative
-              animal->fat_mass = std::max(0.0L, animal->fat_mass + delta_blubber);
-              animal->tot_mass = animal->fat_mass + animal->lean_mass;
-              animal->bc = animal->fat_mass / animal->tot_mass;
+              calves[current_animal].fat_mass = calves[current_animal].fat_mass + delta_blubber_calves;
+              calves[current_animal].tot_mass = calves[current_animal].fat_mass + calves[current_animal].lean_mass;
+              calves[current_animal].bc = calves[current_animal].fat_mass / calves[current_animal].tot_mass;
             }
             
-            // Same for calves
-            if(cohortID == 5 && calves[current_animal].alive == 1){
-              
-              E_balance_calves = E_in_calves < E_out_calves;
-              
-              calves[current_animal].age = calves[current_animal].age + 1.0L/365.0L;
-              calves[current_animal].length = age2length(calves[current_animal].age, calves[current_animal].lengthatage);
-              calves[current_animal].lean_mass = lean_mass_nextday_calves;
-              
-              // Update mouth ratio and mouth width for calves > 1 month of age
-              if(current_day == start_simulation + 30){
-                calves[current_animal].mouth_ratio = start_mouth(0,31.0L/365.0L);
-              }
-              
-              calves[current_animal].mouth_width = calves[current_animal].mouth_ratio*calves[current_animal].length;
-              
-              calves[current_animal].gape = gape_size(calves[current_animal].length,
-                                                      calves[current_animal].mouth_width, 
-                                                      calves[current_animal].mouth_angle);
-              
-              // Lipid growth or breakdown
-              delta_blubber_calves = (E_in_calves - E_out_calves) * anabolism_efficiency[E_balance_calves] / (ED_lipids * catabolism_efficiency[E_balance_calves]);
-              // delta_blubber_calves = lipid_anacat_calves[E_balance_calves] * (E_in_calves - E_out_calves) / ED_lipids;
-              
-              if(growth){
-                calves[current_animal].fat_mass = calves[current_animal].fat_mass + delta_blubber_calves;
-                calves[current_animal].tot_mass = calves[current_animal].fat_mass + calves[current_animal].lean_mass;
-                calves[current_animal].bc = calves[current_animal].fat_mass / calves[current_animal].tot_mass;
-              }
-              
-            }
-            
-          } // End energy allocation
+          }
           
           
           // ------------------------------------------------------------
@@ -1949,7 +1939,7 @@ Rcpp::List movesim(
             // Abort pregnancy if the animal's reserves are insufficient to sustain its daily energetic costs
             if(bc_gest > animal->bc){
               animal->abort = 1;
-              animal->north = 1;
+              // animal->north = 1;
             }
           }
           
@@ -1957,657 +1947,232 @@ Rcpp::List movesim(
           // LEAVE CALVING GROUNDS
           // ------------------------------------------------------------
 
-          // Probability of migrating north is conditional on time already spent on calving grounds
-          if(animal->north == 0 && animal->region == 9){
-            double p_leave = pleave(current_day, enter_SEUS, cohortID, 3, residency_seus);
-            animal->north = R::rbinom(1, p_leave);
-          }
+          if(animal->region == 9 && current_day == enter_SEUS + 40) animal->north = 1;
           
-        } // End if alive
+          // // Probability of migrating north is conditional on time already spent on calving grounds
+          // if(animal->north == 0 && animal->region == 9){
+          //   double p_leave = pleave(current_day, enter_SEUS, cohortID, 3, residency_seus);
+          //   animal->north = R::rbinom(1, p_leave);
+          // }
+          
+        // } // End if alive
       } // End if current_day > 0
       
       // ------------------------------------------------------------
       // STORE VALUES in output matrices
       // ------------------------------------------------------------
+
+      // +++ Animal traits +++
       
-      // // Restart if(alive) conditional otherwise some attributes may still be
-      // // recorded despite animals having died of starvation
-      if(current_day == 0){ // Record initial parameter values
+      *(attrib_out++) = animal->cohortID;                                                                // Unique cohort identifier
+      *(attrib_out++) = animal->alive;                                                                   // Alive or dead
+      *(attrib_out++) = animal->alive * animal->age;                                                     // Age
+      *(attrib_out++) = animal->alive * animal->bc;                                                      // Body condition
+      *(attrib_out++) = animal->alive * animal->length;                                                  // Total body length 
+      *(attrib_out++) = animal->alive * animal->lengthatage(0,0);                                        // Coefficient of the Gompertz growth curve
+      *(attrib_out++) = animal->alive * animal->lengthatage(0,1);                                        // Coefficient of the Gompertz growth curve
+      *(attrib_out++) = animal->alive * animal->lengthatage(0,2);                                        // Coefficient of the Gompertz growth curve
+      *(attrib_out++) = animal->alive * animal->tot_mass;                                                // Total body mass (including blubber)
+      *(attrib_out++) = animal->alive * animal->lean_mass;                                               // Lean body mass (excluding blubber)
+      *(attrib_out++) = animal->alive * animal->fat_mass;                                                // Blubber mass
+      *(attrib_out++) = animal->alive * animal->massatlength(0,0);                                       // Intercept of the logarithmic mass-at-length relationship
+      *(attrib_out++) = animal->alive * animal->massatlength(0,1);                                       // Slope of the logarithmic mass-at-length relationship
+      *(attrib_out++) = animal->alive * animal->gape;                                                    // Size of the gape
+      *(attrib_out++) = animal->alive * animal->mouth_ratio;                                             // Ratio of mouth width to total body length
+      *(attrib_out++) = animal->alive * animal->mouth_angle;                                             // Upper angle of the mouth
+      *(attrib_out++) = animal->alive * animal->mouth_width;                                             // Width of the mouth
+      *(attrib_out++) = animal->gsl;                                                                     // Gulf of St Lawrence
+      *(attrib_out++) = animal->seus;                                                                    // Southeastern U.S.
+      *(attrib_out++) = animal->north;                                                                   // Migration interruption
+      *(attrib_out++) = animal->abort;                                                                   // Abortion (pregnant females)
+      *(attrib_out++) = animal->alive * p_starve;                                                                        // Starvation-induced mortality rate
+      *(attrib_out++) = animal->starve;                                                                  // Incidence of starvation
+      *(attrib_out++) = animal->mort;                                                                    // Mortality from other sources
+      *(attrib_out++) = date_death[current_animal];                                                      // Date of death
+      *(attrib_out++) = animal->alive * p_surv;                   
+      
+      // +++ Stressors +++
+      
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * gear_risk;                  // Probability of becoming entangled
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * entanglement_cost;          // Entanglement cost
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * animal->entangled(0);       // Is the animal entangled?
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * animal->entangled(1);       // Entanglement severity
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * animal->entangled(2);       // Does the entanglement involve the anterior part of the body?
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * animal->entangled(3);       // Reduction in mouth gape
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * animal->entangled(4);       // Entanglement duration
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * animal->entangled(5);       // Day when entanglement event started
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * animal->entangled(6);       // Day when entanglement event ended
+      
+      *(attrib_stressors_out++) = calves[current_animal].alive * calves[current_animal].entangled(0);    // Is the animal entangled? (calves)
+      *(attrib_stressors_out++) = calves[current_animal].alive * calves[current_animal].entangled(1);    // Entanglement severity (calves)
+      *(attrib_stressors_out++) = calves[current_animal].alive * calves[current_animal].entangled(2);    // Does the entanglement involve the anterior part of the body? (calves)
+      *(attrib_stressors_out++) = calves[current_animal].alive * calves[current_animal].entangled(4);    // Entanglement duration (calves)
+      *(attrib_stressors_out++) = calves[current_animal].alive * calves[current_animal].entangled(5);    // Day when entanglement event started (calves)
+      *(attrib_stressors_out++) = calves[current_animal].alive * calves[current_animal].entangled(6);    // Day when entanglement event ended (calves)
+      
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * strike_risk;                // Probability of being struck by vessels
+      *(attrib_stressors_out++) = animal->strike;                                                        // Incidence of vessel strike
+      *(attrib_stressors_out++) = calves[current_animal].strike;                                         // Incidence of vessel strike (calves)    
+      
+      *(attrib_stressors_out++) = animal->respnoise;                                                     // Incidence of behavioral response to noise exposure
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * dB;                         // Noise levels
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * response_dB;                // Behavioral response threshold
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * piling_hrs;                 // Duration of pile-driving activities
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * nursing_cessation(0);       // Nursing cessation
+      *(attrib_stressors_out++) = animal->alive * (1 - (current_day == 0)) * nursing_cessation(1);       // Duration of nursing cessation
+      
+      *(attrib_E_out++) = animal->alive * (1 - (current_day == 0)) * E_in - E_out;                       // Net energy (adults and juveniles)
+      *(attrib_E_out++) = animal->alive * (1 - (current_day == 0)) * E_in;                               // Energy gain (adults and juveniles)
+      *(attrib_E_out++) = animal->alive * (1 - (current_day == 0)) * E_out;                              // Energy expenditure (adults and juveniles)
+      *(attrib_E_out++) = animal->alive * (1 - (current_day == 0)) * delta_blubber;                      // Change in blubber mass (adults and juveniles)
+      *(attrib_E_out++) = animal->alive * (1 - (current_day == 0)) * anabolism_efficiency[0];            // Lipid anabolism efficiency (adults and juveniles)
+      *(attrib_E_out++) = animal->alive * (1 - (current_day == 0)) * catabolism_efficiency[1];           // Lipid catabolism efficiency (adults and juveniles)
+      *(attrib_E_out++) = animal->alive * (1 - (current_day == 0)) * ED_lipids;                          // Energy density of lipids
+      *(attrib_E_out++) = animal->alive * (1 - (current_day == 0)) * ED_protein;                         // Energy density of protein
+      
+         // +++ Energy intake +++
+      
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * is_feeding;                   // Incidence of foraging
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * D_cop;                        // Prey concentration
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * min_calanus;                  // Minimum prey concentration needed for foraging
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * swim_speed;                   // Swimming speed while foraging
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * capture_efficiency;           // Capture efficiency
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * animal->entangled(3);         // Reduction in mouth gape when entangled
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * feeding_nursing_effort[0];    // Feeding/nursing effort
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * eta(0);                       // Steepness of feeding/nursing effort curve for lower target BC
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * eta(1);                       // Steepness of feeding/nursing effort curve for higher target BC
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * target_bc[0];                 // Target body condition
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * cop_mass;                     // Copepod mass (wet weight)
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * water_content;                // Water content of prey
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * cop_kJ;                       // Energy density of Calanus finmarchicus stage V
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * digestive_efficiency;         // Digestive efficiency
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * metabolizing_efficiency(0);   // Metabolizing efficiency (calves and juveniles)
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * metabolizing_efficiency(1);   // Metabolizing efficiency (adults)
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * E_calanus;                    // Prey energy content
+      *(attrib_feeding_out++) = animal->alive * (1 - (current_day == 0)) * calf_foraging;                // Calf foraging
+      
+      // +++ Energy costs +++
+      
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * resting_metab;                  // Resting metabolic rate
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * LC_tot;                         // Locomotory costs
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * scalar_LC;                      // Scalar on locomotory costs
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * stroke_rate;                    // Stroke rate during non-foraging activities
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * stroke_rate_foraging;           // Stroke rate during foraging activities
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * E_growth;                       // Energetic cost associated with growth
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * E_gest;                         // Energetic cost associated with gestation
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * fetal_growth_cost;              // Energetic cost associated with fetal growth
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * placental_cost;                 // Energetic cost associated with placental maintenance
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * HIC;                            // Heat increment of gestation
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * E_lac;                          // Energetic cost associated with lactation
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * lean_mass_increment;            // Daily change in mass of adult
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * prop_muscle;                    // Relative % of muscles in lean mass
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * prop_viscera;                   // Relative % of viscera in lean mass
+      *(attrib_costs_out++) = animal->alive * (1 - (current_day == 0)) * prop_bones;                     // Relative % of bones in lean mass
+      
+      // +++ Activity budgets +++
+      
+      *(attrib_activity_out++) = animal->alive * (1 - (current_day == 0)) * travel_dist;                 // Distance traveled
+      *(attrib_activity_out++) = animal->alive * (1 - (current_day == 0)) * swim_speed;                  // Swimming speed
+      *(attrib_activity_out++) = animal->alive * (1 - (current_day == 0)) * percent_glide;               // % Time spent gliding during non-foraging activities
+      *(attrib_activity_out++) = animal->alive * (1 - (current_day == 0)) * percent_glide_foraging;      // % Time spent gliding during foraging activities
+      *(attrib_activity_out++) = animal->alive * (1 - (current_day == 0)) * percent_glide_echelon;       // % Time spent gliding during echelon swimming
+      *(attrib_activity_out++) = animal->alive * (1 - (current_day == 0)) * travel_time;                 // Time spent traveling
+      *(attrib_activity_out++) = animal->alive * (1 - (current_day == 0)) * feeding_time;                // Time spent feeding
+      *(attrib_activity_out++) = animal->alive * (1 - (current_day == 0)) * resting_nursing_time;        // Time spent resting + nursing
+      
+      // +++ Fetus development +++
+      
+      if(cohortID == 4 | cohortID == 5){
         
-        // +++ Animal traits +++
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * fetus_l;                          // Fetus length
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * fetus_m;                          // Fetus mass
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * mass_increment_fetus;             // Daily change in mass of fetus
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * length_increment_fetus;           // Daily change in length of fetus
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * birth_length[current_animal];     // Expected length at birth
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * birth_mass[current_animal];       // Expected mass at birth
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * mass_muscle;                      // Fetal muscle mass
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * mass_viscera;                     // Fetal visceral mass
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * mass_bones;                       // Fetal bone mass
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * mass_blubber;                     // Fetal blubber mass
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * prop_lipids_in_muscle;            // Lipid content in fetal muscles
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * prop_protein_in_muscle;           // Protein content in fetal muscles
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * prop_lipids_in_viscera;           // Lipid content in fetal viscera
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * prop_protein_in_viscera;          // Protein content in fetal viscera
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * prop_lipids_in_bones;             // Lipid content in fetal bones
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * prop_protein_in_bones;            // Protein content in fetal bones
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * prop_lipids_in_blubber;           // Lipid content in fetal blubber
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * prop_protein_in_blubber;          // Protein content in fetal blubber
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * P_muscle;                         // % of body volume comprising muscle in fetus
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * P_viscera;                        // % of body volume comprising viscera in fetus
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * P_bones;                          // % of body volume comprising bones in fetus
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * blubber_density;                  // Density of blubber
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * muscle_density;                   // Density of muscles
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * visceral_density;                 // Density of viscera
+        *(attrib_fetus_out++) = animal->alive * (1 - (current_day == 0)) * bone_density;                     // Density of bones
         
-        *(attrib_out++) = animal->cohortID;                // Unique cohort identifier
-        *(attrib_out++) = animal->alive;                   // Alive or dead
-        *(attrib_out++) = animal->age;                     // Age
-        *(attrib_out++) = animal->bc;                      // Body condition
-        *(attrib_out++) = animal->length;                  // Total body length 
-        *(attrib_out++) = animal->lengthatage(0,0);        // Coefficient of the Gompertz growth curve
-        *(attrib_out++) = animal->lengthatage(0,1);        // Coefficient of the Gompertz growth curve
-        *(attrib_out++) = animal->lengthatage(0,2);        // Coefficient of the Gompertz growth curve
-        *(attrib_out++) = animal->tot_mass;                // Total body mass (including blubber)
-        *(attrib_out++) = animal->lean_mass;               // Lean body mass (excluding blubber)
-        *(attrib_out++) = animal->fat_mass;                // Blubber mass
-        *(attrib_out++) = animal->massatlength(0,0);       // Intercept of the logarithmic mass-at-length relationship
-        *(attrib_out++) = animal->massatlength(0,1);       // Slope of the logarithmic mass-at-length relationship
-        *(attrib_out++) = animal->gape;                    // Size of the gape
-        *(attrib_out++) = animal->mouth_ratio;             // Ratio of mouth width to total body length
-        *(attrib_out++) = animal->mouth_angle;             // Upper angle of the mouth
-        *(attrib_out++) = animal->mouth_width;             // Width of the mouth
-        *(attrib_out++) = animal->gsl;                     // Gulf of St Lawrence
-        *(attrib_out++) = animal->seus;                    // Southeastern U.S.
-        *(attrib_out++) = animal->north;                   // Migration interruption
-        *(attrib_out++) = animal->abort;                   // Abortion (pregnant females)
-        *(attrib_out++) = p_starve;                        // Starvation-induced mortality rate
-        *(attrib_out++) = animal->starve;                  // Incidence of starvation
-        *(attrib_out++) = animal->mort;                    // Age-dependent mortality
-        *(attrib_out++) = date_death[current_animal];      // Date of death
-        *(attrib_out++) = p_surv;                          // Survival probability
-        
-        // +++ Stressors +++
-        
-        *(attrib_stressors_out++) = 0.0L;                  // Probability of becoming entangled
-        *(attrib_stressors_out++) = 0.0L;                  // Entanglement cost
-        *(attrib_stressors_out++) = animal->entangled(0);  // Is the animal entangled?
-        *(attrib_stressors_out++) = animal->entangled(1);  // Entanglement severity
-        *(attrib_stressors_out++) = animal->entangled(2);  // Does the entanglement involve the anterior part of the body?
-        *(attrib_stressors_out++) = animal->entangled(3);  // Reduction in mouth gape
-        *(attrib_stressors_out++) = animal->entangled(4);  // Entanglement duration
-        *(attrib_stressors_out++) = animal->entangled(5);  // Day when entanglement event started
-        *(attrib_stressors_out++) = animal->entangled(6);  // Day when entanglement event ended
-        
-        *(attrib_stressors_out++) = calves[current_animal].entangled(0);  // Is the animal entangled? (calves)
-        *(attrib_stressors_out++) = calves[current_animal].entangled(1);  // Entanglement severity (calves)
-        *(attrib_stressors_out++) = calves[current_animal].entangled(2);  // Does the entanglement involve the anterior part of the body? (calves)
-        *(attrib_stressors_out++) = calves[current_animal].entangled(4);  // Entanglement duration (calves)
-        *(attrib_stressors_out++) = calves[current_animal].entangled(5);  // Day when entanglement event started (calves)
-        *(attrib_stressors_out++) = calves[current_animal].entangled(6);  // Day when entanglement event ended (calves)
-        
-        *(attrib_stressors_out++) = 0.0L;                                 // Probability of being struck by vessels
-        *(attrib_stressors_out++) = animal->strike;                       // Incidence of vessel strike
-        *(attrib_stressors_out++) = calves[current_animal].strike;        // Incidence of vessel strike
-        
-        *(attrib_stressors_out++) = animal->respnoise;     // Incidence of behavioral response to noise exposure
-        *(attrib_stressors_out++) = 0.0L;                  // Noise levels
-        *(attrib_stressors_out++) = 0.0L;                  // Behavioral response threshold
-        *(attrib_stressors_out++) = 0.0L;                  // Duration of pile-driving activities
-        *(attrib_stressors_out++) = 0.0L;                  // Nursing cessation
-        *(attrib_stressors_out++) = 0.0L;                  // Duration of nursing cessation
-        
-        // +++ Energy budget +++
-        
-        *(attrib_E_out++) = 0.0L;                  // Net energy (adults and juveniles)
-        *(attrib_E_out++) = 0.0L;                  // Energy gain (adults and juveniles)
-        *(attrib_E_out++) = 0.0L;                  // Energy expenditure (adults and juveniles)
-        *(attrib_E_out++) = 0.0L;                  // Change in blubber mass (adults and juveniles)
-        *(attrib_E_out++) = 0.0L;                  // Lipid anabolism efficiency (adults and juveniles)
-        *(attrib_E_out++) = 0.0L;                  // Lipid catabolism efficiency (adults and juveniles)
-        *(attrib_E_out++) = 0.0L;                  // Energy density of lipids
-        *(attrib_E_out++) = 0.0L;                  // Energy density of protein
-        
-        // +++ Energy intake +++
-        
-        *(attrib_feeding_out++) = 0.0L;             // Incidence of foraging
-        *(attrib_feeding_out++) = 0.0L;             // Prey concentration
-        *(attrib_feeding_out++) = 0.0L;             // Minimum prey concentration needed for foraging
-        *(attrib_feeding_out++) = 0.0L;             // Swimming speed while foraging
-        *(attrib_feeding_out++) = 0.0L;             // Capture efficiency
-        *(attrib_feeding_out++) = 0.0L;             // % reduction in the gape when entangled
-        *(attrib_feeding_out++) = 0.0L;             // Feeding/nursing effort
-        *(attrib_feeding_out++) = 0.0L;             // Steepness of feeding/nursing effort curve for lower target BC
-        *(attrib_feeding_out++) = 0.0L;             // Steepness of feeding/nursing effort curve for higher target BC
-        *(attrib_feeding_out++) = 0.0L;             // Target body condition
-        *(attrib_feeding_out++) = 0.0L;             // Copepod mass (wet weight)
-        *(attrib_feeding_out++) = 0.0L;             // Water content of prey
-        *(attrib_feeding_out++) = 0.0L;             // Energy density of Calanus finmarchicus stage V
-        *(attrib_feeding_out++) = 0.0L;             // Digestive efficiency
-        *(attrib_feeding_out++) = 0.0L;             // Metabolizing efficiency (calves and juveniles)
-        *(attrib_feeding_out++) = 0.0L;             // Metabolizing efficiency (adults)
-        *(attrib_feeding_out++) = 0.0L;             // Prey energy content
-        *(attrib_feeding_out++) = 0.0L;             // Calf foraging
-        
-        // +++ Energy costs +++
-        
-        *(attrib_costs_out++) = 0.0L;           // Resting metabolic rate
-        *(attrib_costs_out++) = 0.0L;           // Locomotory costs
-        *(attrib_costs_out++) = 0.0L;           // Scalar on locomotory costs
-        *(attrib_costs_out++) = 0.0L;           // Stroke rate during non-foraging activities
-        *(attrib_costs_out++) = 0.0L;           // Stroke rate during foraging activities
-        *(attrib_costs_out++) = 0.0L;           // Energetic cost associated with growth
-        *(attrib_costs_out++) = 0.0L;           // Energetic cost associated with gestation
-        *(attrib_costs_out++) = 0.0L;           // Energetic cost associated with fetal growth
-        *(attrib_costs_out++) = 0.0L;           // Energetic cost associated with placental maintenance
-        *(attrib_costs_out++) = 0.0L;           // Heat increment of gestation
-        *(attrib_costs_out++) = 0.0L;           // Energetic cost associated with lactation
-        *(attrib_costs_out++) = 0.0L;           // Daily change in mass
-        *(attrib_costs_out++) = 0.0L;           // Relative % of muscles in lean mass
-        *(attrib_costs_out++) = 0.0L;           // Relative % of viscera in lean mass
-        *(attrib_costs_out++) = 0.0L;           // Relative % of bones in lean mass
-        
-        // +++ Activity budgets +++
-        
-        *(attrib_activity_out++) = 0.0L;         // Distance traveled
-        *(attrib_activity_out++) = 0.0L;         // Swimming speed
-        *(attrib_activity_out++) = 0.0L;         // Time spent gliding during non-foraging activities
-        *(attrib_activity_out++) = 0.0L;         // Time spent gliding during foraging activities
-        *(attrib_activity_out++) = 0.0L;         // Time spent gliding during echelon swimming
-        *(attrib_activity_out++) = 0.0L;         // Time spent traveling
-        *(attrib_activity_out++) = 0.0L;         // Time spent feeding
-        *(attrib_activity_out++) = 0.0L;         // Time spent resting + nursing
-        
-        if(cohortID == 4 | cohortID == 5){
-          
-          *(attrib_fetus_out++) = 0.0L;          // Fetus length
-          *(attrib_fetus_out++) = 0.0L;          // Fetus mass
-          *(attrib_fetus_out++) = 0.0L;          // Fetus daily mass gain
-          *(attrib_fetus_out++) = 0.0L;          // Fetus daily length gain
-          *(attrib_fetus_out++) = 0.0L;          // Expected length at birth
-          *(attrib_fetus_out++) = 0.0L;          // Expected mass at birth
-          *(attrib_fetus_out++) = 0.0L;          // Fetal muscle mass
-          *(attrib_fetus_out++) = 0.0L;          // Fetal visceral mass
-          *(attrib_fetus_out++) = 0.0L;          // Fetal bone mass
-          *(attrib_fetus_out++) = 0.0L;          // Fetal blubber mass
-          *(attrib_fetus_out++) = 0.0L;          // Lipid content in fetal muscles
-          *(attrib_fetus_out++) = 0.0L;          // Protein content in fetal muscles
-          *(attrib_fetus_out++) = 0.0L;          // Lipid content in fetal viscera
-          *(attrib_fetus_out++) = 0.0L;          // Protein content in fetal viscera
-          *(attrib_fetus_out++) = 0.0L;          // Lipid content in fetal bones
-          *(attrib_fetus_out++) = 0.0L;          // Protein content in fetal bones
-          *(attrib_fetus_out++) = 0.0L;          // Lipid content in fetal blubber
-          *(attrib_fetus_out++) = 0.0L;          // Protein content in fetal blubber
-          *(attrib_fetus_out++) = 0.0L;          // % of body volume comprising muscle in fetus
-          *(attrib_fetus_out++) = 0.0L;          // % of body volume comprising viscera in fetus
-          *(attrib_fetus_out++) = 0.0L;          // % of body volume comprising bones in fetus
-          *(attrib_fetus_out++) = 0.0L;          // Density of blubber
-          *(attrib_fetus_out++) = 0.0L;          // Density of muscles
-          *(attrib_fetus_out++) = 0.0L;          // Density of viscera
-          *(attrib_fetus_out++) = 0.0L;          // Density of bones
-          
-        }
-        
-        *(attrib_calves_out++) = calves[current_animal].cohortID ; // Unique cohort identifier
-        *(attrib_calves_out++) = born[current_animal];             // Birth
-        *(attrib_calves_out++) = prob_birth;                       // Probability of Birth
-        *(attrib_calves_out++) = dob[current_animal];              // Date of birth
-        *(attrib_calves_out++) = date_death_calf[current_animal];  // Date of death
-        *(attrib_calves_out++) = 0.0L;                             // Alive or dead
-        *(attrib_calves_out++) = 0.0L;                             // Age
-        *(attrib_calves_out++) = 0.0L;                             // Body condition
-        *(attrib_calves_out++) = 0.0L;                             // Body length
-        *(attrib_calves_out++) = 0.0L;                             // Coefficient of the Gompertz growth curve
-        *(attrib_calves_out++) = 0.0L;                             // Coefficient of the Gompertz growth curve
-        *(attrib_calves_out++) = 0.0L;                             // Coefficient of the Gompertz growth curve
-        *(attrib_calves_out++) = 0.0L;                             // Total body mass (including blubber)
-        *(attrib_calves_out++) = 0.0L;                             // Lean body mass (excluding blubber)
-        *(attrib_calves_out++) = 0.0L;                             // Blubber mass
-        *(attrib_calves_out++) = 0.0L;                             // Intercept of the logarithmic mass-at-length relationship
-        *(attrib_calves_out++) = 0.0L;                             // Slope of the logarithmic mass-at-length relationship
-        *(attrib_calves_out++) = 0.0L;                             // Size of the gape
-        *(attrib_calves_out++) = 0.0L;                             // Ratio of mouth width to total body length
-        *(attrib_calves_out++) = 0.0L;                             // Upper angle of the mouth
-        *(attrib_calves_out++) = 0.0L;                             // Width of the mouth
-        *(attrib_calves_out++) = p_starve_calf;                    // Starvation-induced mortality rate
-        *(attrib_calves_out++) = calves[current_animal].starve;    // Incidence of starvation
-        *(attrib_calves_out++) = calves[current_animal].mort;      // Age-dependent mortality
-        *(attrib_calves_out++) = date_death_calf[current_animal];  // Date of death
-        *(attrib_calves_out++) = p_surv_calf;                      // Survival probability
-        
-        *(attrib_nursing_out++) = 0.0L;    // Duration of lactation period
-        *(attrib_nursing_out++) = 0.0L;    // Milk assimilation
-        *(attrib_nursing_out++) = 0.0L;    // Milk provisioning
-        *(attrib_nursing_out++) = 0.0L;    // Non-linearity between milk supply and BC of mother
-        *(attrib_nursing_out++) = 0.0L;    // Age (days) at which milk consumption starts to decrease
-        *(attrib_nursing_out++) = 0.0L;    // Non-linearity between milk assimilation and calf age
-        *(attrib_nursing_out++) = 0.0L;    // Mass of mammary glands
-        *(attrib_nursing_out++) = 0.0L;    // Mammary gland efficiency
-        *(attrib_nursing_out++) = 0.0L;    // Milk yield
-        *(attrib_nursing_out++) = 0.0L;    // Target body condition (mother)
-        *(attrib_nursing_out++) = 0.0L;    // Nursing effort
-        *(attrib_nursing_out++) = 0.0L;    // Proportion of lipids in milk
-        *(attrib_nursing_out++) = 0.0L;    // Proportion of protein in milk
-        
-        *(attrib_costs_calves_out++) = 0.0L;   // Resting metabolic rate
-        *(attrib_costs_calves_out++) = 0.0L;   // Locomotory costs
-        *(attrib_costs_calves_out++) = 0.0L;   // Scalar on locomotory costs
-        *(attrib_costs_calves_out++) = 0.0L;   // Energetic cost associated with growth
-        *(attrib_costs_calves_out++) = 0.0L;   // Daily change in mass
-        
-        *(attrib_E_calves_out++) = 0.0L;   // Net energy (calves)
-        *(attrib_E_calves_out++) = 0.0L;   // Energy gain (calves)
-        *(attrib_E_calves_out++) = 0.0L;   // Energy expenditure (calves)
-        *(attrib_E_calves_out++) = 0.0L;   // Change in blubber mass (calves)
-        
-        
-      } else {
-        
-        if(animal->alive){
-          
-          // +++ Animal traits +++
-          
-          *(attrib_out++) = animal->cohortID;                // Unique cohort identifier
-          *(attrib_out++) = animal->alive;                   // Alive or dead
-          *(attrib_out++) = animal->age;                     // Age
-          *(attrib_out++) = animal->bc;                      // Body condition
-          *(attrib_out++) = animal->length;                  // Total body length 
-          *(attrib_out++) = animal->lengthatage(0,0);        // Coefficient of the Gompertz growth curve
-          *(attrib_out++) = animal->lengthatage(0,1);        // Coefficient of the Gompertz growth curve
-          *(attrib_out++) = animal->lengthatage(0,2);        // Coefficient of the Gompertz growth curve
-          *(attrib_out++) = animal->tot_mass;                // Total body mass (including blubber)
-          *(attrib_out++) = animal->lean_mass;               // Lean body mass (excluding blubber)
-          *(attrib_out++) = animal->fat_mass;                // Blubber mass
-          *(attrib_out++) = animal->massatlength(0,0);       // Intercept of the logarithmic mass-at-length relationship
-          *(attrib_out++) = animal->massatlength(0,1);       // Slope of the logarithmic mass-at-length relationship
-          *(attrib_out++) = animal->gape;                    // Size of the gape
-          *(attrib_out++) = animal->mouth_ratio;             // Ratio of mouth width to total body length
-          *(attrib_out++) = animal->mouth_angle;             // Upper angle of the mouth
-          *(attrib_out++) = animal->mouth_width;             // Width of the mouth
-          *(attrib_out++) = animal->gsl;                     // Gulf of St Lawrence
-          *(attrib_out++) = animal->seus;                    // Southeastern U.S.
-          *(attrib_out++) = animal->north;                   // Migration interruption
-          *(attrib_out++) = animal->abort;                   // Abortion (pregnant females)
-          *(attrib_out++) = p_starve;                        // Starvation-induced mortality rate
-          *(attrib_out++) = animal->starve;                  // Incidence of starvation
-          *(attrib_out++) = animal->mort;                    // Mortality from other sources
-          *(attrib_out++) = date_death[current_animal];      // Date of death
-          *(attrib_out++) = p_surv;                          // Survival probability
-          
-          // +++ Stressors +++
-          
-          if(stressors){
-            
-            *(attrib_stressors_out++) = gear_risk;             // Probability of becoming entangled
-            *(attrib_stressors_out++) = entanglement_cost;                  // Entanglement cost
-            *(attrib_stressors_out++) = animal->entangled(0);  // Is the animal entangled?
-            *(attrib_stressors_out++) = animal->entangled(1);  // Entanglement severity
-            *(attrib_stressors_out++) = animal->entangled(2);  // Does the entanglement involve the anterior part of the body?
-            *(attrib_stressors_out++) = animal->entangled(3);  // Reduction in mouth gape
-            *(attrib_stressors_out++) = animal->entangled(4);  // Entanglement duration
-            *(attrib_stressors_out++) = animal->entangled(5);  // Day when entanglement event started
-            *(attrib_stressors_out++) = animal->entangled(6);  // Day when entanglement event ended
-            
-            *(attrib_stressors_out++) = calves[current_animal].entangled(0);  // Is the animal entangled? (calves)
-            *(attrib_stressors_out++) = calves[current_animal].entangled(1);  // Entanglement severity (calves)
-            *(attrib_stressors_out++) = calves[current_animal].entangled(2);  // Does the entanglement involve the anterior part of the body? (calves)
-            *(attrib_stressors_out++) = calves[current_animal].entangled(4);  // Entanglement duration (calves)
-            *(attrib_stressors_out++) = calves[current_animal].entangled(5);  // Day when entanglement event started (calves)
-            *(attrib_stressors_out++) = calves[current_animal].entangled(6);  // Day when entanglement event ended (calves)
-            
-            *(attrib_stressors_out++) = strike_risk;                           // Probability of being struck by vessels
-            *(attrib_stressors_out++) = animal->strike;                        // Incidence of vessel strike
-            *(attrib_stressors_out++) = calves[current_animal].strike;         // Incidence of vessel strike (calves)    
-            
-            *(attrib_stressors_out++) = animal->respnoise;                     // Incidence of behavioral response to noise exposure
-            *(attrib_stressors_out++) = dB;                                    // Noise levels
-            *(attrib_stressors_out++) = response_dB;                           // Behavioral response threshold
-            *(attrib_stressors_out++) = piling_hrs;                            // Duration of pile-driving activities
-            *(attrib_stressors_out++) = nursing_cessation(0);                  // Nursing cessation
-            *(attrib_stressors_out++) = nursing_cessation(1);                  // Duration of nursing cessation
-            
-          }
-          
-          // +++ Energy budget +++
-          
-          *(attrib_E_out++) = E_in - E_out;                  // Net energy (adults and juveniles)
-          *(attrib_E_out++) = E_in;                          // Energy gain (adults and juveniles)
-          *(attrib_E_out++) = E_out;                         // Energy expenditure (adults and juveniles)
-          *(attrib_E_out++) = delta_blubber;                 // Change in blubber mass (adults and juveniles)
-          *(attrib_E_out++) = anabolism_efficiency[0];       // Lipid anabolism efficiency (adults and juveniles)
-          *(attrib_E_out++) = catabolism_efficiency[1];      // Lipid catabolism efficiency (adults and juveniles)
-          *(attrib_E_out++) = ED_lipids;                     // Energy density of lipids
-          *(attrib_E_out++) = ED_protein;                    // Energy density of protein
-          
-          // +++ Energy intake +++
-          
-          *(attrib_feeding_out++) = is_feeding;                          // Incidence of foraging
-          *(attrib_feeding_out++) = D_cop;                               // Prey concentration
-          *(attrib_feeding_out++) = min_calanus;                         // Minimum prey concentration needed for foraging
-          *(attrib_feeding_out++) = swim_speed;                          // Swimming speed while foraging
-          *(attrib_feeding_out++) = capture_efficiency;                  // Capture efficiency
-          *(attrib_feeding_out++) = animal->entangled(3);                // Reduction in mouth gape when entangled
-          *(attrib_feeding_out++) = feeding_nursing_effort[0];           // Feeding/nursing effort
-          *(attrib_feeding_out++) = eta(0);                              // Steepness of feeding/nursing effort curve for lower target BC
-          *(attrib_feeding_out++) = eta(1);                              // Steepness of feeding/nursing effort curve for higher target BC
-          *(attrib_feeding_out++) = target_bc[0];                        // Target body condition
-          *(attrib_feeding_out++) = cop_mass;                            // Copepod mass (wet weight)
-          *(attrib_feeding_out++) = water_content;                       // Water content of prey
-          *(attrib_feeding_out++) = cop_kJ;                              // Energy density of Calanus finmarchicus stage V
-          *(attrib_feeding_out++) = digestive_efficiency;                // Digestive efficiency
-          *(attrib_feeding_out++) = metabolizing_efficiency(0);          // Metabolizing efficiency (calves and juveniles)
-          *(attrib_feeding_out++) = metabolizing_efficiency(1);          // Metabolizing efficiency (adults)
-          *(attrib_feeding_out++) = E_calanus;                           // Prey energy content
-          *(attrib_feeding_out++) = calf_foraging;                       // Calf foraging
-          
-          // +++ Energy costs +++
-          
-          *(attrib_costs_out++) = resting_metab;           // Resting metabolic rate
-          *(attrib_costs_out++) = LC_tot;                  // Locomotory costs
-          *(attrib_costs_out++) = scalar_LC;               // Scalar on locomotory costs
-          *(attrib_costs_out++) = stroke_rate;             // Stroke rate during non-foraging activities
-          *(attrib_costs_out++) = stroke_rate_foraging;    // Stroke rate during foraging activities
-          *(attrib_costs_out++) = E_growth;                // Energetic cost associated with growth
-          *(attrib_costs_out++) = E_gest;                  // Energetic cost associated with gestation
-          *(attrib_costs_out++) = fetal_growth_cost;       // Energetic cost associated with fetal growth
-          *(attrib_costs_out++) = placental_cost;          // Energetic cost associated with placental maintenance
-          *(attrib_costs_out++) = HIC;                     // Heat increment of gestation
-          *(attrib_costs_out++) = E_lac;                   // Energetic cost associated with lactation
-          *(attrib_costs_out++) = lean_mass_increment;     // Daily change in mass of adult
-          *(attrib_costs_out++) = prop_muscle;             // Relative % of muscles in lean mass
-          *(attrib_costs_out++) = prop_viscera;            // Relative % of viscera in lean mass
-          *(attrib_costs_out++) = prop_bones;              // Relative % of bones in lean mass
-          
-          // +++ Activity budgets +++
-          
-          *(attrib_activity_out++) = travel_dist;               // Distance traveled
-          *(attrib_activity_out++) = swim_speed;                // Swimming speed
-          *(attrib_activity_out++) = percent_glide;            // % Time spent gliding during non-foraging activities
-          *(attrib_activity_out++) = percent_glide_foraging;    // % Time spent gliding during foraging activities
-          *(attrib_activity_out++) = percent_glide_echelon;     // % Time spent gliding during echelon swimming
-          *(attrib_activity_out++) = travel_time;               // Time spent traveling
-          *(attrib_activity_out++) = feeding_time;              // Time spent feeding
-          *(attrib_activity_out++) = resting_nursing_time;      // Time spent resting + nursing
-          
-          // +++ Fetus development +++
-          
-          if(cohortID == 4 | cohortID == 5){
-            
-            *(attrib_fetus_out++) = fetus_l;                               // Fetus length
-            *(attrib_fetus_out++) = fetus_m;                               // Fetus mass
-            *(attrib_fetus_out++) = mass_increment_fetus;                  // Daily change in mass of fetus
-            *(attrib_fetus_out++) = length_increment_fetus;                // Daily change in length of fetus
-            *(attrib_fetus_out++) = birth_length[current_animal];          // Expected length at birth
-            *(attrib_fetus_out++) = birth_mass[current_animal];            // Expected mass at birth
-            *(attrib_fetus_out++) = mass_muscle;                           // Fetal muscle mass
-            *(attrib_fetus_out++) = mass_viscera;                          // Fetal visceral mass
-            *(attrib_fetus_out++) = mass_bones;                            // Fetal bone mass
-            *(attrib_fetus_out++) = mass_blubber;                          // Fetal blubber mass
-            *(attrib_fetus_out++) = prop_lipids_in_muscle;                 // Lipid content in fetal muscles
-            *(attrib_fetus_out++) = prop_protein_in_muscle;                // Protein content in fetal muscles
-            *(attrib_fetus_out++) = prop_lipids_in_viscera;                // Lipid content in fetal viscera
-            *(attrib_fetus_out++) = prop_protein_in_viscera;               // Protein content in fetal viscera
-            *(attrib_fetus_out++) = prop_lipids_in_bones;                  // Lipid content in fetal bones
-            *(attrib_fetus_out++) = prop_protein_in_bones;                 // Protein content in fetal bones
-            *(attrib_fetus_out++) = prop_lipids_in_blubber;                // Lipid content in fetal blubber
-            *(attrib_fetus_out++) = prop_protein_in_blubber;               // Protein content in fetal blubber
-            *(attrib_fetus_out++) = P_muscle;          // % of body volume comprising muscle in fetus
-            *(attrib_fetus_out++) = P_viscera;          // % of body volume comprising viscera in fetus
-            *(attrib_fetus_out++) = P_bones;          // % of body volume comprising bones in fetus
-            *(attrib_fetus_out++) = blubber_density;          // Density of blubber
-            *(attrib_fetus_out++) = muscle_density;          // Density of muscles
-            *(attrib_fetus_out++) = visceral_density;          // Density of viscera
-            *(attrib_fetus_out++) = bone_density;          // Density of bones
-            
-          }
-          
-        } else { 
-          
-          // If the animal is dead
-          // Set all outputs other than location to 0
-          // This is required otherwise attributes from the next animal are erroneously recorded
-          
-          *(attrib_out++) = animal->cohortID;  // Unique cohort identifier
-          *(attrib_out++) = animal->alive;     // Alive or dead
-          *(attrib_out++) = 0.0L;              // Age
-          *(attrib_out++) = 0.0L;              // Body condition
-          *(attrib_out++) = 0.0L;              // Total body length 
-          *(attrib_out++) = 0.0L;              // Coefficient of the Gompertz growth curve
-          *(attrib_out++) = 0.0L;              // Coefficient of the Gompertz growth curve
-          *(attrib_out++) = 0.0L;              // Coefficient of the Gompertz growth curve
-          *(attrib_out++) = 0.0L;              // Total body mass (including blubber)
-          *(attrib_out++) = 0.0L;              // Lean body mass (excluding blubber)
-          *(attrib_out++) = 0.0L;              // Blubber mass
-          *(attrib_out++) = 0.0L;              // Intercept of the logarithmic mass-at-length relationship
-          *(attrib_out++) = 0.0L;              // Slope of the logarithmic mass-at-length relationship
-          *(attrib_out++) = 0.0L;              // Size of the gape
-          *(attrib_out++) = 0.0L;              // Ratio of mouth width to total body length
-          *(attrib_out++) = 0.0L;              // Upper angle of the mouth
-          *(attrib_out++) = 0.0L;              // Width of the mouth
-          *(attrib_out++) = animal->gsl;       // Gulf of St Lawrence
-          *(attrib_out++) = animal->seus;      // Southeastern U.S.
-          *(attrib_out++) = animal->north;     // Migration interruption
-          *(attrib_out++) = animal->abort;     // Abortion (pregnant females)
-          *(attrib_out++) = p_starve;          // Starvation-induced mortality rate
-          *(attrib_out++) = animal->starve;    // Incide of starvation
-          *(attrib_out++) = animal->mort;      // Mortality from other sources
-          *(attrib_out++) = date_death[current_animal];       // Date of death
-          *(attrib_out++) = p_surv;                          // Survival probability
-          
-          // +++ Stressors +++
-          
-          *(attrib_stressors_out++) = 0.0L;                     // Probability of becoming entangled
-          *(attrib_stressors_out++) = 0.0L;                  // Entanglement cost
-          *(attrib_stressors_out++) = animal->entangled(0);  // Is the animal entangled?
-          *(attrib_stressors_out++) = animal->entangled(1);  // Entanglement severity
-          *(attrib_stressors_out++) = animal->entangled(2);  // Does the entanglement involve the anterior part of the body?
-          *(attrib_stressors_out++) = animal->entangled(3);  // Reduction in mouth gape
-          *(attrib_stressors_out++) = animal->entangled(4);  // Entanglement duration
-          *(attrib_stressors_out++) = animal->entangled(5);  // Day when entanglement event started
-          *(attrib_stressors_out++) = animal->entangled(6);  // Day when entanglement event ended
-          
-          *(attrib_stressors_out++) = calves[current_animal].entangled(0);  // Is the animal entangled? (calves)
-          *(attrib_stressors_out++) = calves[current_animal].entangled(1);  // Entanglement severity (calves)
-          *(attrib_stressors_out++) = calves[current_animal].entangled(2);  // Does the entanglement involve the anterior part of the body? (calves)
-          *(attrib_stressors_out++) = calves[current_animal].entangled(4);  // Entanglement duration (calves)
-          *(attrib_stressors_out++) = calves[current_animal].entangled(5);  // Day when entanglement event started (calves)
-          *(attrib_stressors_out++) = calves[current_animal].entangled(6);  // Day when entanglement event ended (calves)
-          
-          *(attrib_stressors_out++) = 0.0L;                                  // Probability of being struck by vessels
-          *(attrib_stressors_out++) = animal->strike;                        // Incidence of vessel strike
-          *(attrib_stressors_out++) = calves[current_animal].strike;         // Incidence of vessel strike (calves)    
-          
-          *(attrib_stressors_out++) = animal->respnoise;        // Incidence of behavioral response to noise exposure
-          *(attrib_stressors_out++) = 0.0L;                     // Noise levels
-          *(attrib_stressors_out++) = 0.0L;                     // Behavioral response threshold
-          *(attrib_stressors_out++) = 0.0L;                     // Duration of pile-driving activities
-          *(attrib_stressors_out++) = 0.0L;                     // Nursing cessation
-          *(attrib_stressors_out++) = 0.0L;                     // Duration of nursing cessation
-          
-          // +++ Energy budget +++
-          
-          *(attrib_E_out++) = 0.0L;            // Net energy (adults and juveniles)
-          *(attrib_E_out++) = 0.0L;            // Energy gain (adults and juveniles)
-          *(attrib_E_out++) = 0.0L;            // Energy expenditure (adults and juveniles)
-          *(attrib_E_out++) = 0.0L;            // Change in blubber mass (adults and juveniles)
-          *(attrib_E_out++) = 0.0L;            // Lipid anabolism efficiency (adults and juveniles)
-          *(attrib_E_out++) = 0.0L;            // Lipid catabolism efficiency (adults and juveniles)      
-          *(attrib_E_out++) = 0.0L;            // Energy density of lipids
-          *(attrib_E_out++) = 0.0L;            // Energy density of protein
-          
-          // +++ Energy intake +++
-          
-          *(attrib_feeding_out++) = 0.0L;        // Incidence of foraging
-          *(attrib_feeding_out++) = 0.0L;        // Prey concentration
-          *(attrib_feeding_out++) = 0.0L;        // Minimum prey concentration needed for foraging
-          *(attrib_feeding_out++) = 0.0L;        // Swimming speed while foraging
-          *(attrib_feeding_out++) = 0.0L;        // Capture efficiency
-          *(attrib_feeding_out++) = 0.0L;        // % reduction in the gape when entangled
-          *(attrib_feeding_out++) = 0.0L;        // Feeding/nursing effort
-          *(attrib_feeding_out++) = 0.0L;        // Steepness of feeding/nursing effort curve for lower target BC
-          *(attrib_feeding_out++) = 0.0L;        // Steepness of feeding/nursing effort curve for higher target BC
-          *(attrib_feeding_out++) = 0.0L;        // Target body condition
-          *(attrib_feeding_out++) = 0.0L;        // Copepod mass (wet weight)
-          *(attrib_feeding_out++) = 0.0L;        // Water content of prey
-          *(attrib_feeding_out++) = 0.0L;        // Energy density of Calanus finmarchicus stage V
-          *(attrib_feeding_out++) = 0.0L;        // Digestive efficiency
-          *(attrib_feeding_out++) = 0.0L;        // Metabolizing efficiency (calves and juveniles)
-          *(attrib_feeding_out++) = 0.0L;        // Metabolizing efficiency (adults)
-          *(attrib_feeding_out++) = 0.0L;        // Prey energy content
-          *(attrib_feeding_out++) = 0.0L;        // Calf foraging
-          
-          // +++ Energy costs +++
-          
-          *(attrib_costs_out++) = 0.0L;           // Resting metabolic rate
-          *(attrib_costs_out++) = 0.0L;           // Locomotory costs
-          *(attrib_costs_out++) = 0.0L;           // Scalar on locomotory costs
-          *(attrib_costs_out++) = 0.0L;           // Stroke rate during non-foraging activities
-          *(attrib_costs_out++) = 0.0L;           // Stroke rate during foraging activities
-          *(attrib_costs_out++) = 0.0L;           // Energetic cost associated with growth
-          *(attrib_costs_out++) = 0.0L;           // Energetic cost associated with gestation
-          *(attrib_costs_out++) = 0.0L;           // Energetic cost associated with fetal growth
-          *(attrib_costs_out++) = 0.0L;           // Energetic cost associated with placental maintenance
-          *(attrib_costs_out++) = 0.0L;           // Heat increment of gestation
-          *(attrib_costs_out++) = 0.0L;           // Energetic cost associated with lactation
-          *(attrib_costs_out++) = 0.0L;           // Daily change in mass
-          *(attrib_costs_out++) = 0.0L;           // Relative % of muscles in lean mass
-          *(attrib_costs_out++) = 0.0L;           // Relative % of viscera in lean mass
-          *(attrib_costs_out++) = 0.0L;           // Relative % of bones in lean mass
-          
-          // +++ Activity budgets +++
-          
-          *(attrib_activity_out++) = 0.0L;         // Distance traveled
-          *(attrib_activity_out++) = 0.0L;         // Swimming speed
-          *(attrib_activity_out++) = 0.0L;        // Time spent gliding during non-foraging activities
-          *(attrib_activity_out++) = 0.0L;         // Time spent gliding during foraging activities
-          *(attrib_activity_out++) = 0.0L;         // Time spent gliding during echelon swimming
-          *(attrib_activity_out++) = 0.0L;         // Time spent traveling
-          *(attrib_activity_out++) = 0.0L;         // Time spent feeding
-          *(attrib_activity_out++) = 0.0L;         // Time spent resting + nursing
-          
-          // +++ Fetus development +++
-          
-          if(cohortID == 4 | cohortID == 5){
-            
-            *(attrib_fetus_out++) = 0.0L;          // Fetus length
-            *(attrib_fetus_out++) = 0.0L;          // Fetus mass
-            *(attrib_fetus_out++) = 0.0L;          // Fetus daily mass gain
-            *(attrib_fetus_out++) = 0.0L;          // Fetus daily length gain
-            *(attrib_fetus_out++) = 0.0L;          // Expected length at birth
-            *(attrib_fetus_out++) = 0.0L;          // Expected mass at birth
-            *(attrib_fetus_out++) = 0.0L;          // Fetal muscle mass
-            *(attrib_fetus_out++) = 0.0L;          // Fetal visceral mass
-            *(attrib_fetus_out++) = 0.0L;          // Fetal bone mass
-            *(attrib_fetus_out++) = 0.0L;          // Fetal blubber mass
-            *(attrib_fetus_out++) = 0.0L;          // Lipid content in fetal muscles
-            *(attrib_fetus_out++) = 0.0L;          // Protein content in fetal muscles
-            *(attrib_fetus_out++) = 0.0L;          // Lipid content in fetal viscera
-            *(attrib_fetus_out++) = 0.0L;          // Protein content in fetal viscera
-            *(attrib_fetus_out++) = 0.0L;          // Lipid content in fetal bones
-            *(attrib_fetus_out++) = 0.0L;          // Protein content in fetal bones
-            *(attrib_fetus_out++) = 0.0L;          // Lipid content in fetal blubber
-            *(attrib_fetus_out++) = 0.0L;          // Protein content in fetal blubber
-            *(attrib_fetus_out++) = 0.0L;          // % of body volume comprising muscle in fetus
-            *(attrib_fetus_out++) = 0.0L;          // % of body volume comprising viscera in fetus
-            *(attrib_fetus_out++) = 0.0L;          // % of body volume comprising bones in fetus
-            *(attrib_fetus_out++) = 0.0L;          // Density of blubber
-            *(attrib_fetus_out++) = 0.0L;          // Density of muscles
-            *(attrib_fetus_out++) = 0.0L;          // Density of viscera
-            *(attrib_fetus_out++) = 0.0L;          // Density of bones
-            
-          }
-          
-        } // End if alive
+      }
+      
+      if(cohortID == 5){
         
         // +++ Calf traits +++
         
-        if(cohortID == 5 && calves[current_animal].alive == 1){
-          
-          *(attrib_calves_out++) = calves[current_animal].cohortID;            // Unique cohort identifier
-          *(attrib_calves_out++) = born[current_animal];                       // Birth
-          *(attrib_calves_out++) = prob_birth;                                 // Probability of Birth
-          *(attrib_calves_out++) = dob[current_animal];                        // Date of birth
-          *(attrib_calves_out++) = date_death_calf[current_animal];            // Date of death
-          *(attrib_calves_out++) = calves[current_animal].alive;               // Alive or dead
-          *(attrib_calves_out++) = calves[current_animal].age;                 // Age
-          *(attrib_calves_out++) = calves[current_animal].bc;                  // Body condition
-          *(attrib_calves_out++) = calves[current_animal].length;              // Body length
-          *(attrib_calves_out++) = calves[current_animal].lengthatage(0,0);    // Coefficient of the Gompertz growth curve
-          *(attrib_calves_out++) = calves[current_animal].lengthatage(0,1);    // Coefficient of the Gompertz growth curve
-          *(attrib_calves_out++) = calves[current_animal].lengthatage(0,2);    // Coefficient of the Gompertz growth curve
-          *(attrib_calves_out++) = calves[current_animal].tot_mass;            // Total body mass (including blubber)
-          *(attrib_calves_out++) = calves[current_animal].lean_mass;           // Lean body mass (excluding blubber)
-          *(attrib_calves_out++) = calves[current_animal].fat_mass;            // Blubber mass
-          *(attrib_calves_out++) = calves[current_animal].massatlength(0,0);   // Intercept of the logarithmic mass-at-length relationship
-          *(attrib_calves_out++) = calves[current_animal].massatlength(0,1);   // Slope of the logarithmic mass-at-length relationship
-          *(attrib_calves_out++) = calves[current_animal].gape;                // Size of the gape
-          *(attrib_calves_out++) = calves[current_animal].mouth_ratio;         // Ratio of mouth width to total body length
-          *(attrib_calves_out++) = calves[current_animal].mouth_angle;         // Upper angle of the mouth
-          *(attrib_calves_out++) = calves[current_animal].mouth_width;         // Width of the mouth
-          *(attrib_calves_out++) = p_starve_calf;                              // Starvation-induced mortality rate
-          *(attrib_calves_out++) = calves[current_animal].starve;              // Incidence of starvation
-          *(attrib_calves_out++) = calves[current_animal].mort;                // Mortality from other sources
-          *(attrib_calves_out++) = date_death_calf[current_animal];            // Mortality date
-          *(attrib_calves_out++) = p_surv_calf;                                // Survival probability
-          
-          *(attrib_nursing_out++) = T_lac;                                     // Duration of lactation period
-          *(attrib_nursing_out++) = milk_assim;                                // Milk assimilation
-          *(attrib_nursing_out++) = milk_provisioning;                         // Milk provisioning
-          *(attrib_nursing_out++) = zeta;                                      // Non-linearity between milk supply and BC of mother
-          *(attrib_nursing_out++) = milk_decrease;                             // Age (days) at which milk consumption starts to decrease
-          *(attrib_nursing_out++) = eta_milk;                                  // Non-linearity between milk assimilation and calf age
-          *(attrib_nursing_out++) = mammary_M;                                 // Mass of mammary glands
-          *(attrib_nursing_out++) = mammary_efficiency;                        // Mammary gland efficiency
-          *(attrib_nursing_out++) = milk_production_rate;                      // Milk yield
-          *(attrib_nursing_out++) = target_bc[1];                              // Target body condition
-          *(attrib_nursing_out++) = feeding_nursing_effort[1];                 // Nursing effort
-          *(attrib_nursing_out++) = milk_lipids;                               // Proportion of lipids in milk
-          *(attrib_nursing_out++) = milk_protein;                              // Proportion of protein in milk
-          
-          *(attrib_costs_calves_out++) = resting_metab_calves;           // Resting metabolic rate
-          *(attrib_costs_calves_out++) = LC_tot_calves;                  // Locomotory costs
-          *(attrib_costs_calves_out++) = scalar_LC_calf;                 // Scalar on locomotory costs
-          *(attrib_costs_calves_out++) = E_growth_calves;                // Energetic cost associated with growth
-          *(attrib_costs_calves_out++) = lean_mass_increment_calves;     // Daily change in mass
-          
-          *(attrib_E_calves_out++) = E_in_calves - E_out_calves;    // Net energy (calves)
-          *(attrib_E_calves_out++) = E_in_calves;                   // Energy gain (calves)
-          *(attrib_E_calves_out++) = E_out_calves;                  // Energy expenditure (calves)
-          *(attrib_E_calves_out++) = delta_blubber_calves;          // Change in blubber mass (calves)
-          
-        } else {
-          
-          *(attrib_calves_out++) = calves[current_animal].cohortID ; // Unique cohort identifier
-          *(attrib_calves_out++) = born[current_animal];             // Birth
-          *(attrib_calves_out++) = prob_birth;                       // Probability of Birth
-          *(attrib_calves_out++) = dob[current_animal];              // Date of birth
-          *(attrib_calves_out++) = date_death_calf[current_animal];  // Date of death
-          *(attrib_calves_out++) = 0.0L;                             // Alive or dead
-          *(attrib_calves_out++) = 0.0L;                             // Age
-          *(attrib_calves_out++) = 0.0L;                             // Body condition
-          *(attrib_calves_out++) = 0.0L;                             // Body length
-          *(attrib_calves_out++) = 0.0L;                             // Coefficient of the Gompertz growth curve
-          *(attrib_calves_out++) = 0.0L;                             // Coefficient of the Gompertz growth curve
-          *(attrib_calves_out++) = 0.0L;                             // Coefficient of the Gompertz growth curve
-          *(attrib_calves_out++) = 0.0L;                             // Total body mass (including blubber)
-          *(attrib_calves_out++) = 0.0L;                             // Lean body mass (excluding blubber)
-          *(attrib_calves_out++) = 0.0L;                             // Blubber mass
-          *(attrib_calves_out++) = 0.0L;                             // Intercept of the logarithmic mass-at-length relationship
-          *(attrib_calves_out++) = 0.0L;                             // Slope of the logarithmic mass-at-length relationship
-          *(attrib_calves_out++) = 0.0L;                             // Size of the gape
-          *(attrib_calves_out++) = 0.0L;                             // Ratio of mouth width to total body length
-          *(attrib_calves_out++) = 0.0L;                             // Upper angle of the mouth
-          *(attrib_calves_out++) = 0.0L;                             // Width of the mouth
-          *(attrib_calves_out++) = p_starve_calf;                    // Starvation-induced mortality rate
-          *(attrib_calves_out++) = calves[current_animal].starve;    // Incidence of starvation
-          *(attrib_calves_out++) = calves[current_animal].mort;      // Age-dependent mortality
-          *(attrib_calves_out++) = date_death_calf[current_animal];  // Date of death
-          *(attrib_calves_out++) = p_surv_calf;                      // Survival probability
-          
-          *(attrib_nursing_out++) = 0.0L;   // Duration of lactation period
-          *(attrib_nursing_out++) = 0.0L;   // Milk assimilation
-          *(attrib_nursing_out++) = 0.0L;   // Milk provisioning
-          *(attrib_nursing_out++) = 0.0L;   // Non-linearity between milk supply and BC of mother
-          *(attrib_nursing_out++) = 0.0L;   // Age (days) at which milk consumption starts to decrease
-          *(attrib_nursing_out++) = 0.0L;   // Non-linearity between milk assimilation and calf age
-          *(attrib_nursing_out++) = 0.0L;   // Mass of mammary glands
-          *(attrib_nursing_out++) = 0.0L;   // Mammary gland efficiency
-          *(attrib_nursing_out++) = 0.0L;   // Milk yield
-          *(attrib_nursing_out++) = 0.0L;   // Target body condition (mother)
-          *(attrib_nursing_out++) = 0.0L;   // Nursing effort
-          *(attrib_nursing_out++) = 0.0L;   // Proportion of lipids in milk
-          *(attrib_nursing_out++) = 0.0L;   // Proportion of protein in milk
-          
-          *(attrib_costs_calves_out++) = 0.0L;  // Resting metabolic rate
-          *(attrib_costs_calves_out++) = 0.0L;  // Locomotory costs
-          *(attrib_costs_calves_out++) = 0.0L;  // Scalar on locomotory costs
-          *(attrib_costs_calves_out++) = 0.0L;  // Energetic cost associated with growth
-          *(attrib_costs_calves_out++) = 0.0L;  // Daily change in mass
-          
-          *(attrib_E_calves_out++) = 0.0L;  // Net energy (calves)
-          *(attrib_E_calves_out++) = 0.0L;  // Energy gain (calves)
-          *(attrib_E_calves_out++) = 0.0L;  // Energy expenditure (calves)
-          *(attrib_E_calves_out++) = 0.0L;  // Change in blubber mass (calves)
-          
-        } 
+        *(attrib_calves_out++) = calves[current_animal].cohortID;                                                                      // Unique cohort identifier
+        *(attrib_calves_out++) = born[current_animal];                                                                                 // Birth
+        *(attrib_calves_out++) = prob_birth;                                                                                           // Probability of Birth
+        *(attrib_calves_out++) = dob[current_animal];                                                                                  // Date of birth
+        *(attrib_calves_out++) = date_death_calf[current_animal];                                                                      // Date of death
+        *(attrib_calves_out++) = (1 - (current_day == 0)) * calves[current_animal].alive;                                              // Alive or dead
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].age;                 // Age
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].bc;                  // Body condition
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].length;              // Body length
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].lengthatage(0,0);    // Coefficient of the Gompertz growth curve
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].lengthatage(0,1);    // Coefficient of the Gompertz growth curve
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].lengthatage(0,2);    // Coefficient of the Gompertz growth curve
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].tot_mass;            // Total body mass (including blubber)
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].lean_mass;           // Lean body mass (excluding blubber)
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].fat_mass;            // Blubber mass
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].massatlength(0,0);   // Intercept of the logarithmic mass-at-length relationship
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].massatlength(0,1);   // Slope of the logarithmic mass-at-length relationship
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].gape;                // Size of the gape
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].mouth_ratio;         // Ratio of mouth width to total body length
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].mouth_angle;         // Upper angle of the mouth
+        *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].mouth_width;         // Width of the mouth
+        *(attrib_calves_out++) = calves[current_animal].alive * p_starve_calf;                                                                                        // Starvation-induced mortality rate
+        *(attrib_calves_out++) = calves[current_animal].starve;                                                                        // Incidence of starvation
+        *(attrib_calves_out++) = calves[current_animal].mort;                                                                          // Mortality from other sources
+        *(attrib_calves_out++) = date_death_calf[current_animal];                                                                      // Mortality date
+        *(attrib_calves_out++) = calves[current_animal].alive * p_surv_calf;                                                                                          // Survival probability
         
-      } // End if current_day == 0
+        // +++ Lactation +++
+        
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * T_lac;                                     // Duration of lactation period
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * milk_assim;                                // Milk assimilation
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * milk_provisioning;                         // Milk provisioning
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * zeta;                                      // Non-linearity between milk supply and BC of mother
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * milk_decrease;                             // Age (days) at which milk consumption starts to decrease
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * eta_milk;                                  // Non-linearity between milk assimilation and calf age
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * mammary_M;                                 // Mass of mammary glands
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * mammary_efficiency;                        // Mammary gland efficiency
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * milk_production_rate;                      // Milk yield
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * target_bc[1];                              // Target body condition
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * feeding_nursing_effort[1];                 // Nursing effort
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * milk_lipids;                               // Proportion of lipids in milk
+        *(attrib_nursing_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * milk_protein;                              // Proportion of protein in milk
+        
+        // +++ Calf energetic budget +++
+        
+        *(attrib_costs_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * resting_metab_calves;                 // Resting metabolic rate
+        *(attrib_costs_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * LC_tot_calves;                        // Locomotory costs
+        *(attrib_costs_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * scalar_LC_calf;                       // Scalar on locomotory costs
+        *(attrib_costs_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * E_growth_calves;                      // Energetic cost associated with growth
+        *(attrib_costs_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * lean_mass_increment_calves;           // Daily change in mass
+        *(attrib_E_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * E_in_calves - E_out_calves;               // Net energy (calves)
+        *(attrib_E_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * E_in_calves;                              // Energy gain (calves)
+        *(attrib_E_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * E_out_calves;                             // Energy expenditure (calves)
+        *(attrib_E_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * delta_blubber_calves;                     // Change in blubber mass (calves)
+        
+      }
+      
     } // End loop over animals
   } // End loop over time points (days)
   
@@ -2688,6 +2253,9 @@ Rcpp::List NARW_simulator(
      double piling_hrs,
      bool progress
  ) {
+   
+   // std::random_device rdev{};
+   // static std::default_random_engine e{123};
    
    // ------------------------------------------------------------------------
    // 0-index variables
