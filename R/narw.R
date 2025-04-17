@@ -31,7 +31,9 @@ narw <- function(nsim = 1e3,
                  ...){
   
   
-  # pair: An object of class \code{narwsim}, to which the current simulation must be matched. With the exception of wind farm parameters, simulation conditions between paired runs are identical; pairing is therefore useful for comparative assessments of competing offshore wind scenarios.
+  # pair: An object of class \code{narwsim}, to which the current simulation must be matched. 
+  # With the exception of wind farm parameters, simulation conditions between paired runs are identical; 
+  # pairing is therefore useful for comparative assessments of competing offshore wind scenarios.
 
   args.names <- substitute(...())
   
@@ -98,23 +100,29 @@ narw <- function(nsim = 1e3,
   if("growth" %in% names(args)) growth <- args[["growth"]] else growth <- TRUE
   if("pkgdev" %in% names(args)) pkgdev <- args[["pkgdev"]] else pkgdev <- FALSE
   if("prey.scalar" %in% names(args)) prey.scalar <- args[["prey.scalar"]] else prey.scalar <- 29
-  
-  # if("pair" %in% names(args)) pair <- args[["pair"]] else pair <- NULL
-  # 
-  # if(!is.null(pair) & !inherits(pair, "narwsim")) stop("Input to <pair> must be an object of class <narwsim>")
+  if("seed" %in% names(args)) seed <- args[["seed"]] else seed <- NULL
+  if("pair" %in% names(args)) pair <- args[["pair"]] else pair <- NULL
+  # if("scam" %in% names(args)) scam <- args[["scam"]] else scam <- FALSE
+
+  if(!is.null(pair) & !inherits(pair, "narwsim")) stop("Input to <pair> must be an object of class <narwsim>")
   
   # Match random seed if pairing scenario is provided
   # if(!is.null(attr(pair,"seed"))){
   #   assign(".Random.seed",  attr(pair, "seed"), .GlobalEnv)
   # }
   
-  # if(!is.null(attr(pair,"seed"))){
-  #   rdseed <- attr(pair,"seed")
-  # } else {
-  #   rdseed <- sample(1:10000, size = 1)
-  # }
-  # 
-  # set.seed(rdseed)
+  if(!is.null(attr(pair,"seed"))){
+    rdseed <- attr(pair,"seed")
+  } else {
+    if(!is.null(seed)){
+    rdseed <- seed
+    } else {
+    rdseed <- sample(1:10000, size = 1)
+    }
+  }
+
+  # Set random seed
+  set.seed(rdseed)
   
   # Vessel strike risk scalar.
   # Factor by which vessel strike risk rasters are multiplied to scale to strike probabilities.
@@ -170,7 +178,7 @@ narw <- function(nsim = 1e3,
   cat("+ Animats: N =", formatC(nsim, big.mark = ","), "[individual(s) / cohort]\n")
   cat("+ Label:", ifelse(!label == "", label, "None"), "\n")
 
-#   cat("+ Pairing:", ifelse(is.null(pair), "None", ifelse(pair$param$label == "", args.names[["pair"]], pair$param$label)), "\n\n")
+  cat("+ Pairing:", ifelse(is.null(pair), "None", ifelse(pair$param$label == "", args.names[["pair"]], pair$param$label)), "\n\n")
   
   cat("+ Cohorts: \n\n")
   for (h in cohort) cat(cohorts[id==h, abb], ": ", cohorts[id==h, name], "\n", sep = "")
@@ -483,6 +491,7 @@ narw <- function(nsim = 1e3,
     doSNOW::registerDoSNOW(cl)
     on.exit(snow::stopCluster(cl))
     # parallel::clusterSetRNGStream(cl = cl, iseed = rdseed)
+    doRNG::registerDoRNG(rdseed)
     
     console(msg = paste0("Initializing parallel computing (", n.cores, " cores)"), suffix = tickmark())
     
@@ -837,54 +846,146 @@ narw <- function(nsim = 1e3,
   # https://stats.stackexchange.com/questions/403772/different-ways-of-modelling-interactions-between-continuous-and-categorical-pred
   
   console(msg = "Fitting terminal functions")
-  
-  surv.fit <- suppressWarnings(
-    tryCatch(
-      {
-        mgcv::gam(alive ~ factor(cohort) + s(start_bc, by = factor(cohort), k = 4, bs = "tp"),
-                  data = gam.dt[born == 1,],
-                  method = "REML",
-                  gamma = 1.4,
-                  family = binomial(link = "logit")
-        )
-      },
-      error = function(cond) {
-        return(NA)
-      }
+
+    # surv.fit.scam <- suppressWarnings(
+    #   tryCatch(
+    #     {
+    #       scam::scam(alive ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "mpi"),
+    #                 data = gam.dt[born == 1,],
+    #                 family = binomial(link = "logit")
+    #       )
+    #     },
+    #     error = function(cond) {
+    #       return(NA)
+    #     }
+    #   )
+    # )
+    # 
+    # bc.fit.scam <- suppressWarnings(
+    #   tryCatch(
+    #     {
+    #       scam::scam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort), bs = "mpi"),
+    #                 data = gam.dt[alive == 1,],
+    #                 family = Gamma(link = "logit"))
+    #     },
+    #     error = function(cond) {
+    #       return(NA)
+    #     }
+    #   )
+    # )
+    
+  # Alive status of calves recorded differently to other cohorts
+  # It is not ideal but quick fix here for model fitting
+  nocalf <- gam.dt[cohort > 0]
+  calfdat <- gam.dt[cohort== 0 & event == "birth"]
+  sdat <- rbind(nocalf, calfdat)
+
+    surv.fit <- suppressWarnings(
+      tryCatch(
+        {
+
+          mgcv::gam(alive ~ factor(cohort) + s(start_bc, by = factor(cohort), k = 4, bs = "tp"),
+                    data = sdat,
+                    method = "REML",
+                    gamma = 1.4,
+                    family = binomial(link = "logit")
+          )
+        },
+        error = function(cond) {
+          return(NA)
+        }
+      )
     )
-  )
-  
-  # Failsafes in the event that all animals in a cohort are dead
-  # n.dead <- gam.dt[, .(alive = sum(alive)), cohort]
-  # gam.alive <- gam.dt[gam.dt$alive == 1, ]
-  # gam.dead <- gam.dt[cohort %in% n.dead[alive == 0, cohort]]
-  # gam.dead[,start_bc:=0]
-  # gam.dead[,end_bc:=0]
-  # gam.bc <- rbindlist(list(gam.alive, gam.dead))
-  
-  bc.fit <- suppressWarnings(
-    tryCatch(
-      {
-        mgcv::gam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort), k = 4, bs = "tp"),
-                  data = gam.dt[alive == 1,],
-                  method = "REML",
-                  gamma = 1.4,
-                  family = betar(link = "logit"))
-      },
-      error = function(cond) {
-        return(NA)
-      }
+    
+    # Failsafes in the event that all animals in a cohort are dead
+    # n.dead <- gam.dt[, .(alive = sum(alive)), cohort]
+    # gam.alive <- gam.dt[gam.dt$alive == 1, ]
+    # gam.dead <- gam.dt[cohort %in% n.dead[alive == 0, cohort]]
+    # gam.dead[,start_bc:=0]
+    # gam.dead[,end_bc:=0]
+    # gam.bc <- rbindlist(list(gam.alive, gam.dead))
+    
+    alive.calf <- unique(gam.dt[cohort == 0 & alive == 1, whale])
+    adat <- gam.dt[alive == 1,]
+    nolac <- adat[!cohort == 5]
+    lacdat <- adat[cohort == 5 & whale  %in% alive.calf]
+    bcdat <- rbind(nolac, lacdat)
+    
+    bc.fit <- suppressWarnings(
+      tryCatch(
+        {
+
+          mgcv::gam(end_bc ~ factor(cohort) + s(start_bc, by = factor(cohort), k = 4, bs = "tp"),
+                    data = bcdat,
+                    method = "REML",
+                    gamma = 1.4,
+                    family = betar(link = "logit"))
+        },
+        error = function(cond) {
+          return(NA)
+        }
+      )
     )
-  )
+    
+    # Model calf body condition and survival as a function of the mother's health
+    
+    calf_df <- dplyr::left_join(x = gam.dt[cohort == 0 & event == "birth"],
+                                y = gam.dt[cohort == 5], by = "whale") |> 
+      dplyr::select(alive.x, start_bc.y, end_bc.x) |> 
+      dplyr::rename(alive = alive.x, start_bc = start_bc.y, end_bc = end_bc.x)
+    
+    calf_survival.fit <- suppressWarnings(
+      tryCatch(
+        {
+          mgcv::gam(alive ~ s(start_bc, k = 4, bs = "tp"),
+                    data = calf_df,
+                    method = "REML",
+                    gamma = 1.4,
+                    family = binomial(link = "logit"))
+        },
+        error = function(cond) {
+          return(NA)
+        }
+      )
+    )
+    
+    # Quick plot
+    # plot(calf_survival.fit$model[,c(2,1)])
+    # lines(seq(0,1,length.out = 500), predict(calf_survival.fit, newdata = data.frame(start_bc = seq(0, 1, length.out = 500)), type = "response"), col = "steelblue4", lwd = 2)
+    
+    calf_bc.fit <- suppressWarnings(
+      tryCatch(
+        {
+          mgcv::gam(end_bc ~ s(start_bc, k = 4, bs = "tp"),
+                    data = calf_df[alive == 1],
+                    method = "REML",
+                    gamma = 1.4,
+                    family = betar(link = "logit"))
+        },
+        error = function(cond) {
+          return(NA)
+        }
+      )
+    )
   
+  # Quick plot
+  # plot(calf_bc.fit$model[,c(2,1)])
+  # lines(seq(0,1,length.out = 500), predict(calf_bc.fit, newdata = data.frame(start_bc = seq(0, 1, length.out = 500)), type = "response"), col = "firebrick", lwd = 2)
+    
   console(msg = "Fitting terminal functions", suffix = tickmark())
   
   # ............................................................
   # Add parameters to list output
   # ............................................................
   
-  outsim$gam <- list(fit = list(surv = surv.fit, bc = bc.fit), 
+  outsim$gam <- list(fit = list(surv = surv.fit, 
+                                bc = bc.fit),
+                     fit_calf = list(surv = calf_survival.fit,
+                                     bc = calf_bc.fit), 
                      dat = gam.dt)
+  
+  # outsim$scam <- list(fit = list(surv = surv.fit.scam, bc = bc.fit.scam), 
+  #                    dat = gam.dt)
   
   outsim[["dead"]] <- locs.dead
   outsim[["birth"]] <- locs.birth
@@ -893,7 +994,7 @@ narw <- function(nsim = 1e3,
   
   outsim$param <- list(nsim = nsim,
                        label = label,
-                       # pair = args.names[["pair"]],
+                       pair = args.names[["pair"]],
                        cohort = cohort,
                        cohorts = cohorts,
                        date_seq = date_seq,
@@ -924,7 +1025,7 @@ narw <- function(nsim = 1e3,
   # Add custom class and random seed attribute
   class(outsim) <- c("narwsim", class(outsim))
   class(outsim$init$xy) <- c("xyinits", class(outsim$init$xy))
-  # attr(outsim, "seed") <- rdseed
+  attr(outsim, "seed") <- rdseed
   
   # Print run time
   cat("---------------------------------\n")
