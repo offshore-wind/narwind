@@ -30,28 +30,44 @@ augment.narwsim <- function(obj,
   
   if("thin" %in% names(args)) thin <- args[["thin"]] else thin <- 10
   if("burn" %in% names(args)) burn <- args[["burn"]] else burn <- 0.5*n
-  if("rw.scale" %in% names(args)) rw.scale <- args[["rw.scale"]] else rw.scale <- 0.25 # Default value from mgcv::gam.mh
+  if("rw.scale" %in% names(args)) rw.scale <- args[["rw.scale"]] else rw.scale <- c(0.25, 2) # Default value from mgcv::gam.mh
   
   # Function checks
   if(!inherits(obj, "narwsim")) stop("Object must be of class <narwsim>")
 
   # Prediction data
   pred.x <- expand.grid(start_bc = seq(bc.range[1], bc.range[2], length.out = 100), cohort = cohorts$id)
+  pred.x_calf <- expand.grid(start_bc = seq(bc.range[1], bc.range[2], length.out = 100))
   
   # Total number of iterations
   n.tot <- n/thin
   
   # Extract GAM objects
   modlist <- obj$gam$fit
+  modlist_calf <- obj$gam$fit_calf
     
   ##'...............................
   ## Survival / health ----
   ##''...............................
   
+  # All cohorts
   out.survbc <- purrr::map(.x = names(modlist), .f = ~{
-    cat(ifelse(.x == "surv", "SURVIVAL MODEL", "\nHEALTH MODEL"),"\n")
-    out.mh <- gam.mh(modlist[[.x]], ns = n, burn = burn, thin = thin, rw.scale = rw.scale)
-    out.mh$bs
+        # if(inherits(modlist[[.x]], "gam")){
+          cat(ifelse(.x == "surv", "SURVIVAL MODEL", "\nHEALTH MODEL"),"\n")
+          out <- mgcv::gam.mh(modlist[[.x]], ns = n, burn = burn, thin = thin, rw.scale = rw.scale[1])
+          out$bs
+        # } else if (inherits(modlist[[.x]], "scam")){
+        #   gratia::post_draws(n = n.tot, method = "gaussian", model = modlist[[.x]])
+        # }
+  }) |> purrr::set_names(nm = names(modlist))
+  
+  cat("\n")
+  
+  # Calf survival and BC as a function of mother's health
+  out.survbc_calf <- purrr::map(.x = names(modlist_calf), .f = ~{
+      cat(ifelse(.x == "surv", "SURVIVAL MODEL (CALVES)", "\nHEALTH MODEL (CALVES)"),"\n")
+      out <- mgcv::gam.mh(modlist_calf[[.x]], ns = n, burn = burn, thin = thin, rw.scale = rw.scale[2])
+      out$bs
   }) |> purrr::set_names(nm = names(modlist))
   
   # Predictions 
@@ -73,6 +89,27 @@ augment.narwsim <- function(obj,
       opt
     }
   ) |> purrr::set_names(nm = names(modlist))
+  
+  
+  # Predictions (calves)
+  preds.survbc_calf <- purrr::map(
+    .x = names(modlist_calf),
+    .f = ~ {
+      
+      # Inverse link function
+      ilink <- family(modlist_calf[[.x]])$linkinv
+      
+      # Map coefficients to fitted curves
+      Xp <- predict(modlist_calf[[.x]], pred.x, type = "lpmatrix")
+      
+      opt <- matrix(data = NA, nrow = n.tot, ncol = nrow(pred.x))
+      
+      for (i in seq_len(n.tot)) {
+        opt[i, ] <- ilink(Xp %*% out.survbc_calf[[.x]][i, ])
+      }
+      opt
+    }
+  ) |> purrr::set_names(nm = names(modlist_calf))
   
   
   #'------------------------------------------------------------
@@ -103,15 +140,18 @@ augment.narwsim <- function(obj,
   
   # Save results
   obj$post <- list(nsamples = n.tot,
-                   samples = out.survbc,
+                   samples = list(all = out.survbc, calf = out.survbc_calf),
                    # samples = append(out.survbc, list("mbc" = out.minbc)),
                    # preds = list(survbc = preds.survbc, mbc = preds.mbc),
-                   preds = list(survbc = preds.survbc),
+                   preds = list(survbc = preds.survbc, survbc_calf = preds.survbc_calf),
                    bc.range = bc.range,
-                   pred.x = pred.x,
-                   # mbc.x = xpred,
-                   burn = burn,
-                   thin = thin)
+                   pred.x = list(all = pred.x, calf = pred.x_calf))
+  if(inherits(modlist[[1]], "gam")){
+    obj$post$burn <- burn
+    obj$post$thin <- thin
+    obj$post$rw.scale <- rw.scale
+  }
+  
   
   cat("Done!\n")
   return(obj)
