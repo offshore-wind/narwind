@@ -2,6 +2,7 @@
 #define MOVEMENTS_H
 
 #include <RcppEigen.h>
+#include <random>
 #include "geodesic.h"
 #include "bioenergetics.h"
 #include <math.h>
@@ -57,9 +58,8 @@ private:
   // size_t is the type returned by the sizeof operator and is widely 
   // used in the standard library to represent sizes and counts.
   std::size_t sampleInd() {
-    GetRNGstate();
+    Rcpp::RNGScope scope;
     double u = R::runif(0,1);
-    PutRNGstate();
     double q = 0;
     std::size_t k = 0;
     double *w = weights.data();
