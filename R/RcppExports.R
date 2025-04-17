@@ -33,8 +33,8 @@ NULL
 #' @name RMR
 NULL
 
-rtnorm <- function(mean, sd, low, high) {
-    .Call('_narwind_rtnorm', PACKAGE = 'narwind', mean, sd, low, high)
+rtnorm <- function(location, scale, low, high) {
+    .Call('_narwind_rtnorm', PACKAGE = 'narwind', location, scale, low, high)
 }
 
 estBetaParams <- function(mu, std) {
@@ -371,8 +371,8 @@ growth_cost <- function(leanmass_increment, EDens_lipids, EDens_protein, lipid_i
     .Call('_narwind_growth_cost', PACKAGE = 'narwind', leanmass_increment, EDens_lipids, EDens_protein, lipid_in_muscle, lipid_in_viscera, lipid_in_bones, protein_in_muscle, protein_in_viscera, protein_in_bones, prop_muscle, prop_viscera, prop_bones)
 }
 
-add_calf <- function(n, attr, sex, nonreprod) {
-    .Call('_narwind_add_calf', PACKAGE = 'narwind', n, attr, sex, nonreprod)
+add_calf <- function(n, attr, sex, nonreprod, BC, psurv) {
+    .Call('_narwind_add_calf', PACKAGE = 'narwind', n, attr, sex, nonreprod, BC, psurv)
 }
 
 pleave <- function(now, enter, cohortID, factor, resid) {
@@ -425,5 +425,13 @@ NARW_simulator <- function(cohortID, seus, gsl, support, densities, densities_se
 
 evalEnvironment <- function(density, density_seus, density_gsl, density_gom, prey, fishing, vessels, noise, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer) {
     .Call('_narwind_evalEnvironment', PACKAGE = 'narwind', density, density_seus, density_gsl, density_gom, prey, fishing, vessels, noise, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer)
+}
+
+cpp_runif <- function(n) {
+    .Call('_narwind_cpp_runif', PACKAGE = 'narwind', n)
+}
+
+mean_rcpp <- function(x) {
+    .Call('_narwind_mean_rcpp', PACKAGE = 'narwind', x)
 }
 

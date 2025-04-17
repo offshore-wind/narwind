@@ -12,16 +12,16 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // rtnorm
-double rtnorm(const double mean, const double sd, const double low, const double high);
-RcppExport SEXP _narwind_rtnorm(SEXP meanSEXP, SEXP sdSEXP, SEXP lowSEXP, SEXP highSEXP) {
+double rtnorm(double location, double scale, double low, double high);
+RcppExport SEXP _narwind_rtnorm(SEXP locationSEXP, SEXP scaleSEXP, SEXP lowSEXP, SEXP highSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const double >::type mean(meanSEXP);
-    Rcpp::traits::input_parameter< const double >::type sd(sdSEXP);
-    Rcpp::traits::input_parameter< const double >::type low(lowSEXP);
-    Rcpp::traits::input_parameter< const double >::type high(highSEXP);
-    rcpp_result_gen = Rcpp::wrap(rtnorm(mean, sd, low, high));
+    Rcpp::traits::input_parameter< double >::type location(locationSEXP);
+    Rcpp::traits::input_parameter< double >::type scale(scaleSEXP);
+    Rcpp::traits::input_parameter< double >::type low(lowSEXP);
+    Rcpp::traits::input_parameter< double >::type high(highSEXP);
+    rcpp_result_gen = Rcpp::wrap(rtnorm(location, scale, low, high));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -716,8 +716,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // add_calf
-Rcpp::NumericMatrix add_calf(int n, Rcpp::StringVector attr, Rcpp::NumericVector sex, Rcpp::NumericVector nonreprod);
-RcppExport SEXP _narwind_add_calf(SEXP nSEXP, SEXP attrSEXP, SEXP sexSEXP, SEXP nonreprodSEXP) {
+Rcpp::NumericMatrix add_calf(int n, Rcpp::StringVector attr, Rcpp::NumericVector sex, Rcpp::NumericVector nonreprod, Rcpp::NumericVector BC, Rcpp::NumericVector psurv);
+RcppExport SEXP _narwind_add_calf(SEXP nSEXP, SEXP attrSEXP, SEXP sexSEXP, SEXP nonreprodSEXP, SEXP BCSEXP, SEXP psurvSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -725,7 +725,9 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::StringVector >::type attr(attrSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type sex(sexSEXP);
     Rcpp::traits::input_parameter< Rcpp::NumericVector >::type nonreprod(nonreprodSEXP);
-    rcpp_result_gen = Rcpp::wrap(add_calf(n, attr, sex, nonreprod));
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type BC(BCSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type psurv(psurvSEXP);
+    rcpp_result_gen = Rcpp::wrap(add_calf(n, attr, sex, nonreprod, BC, psurv));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -916,6 +918,28 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_runif
+Rcpp::NumericVector cpp_runif(int n);
+RcppExport SEXP _narwind_cpp_runif(SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(cpp_runif(n));
+    return rcpp_result_gen;
+END_RCPP
+}
+// mean_rcpp
+double mean_rcpp(Rcpp::NumericVector x);
+RcppExport SEXP _narwind_mean_rcpp(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(mean_rcpp(x));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_narwind_rtnorm", (DL_FUNC) &_narwind_rtnorm, 4},
@@ -972,7 +996,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_narwind_fetal_length", (DL_FUNC) &_narwind_fetal_length, 2},
     {"_narwind_fetal_length_vec", (DL_FUNC) &_narwind_fetal_length_vec, 2},
     {"_narwind_growth_cost", (DL_FUNC) &_narwind_growth_cost, 12},
-    {"_narwind_add_calf", (DL_FUNC) &_narwind_add_calf, 4},
+    {"_narwind_add_calf", (DL_FUNC) &_narwind_add_calf, 6},
     {"_narwind_pleave", (DL_FUNC) &_narwind_pleave, 5},
     {"_narwind_entanglement_effect", (DL_FUNC) &_narwind_entanglement_effect, 4},
     {"_narwind_survival", (DL_FUNC) &_narwind_survival, 3},
@@ -982,6 +1006,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_narwind_geoDist", (DL_FUNC) &_narwind_geoDist, 8},
     {"_narwind_NARW_simulator", (DL_FUNC) &_narwind_NARW_simulator, 40},
     {"_narwind_evalEnvironment", (DL_FUNC) &_narwind_evalEnvironment, 24},
+    {"_narwind_cpp_runif", (DL_FUNC) &_narwind_cpp_runif, 1},
+    {"_narwind_mean_rcpp", (DL_FUNC) &_narwind_mean_rcpp, 1},
     {NULL, NULL, 0}
 };
 
