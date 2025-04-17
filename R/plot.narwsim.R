@@ -91,27 +91,42 @@ plot.narwsim <- function(obj,
     
     if(!"post" %in% names(obj)){
       
-      plot(obj$gam$fit$surv, scheme = 1, scale = 0, pages = 1, ylab = "s(start_bc)", main = "Survival")
-      plot(obj$gam$fit$bc, scheme = 1, scale = 0, pages = 1, ylab = "s(start_bc)", main = "Body condition")
+      plot(obj$gam$fit$surv, scheme = 1, scale = 0, pages = 1, ylab = "s(Start BC)", xlab = "Start BC", main = "Survival")
+      plot(obj$gam$fit$bc, scheme = 1, scale = 0, pages = 1, ylab = "s(Start BC)", xlab = "Start BC",main = "Body condition")
+      
+      plot(obj$gam$fit_calf$surv, scheme = 1, scale = 0, ylab = "s(Start BC)", xlab = "Start BC", main = "Survival")
+      plot(obj$gam$fit_calf$bc, scheme = 1, scale = 0, ylab = "s(Start BC)", xlab = "Start BC", main = "Body condition")
       
     } else {
       
       # Extract objects
       modlist <- obj$gam$fit # Fitted GAMs
-      pred.x <- obj$post$pred.x # Prediction points -- used for mean curve
+      modlist_calf <- obj$gam$fit_calf
+      
+      pred.x <- obj$post$pred.x$all # Prediction points -- used for mean curve
+      pred.x_calf <- obj$post$pred.x$calf
+      
       bc.range <- obj$post$bc.range # Allowable range of BC
       nsamples <- obj$post$nsamples # Number of posterior draws
+      
       # mbc.x <- obj$post$mbc.x
       preds.surv <- obj$post$preds$survbc$surv # Posterior samples from survival model
       preds.bc <- obj$post$preds$survbc$bc # Posterior samples from body condition model
       # preds.mbc <- obj$post$preds$mbc
       
+      preds.surv_calf <- obj$post$preds$survbc_calf$surv # Posterior samples from survival model
+      preds.bc_calf <- obj$post$preds$survbc_calf$bc # Posterior samples from body condition model
+      
       # Create prediction data.frame
       pred.df <- expand.grid(start_bc = seq(bc.range[1], bc.range[2], length.out = 100), 
                              cohort = cohorts$id, 
                              mcmc = seq_len(nsamples))
+      
       pred.df$pred_surv <- as.numeric(t(preds.surv))
       pred.df$pred_bc <- as.numeric(t(preds.bc))
+      
+      pred.df$pred_surv_calf <- as.numeric(t(preds.surv_calf))
+      pred.df$pred_bc_calf <- as.numeric(t(preds.bc_calf))
       
       # Thickness of lines on plot
       linewidth <- 0.65
@@ -147,7 +162,18 @@ plot.narwsim <- function(obj,
           facet.names <- cohorts$name
           names(facet.names) <- cohorts$id
           
-          data.pts <- obj$gam$dat
+          if(.x == "surv"){
+            nocalf <- obj$gam$dat[cohort > 0]
+            calfdat <- obj$gam$dat[cohort== 0 & event == "birth"]
+            data.pts <- rbind(nocalf, calfdat)
+          } else {
+            alive.calf <- unique(obj$gam$dat[cohort == 0 & alive == 1, whale])
+            adat <- obj$gam$dat[alive == 1,]
+            nolac <- adat[!cohort == 5]
+            lacdat <- adat[cohort == 5 & whale  %in% alive.calf]
+            data.pts <- rbind(nolac, lacdat)
+          }
+
           names(data.pts) <- gsub(pattern = ifelse(.x == "bc", "end_bc", "alive"), replacement = "pred", names(data.pts))
           
           ggplot2::ggplot(data = sample.df, aes(x = start_bc, y = pred)) +
@@ -160,16 +186,72 @@ plot.narwsim <- function(obj,
             {if(.x == "surv") ggplot2::scale_y_continuous(limits = c(0,1))} +
             {if(.x == "bc") ggplot2::scale_y_continuous(limits = c(0, find_maxBC()))} +
             theme_narw(bbox = bbox) +
-            xlab("Starting body condition (relative reserve mass, %)") +
+            xlab("Starting body condition") +
             ylab(dplyr::case_when(
               .x == "surv" ~ "p(survival)",
-              .x == "bc" ~ "Final body condition (relative reserve mass, %)",
+              .x == "bc" ~ "Final body condition",
+              .default = ""
+            ))
+        }
+      ) |> purrr::set_names(nm = names(modlist))
+      
+      
+      p_calf <- purrr::map(
+        .x = names(modlist_calf),
+        .f = ~ {
+          
+          # Add mean predictions to data.frame
+          mean_pred_calf <- cbind(pred.x_calf, pred = predict(modlist_calf[[.x]], pred.x_calf, "response"))
+          if(.x == "bc") mean_pred_calf$pred <- clamp(mean_pred_calf$pred, find_maxBC())
+          
+          # Sample a subset of predictions
+          sample.df <- pred.df[pred.df$mcmc %in% sample(nsamples, nL, replace = FALSE) & pred.df$cohort == 0, ] |> 
+            dplyr::select(start_bc, cohort, mcmc, paste0("pred_", .x, "_calf"))
+          
+          if(.x == "bc") sample.df$pred_bc_calf <- clamp(sample.df$pred_bc_calf, find_maxBC())
+          
+          # Rename columns (remove pred_)
+          lookup <- c(pred = paste0("pred_", .x, "_calf"))
+          sample.df <- dplyr::rename(sample.df, all_of(lookup))
+          
+          # Define facet names
+          facet.names <- cohorts$name
+          names(facet.names) <- cohorts$id
+          
+          data.pts <- dplyr::left_join(x = obj$gam$dat[cohort == 0 & event == "birth"],
+                                       y = obj$gam$dat[cohort == 5], by = "whale") |> 
+            dplyr::select(alive.x, start_bc.y, end_bc.x)
+          
+          if(.x == "surv"){
+            
+            data.pts <- data.pts |> dplyr::rename(pred = alive.x, start_bc = start_bc.y, end_bc = end_bc.x)
+            
+          } else {
+           
+            data.pts <- data.pts |> dplyr::rename(alive = alive.x, start_bc = start_bc.y, pred = end_bc.x) |> 
+              dplyr::filter(alive == 1)
+            
+          }
+          
+          ggplot2::ggplot(data = sample.df, aes(x = start_bc, y = pred)) +
+            ggplot2::geom_line(aes(group = mcmc), colour = "grey", alpha = 0.2) +
+            {if(.x == "bc") ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dotted") } +
+            ggplot2::geom_line(data = mean_pred_calf, linewidth = linewidth) +
+            ggplot2::geom_rug(data = data.pts, sides = "b") +
+            {if(.x == "surv") ggplot2::scale_y_continuous(limits = c(0,1))} +
+            {if(.x == "bc") ggplot2::scale_y_continuous(limits = c(0, find_maxBC()))} +
+            theme_narw(bbox = bbox) +
+            xlab("Female body condition") +
+            ylab(dplyr::case_when(
+              .x == "surv" ~ "p(survival)",
+              .x == "bc" ~ "Calf body condition",
               .default = ""
             ))
         }
       ) |> purrr::set_names(nm = names(modlist))
       
       purrr::walk(.x = p, .f = ~print(.x))
+      purrr::walk(.x = p_calf, .f = ~print(.x))
       
     }
     
