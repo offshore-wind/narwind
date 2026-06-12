@@ -427,11 +427,3 @@ evalEnvironment <- function(density, density_seus, density_gsl, density_gom, pre
     .Call('_narwind_evalEnvironment', PACKAGE = 'narwind', density, density_seus, density_gsl, density_gom, prey, fishing, vessels, noise, regions, limits, limits_regions, limits_prey, limits_fishing, limits_vessels, limits_noise, resolution, resolution_regions, resolution_prey, resolution_fishing, resolution_vessels, resolution_noise, x, y, layer)
 }
 
-cpp_runif <- function(n) {
-    .Call('_narwind_cpp_runif', PACKAGE = 'narwind', n)
-}
-
-mean_rcpp <- function(x) {
-    .Call('_narwind_mean_rcpp', PACKAGE = 'narwind', x)
-}
-

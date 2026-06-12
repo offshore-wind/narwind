@@ -218,7 +218,7 @@ template<typename AnimalType,
          typename MovementRule, 
          int CoordSize = 7,
          int nparam_animal = 26,
-         int nparam_calves = 26,
+         int nparam_calves = 25,
          int nparam_E = 8,
          int nparam_E_calves = 4,
          int nparam_fetus = 25,
@@ -333,7 +333,6 @@ Rcpp::List movesim(
     "p_starve_calf",
     "starve_calf",
     "died_calf",
-    "date_died_calf",
     "p_surv_calf"};
   
   // Initialize and label array in which energy budget data will be stored
@@ -498,7 +497,7 @@ Rcpp::List movesim(
   std::vector<string> attrib_costs_calves_names = {
     "rmr_calf", 
     "LC_calf",
-    "scalar_LC",
+    "scalar_LC_calf",
     "E_growth_calf",
     "delta_m_calf"};
   
@@ -2137,11 +2136,10 @@ Rcpp::List movesim(
         *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].mouth_ratio;         // Ratio of mouth width to total body length
         *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].mouth_angle;         // Upper angle of the mouth
         *(attrib_calves_out++) = calves[current_animal].alive * (1 - (current_day == 0)) * calves[current_animal].mouth_width;         // Width of the mouth
-        *(attrib_calves_out++) = calves[current_animal].alive * p_starve_calf;                                                                                        // Starvation-induced mortality rate
+        *(attrib_calves_out++) = calves[current_animal].alive * p_starve_calf;                                                         // Starvation-induced mortality rate
         *(attrib_calves_out++) = calves[current_animal].starve;                                                                        // Incidence of starvation
         *(attrib_calves_out++) = calves[current_animal].mort;                                                                          // Mortality from other sources
-        *(attrib_calves_out++) = date_death_calf[current_animal];                                                                      // Mortality date
-        *(attrib_calves_out++) = calves[current_animal].alive * p_surv_calf;                                                                                          // Survival probability
+        *(attrib_calves_out++) = calves[current_animal].alive * p_surv_calf;                                                           // Survival probability
         
         // +++ Lactation +++
         
